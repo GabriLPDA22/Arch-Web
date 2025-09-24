@@ -1,7 +1,5 @@
-<!-- src/views/EventsDashboard.vue -->
 <template>
   <div class="page">
-    <!-- Hero -->
     <header class="hero">
       <div class="hero__glow"></div>
       <div class="hero__content">
@@ -11,7 +9,6 @@
     </header>
 
     <main class="container">
-      <!-- Creator -->
       <section class="card card--outline">
         <div class="card__head">
           <h2 class="card__title">
@@ -27,23 +24,18 @@
 
         <form class="grid" @submit.prevent="onSubmit">
           <div class="field col-2">
-            <label class="label">Title <span class="req">*</span></label>
-            <input class="input" v-model.trim="form.title" type="text" required placeholder="e.g. React Workshop, Jazz Concert…" />
+            <label class="label">Name <span class="req">*</span></label>
+            <input class="input" v-model.trim="form.name" type="text" required placeholder="e.g. React Workshop, Jazz Concert…" />
           </div>
 
           <div class="field">
-            <label class="label">Start (local) <span class="req">*</span></label>
+            <label class="label">Start Date (local) <span class="req">*</span></label>
             <input class="input" v-model="form.startLocal" type="datetime-local" required />
           </div>
 
           <div class="field">
-            <label class="label">End (local)</label>
+            <label class="label">End Date (local)</label>
             <input class="input" v-model="form.endLocal" type="datetime-local" />
-          </div>
-
-          <div class="field">
-            <label class="label">Category</label>
-            <input class="input" v-model.trim="form.category" type="text" placeholder="e.g. Workshop, Music, Networking…" />
           </div>
 
           <div class="field">
@@ -51,14 +43,33 @@
             <input class="input" v-model.number="form.capacity" type="number" min="0" placeholder="e.g. 50" />
           </div>
 
-          <div class="field col-2">
-            <label class="label">Location</label>
-            <input class="input" v-model.trim="form.location" type="text" placeholder="Address or city" />
+          <div class="field">
+            <label class="label">Price</label>
+            <input class="input" v-model.number="form.price" type="number" step="0.01" min="0" placeholder="e.g. 19.99" />
+          </div>
+
+          <div class="field">
+            <label class="label">Postcode <span class="req">*</span></label>
+            <input class="input" v-model.trim="form.postcode" type="text" required placeholder="e.g. 08001" />
+          </div>
+          
+          <div class="field">
+            <label class="label">Category</label>
+            <select class="input" v-model="form.preferenceId">
+              <option value="">(None)</option>
+              <option value="1288c1f9-f538-4e89-8d7d-5a6396740685">Concerts</option>
+              <option value="f18c886a-6058-4503-ac8b-40b99131d053">Sporting Events</option>
+            </select>
           </div>
 
           <div class="field col-2">
-            <label class="label">Image (URL)</label>
-            <input class="input" v-model.trim="form.imageUrl" type="url" placeholder="https://…" />
+            <label class="label">Address <span class="req">*</span></label>
+            <input class="input" v-model.trim="form.address" type="text" required placeholder="Street and number" />
+          </div>
+
+          <div class="field col-2">
+            <label class="label">External URL</label>
+            <input class="input" v-model.trim="form.externalUrl" type="url" placeholder="https://…" />
           </div>
 
           <div class="field col-2">
@@ -66,12 +77,9 @@
             <textarea class="input input--textarea" v-model.trim="form.description" rows="4" placeholder="Describe the event…"></textarea>
           </div>
 
-          <div class="field switch">
-            <label class="switch__label">
-              <input type="checkbox" v-model="form.isPublic" />
-              <span class="switch__track"></span>
-              <span class="switch__text">Publicly visible</span>
-            </label>
+          <div class="field col-2">
+            <label class="label">Organizer</label>
+            <input class="input" v-model.trim="form.organizer" type="text" placeholder="e.g. Google" />
           </div>
 
           <div class="actions">
@@ -87,7 +95,6 @@
         </form>
       </section>
 
-      <!-- List -->
       <section class="card card--soft">
         <div class="card__head">
           <h2 class="card__title">
@@ -102,27 +109,25 @@
 
         <div v-else class="table">
           <div class="table__head">
-            <div>Title</div>
+            <div>Name</div>
+            <div>Category</div>
             <div>Start</div>
             <div>End</div>
-            <div>Category</div>
-            <div>Public</div>
+            <div>Address</div>
+            <div>Price</div>
             <div class="right">Actions</div>
           </div>
 
-          <div class="table__row" v-for="ev in events" :key="ev.id">
+          <div class="table__row" v-for="ev in events" :key="ev.eventID">
             <div class="stack">
-              <div class="strong">{{ ev.title }}</div>
-              <div class="muted">{{ ev.location || "—" }}</div>
+              <div class="strong">{{ ev.name }}</div>
+              <div class="muted">{{ ev.address || "—" }}</div>
             </div>
-            <div>{{ formatDate(ev.startDateUtc) }}</div>
-            <div>{{ ev.endDateUtc ? formatDate(ev.endDateUtc) : "—" }}</div>
-            <div>{{ ev.category || "—" }}</div>
-            <div>
-              <span :class="['pill', ev.isPublic ? 'pill--ok' : 'pill--muted']">
-                {{ ev.isPublic ? "Yes" : "No" }}
-              </span>
-            </div>
+            <div>{{ ev.preferenceName || "—" }}</div>
+            <div>{{ formatDate(ev.startDate) }}</div>
+            <div>{{ ev.endDate ? formatDate(ev.endDate) : "—" }}</div>
+            <div>{{ ev.address || "—" }}</div>
+            <div>{{ ev.price }} €</div>
             <div class="right">
               <div class="row-actions">
                 <button class="btn btn--tiny" @click="loadForEdit(ev)">Edit</button>
@@ -140,26 +145,29 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
-import { EventApi, type EventDto } from "@/services/api";
+import { EventApi, type EventListDto, type EventDetailDto, type EventCreateDto, type EventUpdateDto } from "@/services/api";
 
-const events = ref<EventDto[]>([]);
+const events = ref<EventListDto[]>([]);
 const loading = ref(false);
 const listError = ref("");
 const submitting = ref(false);
 const error = ref("");
 const notice = ref("");
-const editingId = ref<number | string | null>(null);
+const editingId = ref<string | null>(null);
 
 const form = reactive({
-  title: "",
+  name: "",
   description: "",
   startLocal: "",
   endLocal: "",
-  location: "",
+  address: "",
+  postcode: "",
   capacity: null as number | null,
-  category: "",
-  isPublic: true,
-  imageUrl: "",
+  price: null as number | null,
+  organizer: "",
+  externalUrl: "",
+  // Nuevo campo para el ID de preferencia
+  preferenceId: "" as string | null,
 });
 
 function toIsoUtc(local: string): string {
@@ -184,21 +192,24 @@ function resetForm() {
   editingId.value = null;
   error.value = "";
   notice.value = "";
-  form.title = "";
+  form.name = "";
   form.description = "";
   form.startLocal = "";
   form.endLocal = "";
-  form.location = "";
+  form.address = "";
+  form.postcode = "";
   form.capacity = null;
-  form.category = "";
-  form.isPublic = true;
-  form.imageUrl = "";
+  form.price = null;
+  form.organizer = "";
+  form.externalUrl = "";
+  form.preferenceId = null;
 }
 async function fetchEvents() {
   loading.value = true;
   listError.value = "";
   try {
-    events.value = await EventApi.list();
+    const pagedResult = await EventApi.list();
+    events.value = pagedResult.items;
   } catch (e: any) {
     listError.value = e?.message ?? "Failed to load events.";
   } finally {
@@ -211,31 +222,35 @@ async function onSubmit() {
   submitting.value = true;
 
   try {
-    if (!form.title.trim()) throw new Error("Title is required.");
+    if (!form.name.trim()) throw new Error("Name is required.");
     if (!form.startLocal) throw new Error("Start date/time is required.");
+    if (!form.address.trim()) throw new Error("Address is required.");
+    if (!form.postcode.trim()) throw new Error("Postcode is required.");
 
-    const payload: EventDto = {
-      title: form.title.trim(),
-      description: form.description?.trim() || "",
-      startDateUtc: toIsoUtc(form.startLocal),
-      endDateUtc: form.endLocal ? toIsoUtc(form.endLocal) : "",
-      location: form.location?.trim() || "",
-      capacity: form.capacity ?? null,
-      category: form.category?.trim() || "",
-      isPublic: !!form.isPublic,
-      imageUrl: form.imageUrl?.trim() || "",
+    const payload: EventCreateDto = {
+      name: form.name.trim(),
+      description: form.description?.trim() || undefined,
+      startDate: toIsoUtc(form.startLocal),
+      endDate: form.endLocal ? toIsoUtc(form.endLocal) : undefined,
+      address: form.address.trim(),
+      postcode: form.postcode.trim(),
+      capacity: form.capacity ?? undefined,
+      price: form.price ?? 0.00,
+      organizer: form.organizer?.trim() || undefined,
+      externalUrl: form.externalUrl?.trim() || undefined,
+      preferenceId: form.preferenceId ?? undefined,
     };
 
     if (editingId.value != null) {
-      const updated = await EventApi.update(editingId.value, payload);
-      const idx = events.value.findIndex(e => e.id === editingId.value);
-      if (idx >= 0) events.value[idx] = updated;
+      await EventApi.update(editingId.value, payload);
       notice.value = "Event updated successfully.";
     } else {
-      const created = await EventApi.create(payload);
-      events.value.unshift(created);
+      await EventApi.create(payload);
       notice.value = "Event created successfully.";
     }
+
+    // Volvemos a cargar toda la lista después de cualquier operación exitosa
+    await fetchEvents();
     resetForm();
   } catch (e: any) {
     error.value = e?.message ?? "Could not save the event.";
@@ -243,28 +258,31 @@ async function onSubmit() {
     submitting.value = false;
   }
 }
-function loadForEdit(ev: EventDto) {
-  editingId.value = ev.id ?? null;
-  form.title = ev.title ?? "";
+function loadForEdit(ev: EventDetailDto) {
+  editingId.value = ev.eventID ?? null;
+  form.name = ev.name ?? "";
   form.description = ev.description ?? "";
-  form.startLocal = fromIsoToLocal(ev.startDateUtc);
-  form.endLocal = fromIsoToLocal(ev.endDateUtc);
-  form.location = ev.location ?? "";
+  form.startLocal = fromIsoToLocal(ev.startDate);
+  form.endLocal = fromIsoToLocal(ev.endDate);
+  form.address = ev.address ?? "";
+  form.postcode = ev.postcode ?? "";
   form.capacity = ev.capacity ?? null;
-  form.category = ev.category ?? "";
-  form.isPublic = !!ev.isPublic;
-  form.imageUrl = ev.imageUrl ?? "";
+  form.price = ev.price ?? null;
+  form.organizer = ev.organizer ?? "";
+  form.externalUrl = ev.externalUrl ?? "";
+  // Se carga el ID de preferencia en el formulario
+  form.preferenceId = ev.preferenceId ?? null;
   notice.value = "";
   error.value = "";
 }
-async function onDelete(ev: EventDto) {
-  if (!ev.id) return;
-  const ok = confirm(`Delete the event "${ev.title}"?`);
+async function onDelete(ev: EventListDto) {
+  if (!ev.eventID) return;
+  const ok = confirm(`Delete the event "${ev.name}"?`);
   if (!ok) return;
 
   try {
-    await EventApi.remove(ev.id);
-    events.value = events.value.filter(e => e.id !== ev.id);
+    await EventApi.remove(ev.eventID);
+    events.value = events.value.filter(e => e.eventID !== ev.eventID);
   } catch (e: any) {
     alert(e?.message ?? "Could not delete.");
   }
@@ -375,7 +393,7 @@ onMounted(fetchEvents);
   padding: 1px; border-radius: 16px;
   background: var(--gold);
   -webkit-mask:
-    linear-gradient(#000 0 0) content-box, 
+    linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
   pointer-events: none; opacity: .18;
@@ -439,7 +457,7 @@ onMounted(fetchEvents);
   content: ""; position: absolute; top: 2px; left: 2px;
   width: 22px; height: 22px; border-radius: 50%;
   background: linear-gradient(180deg, #1b1b21, #0f0f13);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,.08);
   box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 6px 16px rgba(0,0,0,.6);
   transition: transform .22s cubic-bezier(.2,.7,.2,1.1), box-shadow .2s ease;
 }
@@ -509,7 +527,7 @@ onMounted(fetchEvents);
 /* Table */
 .table { width: 100%; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .table__head, .table__row {
-  display: grid; grid-template-columns: 2.2fr 1.1fr 1.1fr 1fr .7fr .9fr; gap: 0;
+  display: grid; grid-template-columns: 2.2fr 1.1fr 1.1fr 1.1fr 1.5fr .7fr .9fr; gap: 0;
 }
 .table__head {
   background: linear-gradient(180deg,#15151a,#121218);
@@ -539,7 +557,9 @@ onMounted(fetchEvents);
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
   .col-2, .actions { grid-column: auto; }
-  .table__head, .table__row { grid-template-columns: 1.7fr 1.2fr 1.2fr .9fr .7fr .9fr; }
+  .table__head, .table__row { grid-template-columns: 1.7fr 1.2fr 1.2fr 1.5fr .7fr .9fr; }
+  .table__head > div:nth-child(5), .table__head > div:nth-child(6),
+  .table__row > div:nth-child(5), .table__row > div:nth-child(6) { display: none; }
 }
 @media (max-width: 640px) {
   .table__head, .table__row { grid-template-columns: 1.8fr 1.3fr .9fr .8fr; }
