@@ -44,7 +44,7 @@
             <label class="label">Postcode <span class="req">*</span></label>
             <input class="input" v-model.trim="form.postcode" type="text" required placeholder="e.g. 08001" />
           </div>
-          
+
           <div class="field">
             <label class="label">Category</label>
             <select class="input" v-model="form.preferenceId">
@@ -74,6 +74,11 @@
             <input class="input" v-model.trim="form.organizer" type="text" placeholder="e.g. Google" />
           </div>
 
+          <div class="field col-2">
+            <label class="label">Image</label>
+            <input class="input" type="file" @change="onFileChange" accept="image/*" />
+          </div>
+
           <div class="actions">
             <button class="btn btn--gold" type="submit" :disabled="submitting">
               <span v-if="submitting">Saving…</span>
@@ -94,13 +99,13 @@
             Existing Events
           </h2>
         </div>
-        
+
         <div class="field col-2 search-box">
           <label class="label">Search Events</label>
           <input class="input" v-model="searchQuery" type="text" placeholder="e.g. concerts, New York, 1001" />
         </div>
 
-        <div v-if="filteredEvents.length === 0" class="empty">
+        <div v-if="events.length === 0" class="empty">
           <p>No events found. {{ searchQuery ? 'Try a different search term.' : 'Create your first one above.' }}</p>
         </div>
 
@@ -118,8 +123,11 @@
           </div>
           <div class="table-scroll-container">
             <div class="table table-wrapper">
-              <div class="table__row" v-for="ev in filteredEvents" :key="ev.eventID">
+              <div class="table__row" v-for="ev in events" :key="ev.eventID">
                 <div class="stack">
+                  <div class="image-wrapper" v-if="ev.imageUrl">
+                    <img :src="ev.imageUrl" :alt="`Image for ${ev.name}`" />
+                  </div>
                   <div class="strong">{{ ev.name }}</div>
                   <div class="muted">{{ ev.address || "—" }}</div>
                 </div>
@@ -146,8 +154,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed } from "vue";
-import { EventApi, type EventListDto, type EventDetailDto, type EventCreateDto, type EventUpdateDto } from "@/services/api";
+import { onMounted, reactive, ref, watch } from "vue";
+import { EventApi, type EventListDto, type EventDetailDto, type EventCreateDto, type EventUpdateDto, ImageApi, type EventImageCreateDto } from "@/services/api";
 
 const events = ref<EventListDto[]>([]);
 const loading = ref(false);
@@ -156,19 +164,12 @@ const submitting = ref(false);
 const error = ref("");
 const notice = ref("");
 const editingId = ref<string | null>(null);
-const searchQuery = ref(""); // Nuevo: para el buscador
+const searchQuery = ref("");
+const imageFile = ref<File | null>(null); // NUEVO: Ref para el archivo de imagen
 
-const filteredEvents = computed(() => {
-  if (!searchQuery.value) {
-    return events.value;
-  }
-  const query = searchQuery.value.toLowerCase();
-  return events.value.filter(event =>
-    event.name.toLowerCase().includes(query) ||
-    event.address.toLowerCase().includes(query) ||
-    event.postcode.toLowerCase().includes(query) ||
-    (event.preferenceName?.toLowerCase().includes(query) ?? false)
-  );
+// Observa los cambios en searchQuery para recargar la lista
+watch(searchQuery, () => {
+  fetchEvents();
 });
 
 const form = reactive({
@@ -218,12 +219,21 @@ function resetForm() {
   form.organizer = "";
   form.externalUrl = "";
   form.preferenceId = null;
+  imageFile.value = null; // NUEVO: Reinicia el archivo de imagen
+}
+function onFileChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (target.files && target.files.length > 0) {
+    imageFile.value = target.files[0];
+  } else {
+    imageFile.value = null;
+  }
 }
 async function fetchEvents() {
   loading.value = true;
   listError.value = "";
   try {
-    const pagedResult = await EventApi.list();
+    const pagedResult = await EventApi.list({ q: searchQuery.value });
     events.value = pagedResult.items;
   } catch (e: any) {
     listError.value = e?.message ?? "Failed to load events.";
@@ -235,6 +245,7 @@ async function onSubmit() {
   error.value = "";
   notice.value = "";
   submitting.value = true;
+  let eventId = editingId.value;
 
   try {
     if (!form.name.trim()) throw new Error("Name is required.");
@@ -260,9 +271,36 @@ async function onSubmit() {
       await EventApi.update(editingId.value, payload);
       notice.value = "Event updated successfully.";
     } else {
-      await EventApi.create(payload);
+      const createdEvent = await EventApi.create(payload);
       notice.value = "Event created successfully.";
+      eventId = createdEvent.eventID;
     }
+
+    // NUEVO: Lógica para la subida de imágenes
+    if (imageFile.value && eventId) {
+      // TODO: Aquí falta la lógica para subir el archivo de imagen a S3 o un servicio similar.
+      // Esta lógica te devolvería la URL de la imagen.
+
+      // Por ahora, asumiremos una URL de prueba para la demo.
+      // let imageUrl = "https://ejemplo.com/path-a-mi-imagen.jpg";
+      // Cuando tengas el código de la subida, reemplaza la línea anterior
+      // y asegúrate de que 'imageUrl' contenga la URL real.
+      const imageUrl = "https://picsum.photos/400/300";
+
+      const imagePayload: EventImageCreateDto = {
+        EventID: eventId,
+        ImageURL: imageUrl,
+        IsPrimary: true,
+      };
+
+      try {
+        await ImageApi.upload(imagePayload);
+        notice.value += " Image uploaded successfully.";
+      } catch (imageError: any) {
+        error.value += ` Could not upload image: ${imageError?.message ?? "Unknown error"}`;
+      }
+    }
+
 
     await fetchEvents();
     resetForm();
@@ -285,6 +323,7 @@ function loadForEdit(ev: EventDetailDto) {
   form.organizer = ev.organizer ?? "";
   form.externalUrl = ev.externalUrl ?? "";
   form.preferenceId = ev.preferenceId ?? null;
+  imageFile.value = null; // Reiniciamos el archivo para la edición
   notice.value = "";
   error.value = "";
 }
@@ -487,7 +526,7 @@ onMounted(fetchEvents);
   padding-bottom: 8px; /* Evita que el último elemento quede pegado */
 }
 
-/* NEW: Estilo de la barra de desplazamiento */
+/* NUEVO: Estilo de la barra de desplazamiento */
 .table-scroll-container::-webkit-scrollbar {
   width: 8px;
 }
@@ -540,6 +579,27 @@ onMounted(fetchEvents);
 
 .stack .strong { font-weight: 600; }
 .stack .muted { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+/* NUEVOS ESTILOS PARA LA IMAGEN */
+.image-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.stack {
+  gap: 8px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
 
 /* Responsive */
 @media (max-width: 860px) {
