@@ -1,13 +1,5 @@
 <template>
   <div class="page">
-    <header class="hero">
-      <div class="hero__glow"></div>
-      <div class="hero__content">
-        <h1 class="hero__title">Events Dashboard</h1>
-        <p class="hero__subtitle">Create, curate, and publish stunning events with a touch of gold.</p>
-      </div>
-    </header>
-
     <main class="container">
       <section class="card card--outline">
         <div class="card__head">
@@ -102,36 +94,46 @@
             Existing Events
           </h2>
         </div>
-
-        <div v-if="events.length === 0" class="empty">
-          <p>No events yet. Create your first one above.</p>
+        
+        <div class="field col-2 search-box">
+          <label class="label">Search Events</label>
+          <input class="input" v-model="searchQuery" type="text" placeholder="e.g. concerts, New York, 1001" />
         </div>
 
-        <div v-else class="table">
-          <div class="table__head">
-            <div>Name</div>
-            <div>Category</div>
-            <div>Start</div>
-            <div>End</div>
-            <div>Address</div>
-            <div>Price</div>
-            <div class="right">Actions</div>
-          </div>
+        <div v-if="filteredEvents.length === 0" class="empty">
+          <p>No events found. {{ searchQuery ? 'Try a different search term.' : 'Create your first one above.' }}</p>
+        </div>
 
-          <div class="table__row" v-for="ev in events" :key="ev.eventID">
-            <div class="stack">
-              <div class="strong">{{ ev.name }}</div>
-              <div class="muted">{{ ev.address || "—" }}</div>
+        <div v-else class="table-container">
+          <div class="table">
+            <div class="table__head">
+              <div>Name</div>
+              <div>Category</div>
+              <div>Start</div>
+              <div>End</div>
+              <div>Address</div>
+              <div>Price</div>
+              <div class="right">Actions</div>
             </div>
-            <div>{{ ev.preferenceName || "—" }}</div>
-            <div>{{ formatDate(ev.startDate) }}</div>
-            <div>{{ ev.endDate ? formatDate(ev.endDate) : "—" }}</div>
-            <div>{{ ev.address || "—" }}</div>
-            <div>{{ ev.price }} €</div>
-            <div class="right">
-              <div class="row-actions">
-                <button class="btn btn--tiny" @click="loadForEdit(ev)">Edit</button>
-                <button class="btn btn--tiny btn--danger" @click="onDelete(ev)">Delete</button>
+          </div>
+          <div class="table-scroll-container">
+            <div class="table table-wrapper">
+              <div class="table__row" v-for="ev in filteredEvents" :key="ev.eventID">
+                <div class="stack">
+                  <div class="strong">{{ ev.name }}</div>
+                  <div class="muted">{{ ev.address || "—" }}</div>
+                </div>
+                <div>{{ ev.preferenceName || "—" }}</div>
+                <div>{{ formatDate(ev.startDate) }}</div>
+                <div>{{ ev.endDate ? formatDate(ev.endDate) : "—" }}</div>
+                <div>{{ ev.address || "—" }}</div>
+                <div>{{ ev.price }} €</div>
+                <div class="right">
+                  <div class="row-actions">
+                    <button class="btn btn--tiny" @click="loadForEdit(ev)">Edit</button>
+                    <button class="btn btn--tiny btn--danger" @click="onDelete(ev)">Delete</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -144,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { onMounted, reactive, ref, computed } from "vue";
 import { EventApi, type EventListDto, type EventDetailDto, type EventCreateDto, type EventUpdateDto } from "@/services/api";
 
 const events = ref<EventListDto[]>([]);
@@ -154,6 +156,20 @@ const submitting = ref(false);
 const error = ref("");
 const notice = ref("");
 const editingId = ref<string | null>(null);
+const searchQuery = ref(""); // Nuevo: para el buscador
+
+const filteredEvents = computed(() => {
+  if (!searchQuery.value) {
+    return events.value;
+  }
+  const query = searchQuery.value.toLowerCase();
+  return events.value.filter(event =>
+    event.name.toLowerCase().includes(query) ||
+    event.address.toLowerCase().includes(query) ||
+    event.postcode.toLowerCase().includes(query) ||
+    (event.preferenceName?.toLowerCase().includes(query) ?? false)
+  );
+});
 
 const form = reactive({
   name: "",
@@ -166,7 +182,6 @@ const form = reactive({
   price: null as number | null,
   organizer: "",
   externalUrl: "",
-  // Nuevo campo para el ID de preferencia
   preferenceId: "" as string | null,
 });
 
@@ -249,7 +264,6 @@ async function onSubmit() {
       notice.value = "Event created successfully.";
     }
 
-    // Volvemos a cargar toda la lista después de cualquier operación exitosa
     await fetchEvents();
     resetForm();
   } catch (e: any) {
@@ -270,7 +284,6 @@ function loadForEdit(ev: EventDetailDto) {
   form.price = ev.price ?? null;
   form.organizer = ev.organizer ?? "";
   form.externalUrl = ev.externalUrl ?? "";
-  // Se carga el ID de preferencia en el formulario
   form.preferenceId = ev.preferenceId ?? null;
   notice.value = "";
   error.value = "";
@@ -281,10 +294,10 @@ async function onDelete(ev: EventListDto) {
   if (!ok) return;
 
   try {
-    await EventApi.remove(ev.eventID);
-    events.value = events.value.filter(e => e.eventID !== ev.eventID);
+      await EventApi.remove(ev.eventID);
+      events.value = events.value.filter(e => e.eventID !== ev.eventID);
   } catch (e: any) {
-    alert(e?.message ?? "Could not delete.");
+      alert(e?.message ?? "Could not delete.");
   }
 }
 
@@ -332,41 +345,6 @@ onMounted(fetchEvents);
               radial-gradient(900px 400px at -10% 10%, rgba(255,215,128,0.06), transparent 70%),
               var(--bg);
   color: var(--text);
-}
-
-/* ======= HERO ======= */
-.hero {
-  position: relative;
-  padding: 56px 24px 36px;
-  overflow: hidden;
-  border-bottom: 1px solid var(--border);
-}
-.hero__glow {
-  position: absolute;
-  inset: -10%;
-  background:
-    radial-gradient(600px 220px at 20% 0%, rgba(255, 210, 120, .16), transparent 60%),
-    radial-gradient(800px 300px at 80% 20%, rgba(255, 210, 120, .12), transparent 60%);
-  filter: blur(8px);
-  pointer-events: none;
-}
-.hero__content {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-.hero__title {
-  font-size: clamp(28px, 2.8vw, 44px);
-  line-height: 1.1;
-  letter-spacing: .3px;
-  margin: 0 0 8px;
-  background: var(--gold);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: 0 0 24px rgba(255, 205, 110, .12);
-}
-.hero__subtitle {
-  color: var(--muted);
 }
 
 /* ======= LAYOUT ======= */
@@ -443,34 +421,6 @@ onMounted(fetchEvents);
 .input:hover { border-color: rgba(255,255,255,0.16); }
 .input--textarea { resize: vertical; min-height: 108px; }
 
-/* Switch */
-.switch { margin-top: 4px; }
-.switch__label { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
-.switch__label input { display: none; }
-.switch__track {
-  width: 46px; height: 26px; border-radius: 26px; position: relative;
-  background: #2a2a33; border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
-  transition: background .2s ease, border-color .2s ease;
-}
-.switch__track::after {
-  content: ""; position: absolute; top: 2px; left: 2px;
-  width: 22px; height: 22px; border-radius: 50%;
-  background: linear-gradient(180deg, #1b1b21, #0f0f13);
-  border: 1px solid rgba(255,255,255,.08);
-  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 6px 16px rgba(0,0,0,.6);
-  transition: transform .22s cubic-bezier(.2,.7,.2,1.1), box-shadow .2s ease;
-}
-.switch__label input:checked + .switch__track {
-  background: linear-gradient(180deg, #2a2312, #1b160b);
-  border-color: rgba(240,195,70,.35);
-}
-.switch__label input:checked + .switch__track::after {
-  transform: translateX(20px);
-  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 6px 18px rgba(240,195,70,.35);
-}
-.switch__text { color: var(--text); font-size: 14px; }
-
 /* Actions */
 .actions { grid-column: span 2; display: flex; gap: 10px; align-items: center; }
 
@@ -525,14 +475,62 @@ onMounted(fetchEvents);
 }
 
 /* Table */
-.table { width: 100%; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.table__head, .table__row {
-  display: grid; grid-template-columns: 2.2fr 1.1fr 1.1fr 1.1fr 1.5fr .7fr .9fr; gap: 0;
+.table-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 400px; /* NEW: Altura mínima para evitar que colapse */
 }
-.table__head {
-  background: linear-gradient(180deg,#15151a,#121218);
+
+.table-scroll-container {
+  max-height: 400px; /* Ajusta esta altura a tu gusto */
+  overflow-y: auto;
+  padding-bottom: 8px; /* Evita que el último elemento quede pegado */
+}
+
+/* NEW: Estilo de la barra de desplazamiento */
+.table-scroll-container::-webkit-scrollbar {
+  width: 8px;
+}
+.table-scroll-container::-webkit-scrollbar-track {
+  background: #111;
+  border-radius: 4px;
+}
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--gold-3);
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-2);
+}
+
+.table {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table-wrapper {
+  border-top: none;
   border-bottom: 1px solid var(--border);
-  font-size: 13px; color: var(--muted);
+}
+
+.table__head, .table__row {
+  display: grid;
+  grid-template-columns: 2.2fr 1.1fr 1.1fr 1.1fr 1.5fr .7fr .9fr;
+  gap: 0;
+}
+
+.table__head {
+  background: linear-gradient(180deg, #15151a, #121218);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 .table__head > div, .table__row > div { padding: 12px 14px; display: flex; align-items: center; }
 .table__row { border-top: 1px solid rgba(255,255,255,.05); background: linear-gradient(180deg,#121218,#101015); }
@@ -542,16 +540,6 @@ onMounted(fetchEvents);
 
 .stack .strong { font-weight: 600; }
 .stack .muted { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
-
-.pill {
-  font-size: 12px; line-height: 1; padding: 6px 8px; border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.08); background: #17171d; color: var(--muted);
-}
-.pill--ok {
-  color: #241600; background: rgba(240,195,70,.88); border-color: rgba(240,195,70,.2);
-  box-shadow: 0 0 0 2px rgba(240,195,70,.15);
-}
-.pill--muted { background: #141419; }
 
 /* Responsive */
 @media (max-width: 860px) {
