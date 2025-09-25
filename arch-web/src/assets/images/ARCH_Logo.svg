@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="77.743057mm"
+   height="116.94584mm"
+   viewBox="0 0 77.743057 116.94584"
+   version="1.1"
+   id="svg1"
+   xml:space="preserve"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+     id="defs1"><linearGradient
+       id="linearGradient13"><stop
+         style="stop-color:#093268;stop-opacity:1;"
+         offset="0"
+         id="stop13" /><stop
+         style="stop-color:#072f67;stop-opacity:0.26635513;"
+         offset="1"
+         id="stop14" /></linearGradient><linearGradient
+       xlink:href="#linearGradient13"
+       id="linearGradient14"
+       x1="98.425003"
+       y1="27.807606"
+       x2="98.425003"
+       y2="151.25191"
+       gradientUnits="userSpaceOnUse" /></defs><g
+     id="layer1"
+     transform="translate(-59.553472,-24.253817)"><path
+       d="M 98.425,24.253817 C 75.866409,37.98009 60.282155,63.576062 59.553471,86.25675 v 54.9429 h 2.785876 V 85.392204 c 0,0 2.435943,-35.107885 36.085653,-57.584599 33.64971,22.476714 36.08565,57.584599 36.08565,57.584599 v 55.807446 h 2.78588 V 86.25675 C 136.56784,63.576062 120.98359,37.98009 98.425,24.253817 Z"
+       style="fill:#dbb067;fill-opacity:1;stroke-width:0.2"
+       id="path13" /><path
+       d="M 98.425,27.807605 C 64.77529,50.284319 62.339347,85.392204 62.339347,85.392204 V 141.19965 H 74.441968 V 85.392204 c 0,0 0.13086,-24.157889 23.983032,-40.775289 23.85217,16.6174 23.98303,40.775289 23.98303,40.775289 v 55.807446 h 12.10262 V 85.392204 c 0,0 -2.43594,-35.107885 -36.08565,-57.584599 z"
+       style="fill:url(#linearGradient14);fill-opacity:1;stroke-width:0.2"
+       id="path12" /><path
+       id="rect17"
+       style="fill:#073e7a;stroke-width:0.2"
+       d="m 62.339348,138.86382 h 12.102621 v 2.33583 H 62.339348 Z" /><path
+       id="rect18"
+       style="fill:#073e7a;stroke-width:0.2"
+       d="m 122.40803,138.86382 h 12.10262 v 2.33583 h -12.10262 z" /></g></svg>

@@ -1,9 +1,8 @@
-// src/stores/auth.store.ts
 import { defineStore } from 'pinia';
-import AuthService from '@/services/AuthService';
 import router from '@/router';
-// Importamos los tipos
-import type { UserAuthDto } from '@/services/AuthService';
+import AuthService from '@/services/AuthService';
+// ¡CORRECCIÓN AQUÍ! Importamos los tipos desde Api.ts, no desde AuthService.ts
+import type { UserAuthDto } from '@/services/Api';
 
 // 1. Definimos la forma del State como una interfaz
 interface AuthState {
@@ -34,15 +33,16 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     // 3. Los getters infieren los tipos del 'state'
     isLoggedIn: (state) => !!state.token,
-    isAdmin: (state) => state.user?.userType === 'admin', 
+    isAdmin: (state) => state.user?.userType === 'admin',
   },
 
   actions: {
     async login(email: string, password: string) {
       this.loginError = null;
       try {
+        // AuthService ahora devuelve la respuesta completa de la API
         const response = await AuthService.login(email, password);
-        const { user, token } = response.data;
+        const { user, token } = response; // Desestructuramos directamente la respuesta
 
         if (user && token) {
           this.user = user;
@@ -51,19 +51,14 @@ export const useAuthStore = defineStore('auth', {
           localStorage.setItem('user', JSON.stringify(user));
           localStorage.setItem('token', token);
 
-          router.push(this.returnUrl || '/admin');
+          // Redirige a la URL de retorno o al dashboard por defecto
+          await router.push(this.returnUrl || '/admin');
         } else {
-          throw new Error(
-            response.data.message || 'Respuesta de login inválida'
-          );
+          throw new Error(response.message || 'Respuesta de login inválida');
         }
       } catch (error: any) {
-        console.error(
-          'Error de login:',
-          error.response?.data?.message || error.message
-        );
-        this.loginError =
-          error.response?.data?.message || 'Error al iniciar sesión.';
+        console.error('Error de login:', error.message);
+        this.loginError = error.message || 'Error al iniciar sesión.';
       }
     },
 
