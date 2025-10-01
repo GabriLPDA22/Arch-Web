@@ -13,7 +13,7 @@ export type UserAuthDto = {
 };
 
 export type AuthResponseDto = {
-  user: UserAuthDto; // Corrected type name
+  user: UserAuthDto;
   token: string;
   message?: string;
 };
@@ -73,6 +73,7 @@ export type EventCreateDto = {
   organizer?: string;
   externalUrl?: string;
   preferenceId?: string;
+  imageUrl?: string; // <-- AÑADIDO
 };
 
 export type EventUpdateDto = {
@@ -87,6 +88,7 @@ export type EventUpdateDto = {
   organizer?: string;
   externalUrl?: string;
   preferenceId?: string;
+  imageUrl?: string; // <-- AÑADIDO
 };
 
 export type EventImageCreateDto = {
@@ -113,7 +115,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...(init?.headers || {}),
   };
 
-  // Añade el token de autenticación si el usuario está logueado
   if (authStore.isLoggedIn && authStore.token) {
     headers['Authorization'] = `Bearer ${authStore.token}`;
   }
@@ -174,6 +175,33 @@ export const EventApi = {
       method: "DELETE",
     }),
 };
+
+// NUEVO CLIENTE PARA SUBIDA DE ARCHIVOS
+export const FilesApi = {
+  uploadImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const authStore = useAuthStore();
+    const headers: HeadersInit = {};
+    if (authStore.isLoggedIn && authStore.token) {
+      headers['Authorization'] = `Bearer ${authStore.token}`;
+    }
+
+    return fetch(`${BASE_URL}/api/Files/upload`, {
+      method: 'POST',
+      body: formData,
+      headers,
+    }).then(async res => {
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      return res.json() as Promise<{ imageUrl: string }>;
+    });
+  },
+};
+
 
 export const ImageApi = {
   upload: (data: EventImageCreateDto) =>

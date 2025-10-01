@@ -150,7 +150,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
-import { EventApi, type EventListDto, type EventDetailDto } from "@/services/Api";
+import { EventApi, FilesApi, type EventListDto, type EventDetailDto } from "@/services/Api"; // <--- MODIFICADO
 import { PreferencesService } from "@/services/PreferencesService";
 import EventForm from '@/components/EventForm.vue';
 import PaginationComponent from '@/components/PaginationComponent.vue';
@@ -176,6 +176,7 @@ const isFormModalOpen = ref(false);
 const isDeleteModalOpen = ref(false);
 const isEditing = ref(false);
 const selectedEvent = ref<EventDetailDto | null>(null);
+// MODIFICADO para incluir imageFile
 const eventFormComponent = ref<{ form: any; validationErrors: string[]; imageFile: File | null } | null>(null);
 
 // Filtros
@@ -269,23 +270,57 @@ const openCreateModal = () => { isEditing.value = false; selectedEvent.value = n
 const openEditModal = (event: EventListDto) => { isEditing.value = true; selectedEvent.value = event as EventDetailDto; isFormModalOpen.value = true; };
 const openDeleteModal = (event: EventListDto) => { selectedEvent.value = event as EventDetailDto; isDeleteModalOpen.value = true; };
 const closeModals = () => { isFormModalOpen.value = false; isDeleteModalOpen.value = false; selectedEvent.value = null; isEditing.value = false; };
+
+// LÓGICA DE GUARDADO COMPLETAMENTE NUEVA
 const handleSaveEvent = async () => {
   if (!eventFormComponent.value) return;
   submitting.value = true;
+
+  let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined;
+
   try {
+    // 1. Subir la imagen si existe una nueva
+    const imageFile = eventFormComponent.value.imageFile;
+    if (imageFile) {
+      console.log("🚀 Uploading new image...");
+      const uploadResult = await FilesApi.uploadImage(imageFile);
+      imageUrl = uploadResult.imageUrl;
+      console.log("✅ Image uploaded, URL:", imageUrl);
+    }
+
+    // 2. Construir el payload del evento con la URL de la imagen
     const form = eventFormComponent.value.form;
     const payload = {
-      name: form.name.trim(), description: form.description?.trim(), startDate: new Date(form.startLocal).toISOString(), endDate: form.endLocal ? new Date(form.endLocal).toISOString() : undefined, address: form.address.trim(), postcode: form.postcode.trim(), capacity: form.capacity, price: form.price || 0, preferenceId: form.preferenceId, externalUrl: form.externalUrl,
+      name: form.name.trim(),
+      description: form.description?.trim(),
+      startDate: new Date(form.startLocal).toISOString(),
+      endDate: form.endLocal ? new Date(form.endLocal).toISOString() : undefined,
+      address: form.address.trim(),
+      postcode: form.postcode.trim(),
+      capacity: form.capacity,
+      price: form.price || 0,
+      preferenceId: form.preferenceId,
+      externalUrl: form.externalUrl,
+      imageUrl: imageUrl, // <-- AÑADIR LA URL AQUÍ
     };
+
+    // 3. Crear o actualizar el evento
     if (isEditing.value && selectedEvent.value?.eventID) {
       await EventApi.update(selectedEvent.value.eventID, payload);
     } else {
       await EventApi.create(payload);
     }
+
     await fetchEvents(currentPage.value);
     closeModals();
-  } catch (error) { console.error("Failed to save event:", error); } finally { submitting.value = false; }
+  } catch (error) {
+    console.error("❌ Failed to save event:", error);
+    // Aquí podrías añadir una notificación de error al usuario
+  } finally {
+    submitting.value = false;
+  }
 };
+
 const handleDeleteConfirm = async () => {
   if (!selectedEvent.value?.eventID) return;
   try {
@@ -332,17 +367,8 @@ onMounted(async () => {
 .view-toggle .action-btn { border-radius: 0; }
 .view-toggle .action-btn:first-child { border-right: none; border-top-left-radius: 0.5rem; border-bottom-left-radius: 0.5rem; }
 .view-toggle .action-btn:last-child { border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
-
-/* Animación de spinning para el refresh */
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
+.spinning { animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .filter-buttons { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
 .filter-btn { background: #ffffff; border: 1px solid #e2e8f0; color: #4a5568; padding: 0.5rem 1rem; border-radius: 2rem; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
 .filter-btn:hover { background: #f7fafc; }
@@ -376,8 +402,6 @@ onMounted(async () => {
 .events-container.list .event-card { flex-direction: row; align-items: center; }
 .events-container.list .card-image { width: 200px; height: 120px; flex-shrink: 0; }
 .events-container.list .card-content { flex-grow: 1; }
-
-/* MODALES CON CLASES ESPECÍFICAS PARA EVITAR CONFLICTOS */
 .events-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 2rem; }
 .events-modal-container { background: #ffffff; border-radius: 1rem; max-width: 600px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 25px rgba(0, 0, 0, 0.25); }
 .delete-modal { max-width: 400px; }
