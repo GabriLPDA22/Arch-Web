@@ -1,10 +1,11 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '@/stores/auth.store';
+// arch-web/src/router/index.ts
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.store'
 
-// Importa tus componentes de vista
-import LoginView from '@/views/LoginView.vue';
-import AdminLayout from '@/components/layouts/AdminLayout.vue';
-import EventsDashboard from '@/views/EventsDashboard.vue';
+import LoginView from '@/views/LoginView.vue'
+import AdminLayout from '@/components/layouts/AdminLayout.vue'
+import EventsDashboard from '@/views/EventsDashboard.vue'
+import UnauthorizedView from '../views/UnauthorizedView.vue' 
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,42 +16,53 @@ const router = createRouter({
       component: LoginView,
     },
     {
+      path: '/unauthorized',
+      name: 'unauthorized',
+      component: UnauthorizedView, // 👈 Ruta para no autorizados
+    },
+    {
       path: '/admin',
-      component: AdminLayout, // El layout principal para el panel
+      component: AdminLayout,
+      meta: { requiresAdmin: true }, // 👈 Marca que requiere admin
       children: [
-        // <-- CAMBIO: Redirige /admin a /admin/events
         {
           path: '',
           redirect: '/admin/events',
         },
-        // <-- CAMBIO: La ruta ahora es 'events' para que coincida con el enlace
         {
           path: 'events',
-          name: 'admin-events', // Nombre actualizado para mayor claridad
+          name: 'admin-events',
           component: EventsDashboard,
         },
       ],
     },
-    // Redirige la raíz a la página de login o al dashboard si ya está logueado
     {
       path: '/',
       redirect: '/admin',
     },
   ],
-});
+})
 
-// Guardia de Navegación: Protege las rutas de administración
+// 🔐 GUARDIA DE NAVEGACIÓN MEJORADA
 router.beforeEach(async (to) => {
-  const authStore = useAuthStore();
-  const publicPages = ['/login'];
-  const authRequired = !publicPages.includes(to.path);
+  const authStore = useAuthStore()
+  const publicPages = ['/login', '/unauthorized']
+  const authRequired = !publicPages.includes(to.path)
 
-  // Si se requiere autenticación y el usuario no está logueado,
-  // redirige a la página de login.
+  // Si no está logueado y requiere autenticación → login
   if (authRequired && !authStore.isLoggedIn) {
-    authStore.returnUrl = to.fullPath;
-    return '/login';
+    authStore.returnUrl = to.fullPath
+    return '/login'
   }
-});
 
-export default router;
+  // 🚨 NUEVO: Si está logueado pero NO es admin y la ruta requiere admin → unauthorized
+  if (
+    authStore.isLoggedIn &&
+    to.matched.some((record) => record.meta.requiresAdmin) &&
+    !authStore.isAdmin
+  ) {
+    return '/unauthorized'
+  }
+})
+
+export default router

@@ -23,6 +23,7 @@
               placeholder="example@email.com"
               required
               autocomplete="email"
+              :disabled="isLoading"
             />
           </div>
 
@@ -37,6 +38,7 @@
                 placeholder="At least 8 characters"
                 required
                 autocomplete="current-password"
+                :disabled="isLoading"
               />
               <button type="button" class="toggle-password" @click="showPassword = !showPassword">
                 <svg
@@ -204,6 +206,12 @@ const handleLogin = async () => {
 .form-input:focus {
   border-color: #0d2954;
   box-shadow: 0 0 0 3px rgba(13, 41, 84, 0.1);
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f3f4f6;
 }
 
 .toggle-password {

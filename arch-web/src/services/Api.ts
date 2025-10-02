@@ -107,7 +107,7 @@ export type EventImageDto = {
   uploadedAt: string;
 };
 
-// --- FUNCIÓN DE REQUEST GENÉRICA ---
+// FUNCIÓN DE REQUEST GENÉRICA CON CAPTURA DE CÓDIGOS DE ERROR 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const authStore = useAuthStore();
   const headers: HeadersInit = {
@@ -125,9 +125,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `HTTP ${res.status}`);
+    // 🔥 MEJORA: Intentar parsear el JSON de error para obtener mensaje y código
+    try {
+      const errorData = await res.json();
+      const error = new Error(errorData.message || `HTTP ${res.status}`) as any;
+      
+      // 👉 Adjuntar el código de error si existe (ej: "NOT_ADMIN")
+      if (errorData.code) {
+        error.code = errorData.code;
+      }
+      
+      // También adjuntar la respuesta completa por si necesitamos más info
+      error.response = {
+        data: errorData,
+        status: res.status
+      };
+      
+      throw error;
+    } catch (parseError) {
+      // Si no se puede parsear como JSON, usar el texto plano
+      const text = await res.text().catch(() => "");
+      throw new Error(text || `HTTP ${res.status}`);
+    }
   }
+  
   if (res.status === 204) return undefined as unknown as T;
   return res.json() as Promise<T>;
 }
