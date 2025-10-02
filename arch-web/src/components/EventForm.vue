@@ -54,7 +54,7 @@
                 v-model.trim="form.externalUrl"
                 class="form-input"
                 type="url"
-                placeholder="https://your-event-website.com"
+                placeholder="https://event-website.com"
               />
             </div>
           </div>
