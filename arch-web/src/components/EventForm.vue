@@ -1,17 +1,12 @@
 <template>
   <form class="modern-form">
     <div class="form-sections">
-
       <div class="form-section">
-        <h3 class="section-title">
-          Basic Information
-        </h3>
+        <h3 class="section-title">Basic Information</h3>
 
         <div class="form-row">
           <div class="form-group full-width">
-            <label class="form-label">
-              Event Name <span class="required">*</span>
-            </label>
+            <label class="form-label"> Event Name <span class="required">*</span> </label>
             <div class="input-wrapper">
               <input
                 v-model.trim="form.name"
@@ -26,11 +21,13 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">
-              Category
-            </label>
+            <label class="form-label"> Category </label>
             <div class="select-wrapper">
-              <select v-model="form.preferenceId" class="form-select" :disabled="loadingPreferences">
+              <select
+                v-model="form.preferenceId"
+                class="form-select"
+                :disabled="loadingPreferences"
+              >
                 <option value="">
                   {{ loadingPreferences ? 'Loading categories...' : 'Choose a category' }}
                 </option>
@@ -46,9 +43,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">
-              External URL
-            </label>
+            <label class="form-label"> External URL </label>
             <div class="input-wrapper">
               <input
                 v-model.trim="form.externalUrl"
@@ -62,9 +57,7 @@
 
         <div class="form-row">
           <div class="form-group full-width">
-            <label class="form-label">
-              Description
-            </label>
+            <label class="form-label"> Description </label>
             <div class="textarea-wrapper">
               <textarea
                 v-model.trim="form.description"
@@ -78,60 +71,49 @@
       </div>
 
       <div class="form-section">
-        <h3 class="section-title">
-          Event Image
-        </h3>
+        <h3 class="section-title">Event Image</h3>
         <div class="form-group">
-            <label class="form-label">
-              Upload an image
-            </label>
-            <div class="image-upload-wrapper">
-              <input
-                type="file"
-                accept="image/png, image/jpeg, image/gif"
-                class="file-input"
-                @change="handleImageSelection"
-              />
-              <div v-if="imagePreviewUrl" class="image-preview">
-                <img :src="imagePreviewUrl" alt="Image preview" />
-              </div>
-               <div v-else class="image-placeholder">
-                Click to upload
-              </div>
+          <label class="form-label"> Upload an image </label>
+          <div class="image-upload-wrapper">
+            <input
+              type="file"
+              accept="image/png, image/jpeg, image/gif"
+              class="file-input"
+              @change="handleImageSelection"
+            />
+            <div v-if="imagePreviewUrl" class="image-preview">
+              <img :src="imagePreviewUrl" alt="Image preview" />
             </div>
+            <div v-else class="image-placeholder">Click to upload</div>
           </div>
+        </div>
       </div>
 
-
       <div class="form-section">
-        <h3 class="section-title">
-          Date & Time
-        </h3>
+        <h3 class="section-title">Date & Time</h3>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">
-              Start Date & Time <span class="required">*</span>
-            </label>
+            <label class="form-label"> Start Date & Time <span class="required">*</span> </label>
             <div class="input-wrapper">
               <input
                 v-model="form.startLocal"
                 class="form-input datetime-input"
                 type="datetime-local"
+                lang="en-GB"
                 required
               />
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">
-              End Date & Time
-            </label>
+            <label class="form-label"> End Date & Time </label>
             <div class="input-wrapper">
               <input
                 v-model="form.endLocal"
                 class="form-input datetime-input"
                 type="datetime-local"
+                lang="en-GB"
               />
             </div>
           </div>
@@ -139,15 +121,11 @@
       </div>
 
       <div class="form-section">
-        <h3 class="section-title">
-          Location
-        </h3>
+        <h3 class="section-title">Location</h3>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">
-              Address <span class="required">*</span>
-            </label>
+            <label class="form-label"> Address <span class="required">*</span> </label>
             <div class="input-wrapper">
               <input
                 v-model.trim="form.address"
@@ -160,9 +138,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">
-              Postcode <span class="required">*</span>
-            </label>
+            <label class="form-label"> Postcode <span class="required">*</span> </label>
             <div class="input-wrapper">
               <input
                 v-model.trim="form.postcode"
@@ -177,15 +153,11 @@
       </div>
 
       <div class="form-section">
-        <h3 class="section-title">
-          Event Details
-        </h3>
+        <h3 class="section-title">Event Details</h3>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">
-              Ticket Price (£)
-            </label>
+            <label class="form-label"> Ticket Price (£) </label>
             <div class="input-wrapper price-input">
               <span class="currency-symbol">£</span>
               <input
@@ -200,9 +172,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">
-              Capacity
-            </label>
+            <label class="form-label"> Capacity </label>
             <div class="input-wrapper">
               <input
                 v-model.number="form.capacity"
@@ -215,7 +185,6 @@
           </div>
         </div>
       </div>
-
     </div>
 
     <div v-if="validationErrors.length > 0" class="validation-summary">
@@ -230,30 +199,27 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch, computed, onMounted, ref } from 'vue';
-import type { EventDetailDto } from '@/services/Api';
-import { PreferencesService, type PreferenceDto } from '@/services/PreferencesService';
+import { reactive, watch, computed, onMounted, ref } from 'vue'
+import type { EventDetailDto } from '@/services/Api'
+import { PreferencesService, type PreferenceDto } from '@/services/PreferencesService'
 
 const props = defineProps<{
-  initialData?: EventDetailDto | null;
-}>();
+  initialData?: EventDetailDto | null
+}>()
 
-// --- NUEVO: State para la previsualización de imagen ---
-const imageFile = ref<File | null>(null);
-const imagePreviewUrl = ref<string | null>(null);
-
-// State for preferences
-const preferences = ref<PreferenceDto[]>([]);
-const loadingPreferences = ref(true);
+const imageFile = ref<File | null>(null)
+const imagePreviewUrl = ref<string | null>(null)
+const preferences = ref<PreferenceDto[]>([])
+const loadingPreferences = ref(true)
 
 // Convert ISO to local datetime format
 const fromIsoToLocal = (iso?: string): string => {
-  if (!iso) return "";
-  const dt = new Date(iso);
-  const offset = dt.getTimezoneOffset() * 60000;
-  const local = new Date(dt.getTime() - offset);
-  return local.toISOString().slice(0, 16);
-};
+  if (!iso) return ''
+  const dt = new Date(iso)
+  const offset = dt.getTimezoneOffset() * 60000
+  const local = new Date(dt.getTime() - offset)
+  return local.toISOString().slice(0, 16)
+}
 
 const form = reactive({
   name: '',
@@ -266,96 +232,90 @@ const form = reactive({
   address: '',
   externalUrl: '',
   description: '',
-});
+})
 
-// Load preferences from API
 const loadPreferences = async () => {
   try {
-    preferences.value = await PreferencesService.getAll();
+    preferences.value = await PreferencesService.getAll()
   } catch (error) {
-    console.error('Failed to load preferences:', error);
+    console.error('Failed to load preferences:', error)
   } finally {
-    loadingPreferences.value = false;
+    loadingPreferences.value = false
   }
-};
+}
 
-// --- NUEVO: Método para manejar la selección de imagen ---
 const handleImageSelection = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
 
   if (file) {
-    imageFile.value = file;
-    // Crear una URL para la previsualización
-    imagePreviewUrl.value = URL.createObjectURL(file);
+    imageFile.value = file
+    imagePreviewUrl.value = URL.createObjectURL(file)
   } else {
-    imageFile.value = null;
-    imagePreviewUrl.value = null;
+    imageFile.value = null
+    imagePreviewUrl.value = null
   }
-};
+}
 
-
-// Form validation
 const validationErrors = computed(() => {
-  const errors: string[] = [];
+  const errors: string[] = []
 
   if (!form.name.trim()) {
-    errors.push("Event name is required");
+    errors.push('Event name is required')
   }
 
   if (!form.startLocal) {
-    errors.push("Start date and time is required");
+    errors.push('Start date and time is required')
   }
 
   if (!form.address.trim()) {
-    errors.push("Address is required");
+    errors.push('Address is required')
   }
 
   if (!form.postcode.trim()) {
-    errors.push("Postcode is required");
+    errors.push('Postcode is required')
   }
 
   if (form.endLocal && form.startLocal && new Date(form.endLocal) <= new Date(form.startLocal)) {
-    errors.push("End time must be after start time");
+    errors.push('End time must be after start time')
   }
 
   if (form.price !== null && form.price < 0) {
-    errors.push("Price cannot be negative");
+    errors.push('Price cannot be negative')
   }
 
   if (form.capacity !== null && form.capacity < 0) {
-    errors.push("Capacity cannot be negative");
+    errors.push('Capacity cannot be negative')
   }
 
-  return errors;
-});
+  return errors
+})
 
-// Watch for changes in initial data and populate form
-watch(() => props.initialData, (newData) => {
-  form.name = newData?.name ?? '';
-  form.startLocal = fromIsoToLocal(newData?.startDate);
-  form.endLocal = fromIsoToLocal(newData?.endDate);
-  form.capacity = newData?.capacity ?? null;
-  form.price = newData?.price ?? null;
-  form.postcode = newData?.postcode ?? '';
-  form.preferenceId = newData?.preferenceId ?? null;
-  form.address = newData?.address ?? '';
-  form.externalUrl = newData?.externalUrl ?? '';
-  form.description = newData?.description ?? '';
+watch(
+  () => props.initialData,
+  (newData) => {
+    form.name = newData?.name ?? ''
+    form.startLocal = fromIsoToLocal(newData?.startDate)
+    form.endLocal = fromIsoToLocal(newData?.endDate)
+    form.capacity = newData?.capacity ?? null
+    form.price = newData?.price ?? null
+    form.postcode = newData?.postcode ?? ''
+    form.preferenceId = newData?.preferenceId ?? null
+    form.address = newData?.address ?? ''
+    form.externalUrl = newData?.externalUrl ?? ''
+    form.description = newData?.description ?? ''
 
-  // Reset image on data change
-  imageFile.value = null;
-  imagePreviewUrl.value = newData?.imageUrl || null;
+    imageFile.value = null
+    imagePreviewUrl.value = newData?.imageUrl || null
+  },
+  { immediate: true },
+)
 
-}, { immediate: true });
-
-// Load preferences on mount
 onMounted(() => {
-  loadPreferences();
-});
+  loadPreferences()
+})
 
-// Expose form state and validation for parent component
-defineExpose({ form, validationErrors, imageFile });
+defineExpose({ form, validationErrors, imageFile })
 </script>
 
 <style scoped>
@@ -395,9 +355,8 @@ defineExpose({ form, validationErrors, imageFile });
 }
 /* --- FIN de estilos añadidos --- */
 
-
 .modern-form {
-  color: #1a202c; /* Color de texto oscuro para legibilidad */
+  color: #1a202c;
 }
 
 .form-sections {
@@ -407,8 +366,8 @@ defineExpose({ form, validationErrors, imageFile });
 }
 
 .form-section {
-  background: #f8f9fa; /* Fondo gris muy claro */
-  border: 1px solid #e2e8f0; /* Borde estándar */
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
   border-radius: 1rem;
   padding: 1.5rem;
   transition: all 0.3s ease;
@@ -421,7 +380,7 @@ defineExpose({ form, validationErrors, imageFile });
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: #1a202c; /* Color de título oscuro */
+  color: #1a202c;
 }
 
 .form-row {
@@ -448,7 +407,7 @@ defineExpose({ form, validationErrors, imageFile });
 .form-label {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #4a5568; /* Color de etiqueta gris oscuro */
+  color: #4a5568;
   margin-bottom: 0.25rem;
 }
 
@@ -457,10 +416,12 @@ defineExpose({ form, validationErrors, imageFile });
   font-weight: 700;
 }
 
-.input-wrapper, .select-wrapper, .textarea-wrapper {
+.input-wrapper,
+.select-wrapper,
+.textarea-wrapper {
   position: relative;
-  background: #ffffff; /* Fondo blanco para los inputs */
-  border: 1px solid #e2e8f0; /* Borde gris */
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
   transition: all 0.3s ease;
   overflow: hidden;
@@ -474,20 +435,22 @@ defineExpose({ form, validationErrors, imageFile });
   box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.2);
 }
 
-.form-input, .form-select, .form-textarea {
+.form-input,
+.form-select,
+.form-textarea {
   width: 100%;
   background: transparent;
   border: none;
   outline: none;
   padding: 1rem 1.25rem;
-  color: #1a202c; /* Texto oscuro en inputs */
+  color: #1a202c;
   font-size: 1rem;
   font-weight: 500;
 }
 
 .form-input::placeholder,
 .form-textarea::placeholder {
-  color: #a0aec0; /* Color de placeholder gris */
+  color: #a0aec0;
 }
 
 .form-select {
@@ -559,7 +522,7 @@ defineExpose({ form, validationErrors, imageFile });
 }
 
 .validation-error::before {
-  content: "•";
+  content: '•';
   color: #ef4444;
   font-weight: bold;
   position: absolute;

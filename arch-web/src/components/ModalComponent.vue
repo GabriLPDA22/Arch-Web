@@ -1,22 +1,29 @@
 <template>
   <Transition name="modal-fade">
-    <div v-if="show" class="modal-backdrop" @click="close">
-      <div class="modal-content" @click.stop>
+    <div 
+      v-if="show" 
+      class="modal-backdrop" 
+      @mousedown="handleBackdropMouseDown"
+      @mouseup="handleBackdropMouseUp"
+    >
+      <div class="modal-content" @mousedown.stop @mouseup.stop>
         <header class="modal-header">
           <h3 class="modal-title">{{ title }}</h3>
           <button type="button" class="btn-close" @click="close">×</button>
         </header>
         <section class="modal-body">
-          <slot></slot> </section>
+          <slot></slot>
+        </section>
         <footer class="modal-footer">
-          <slot name="footer"></slot> </footer>
+          <slot name="footer"></slot>
+        </footer>
       </div>
     </div>
   </Transition>
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
   show: {
@@ -31,6 +38,21 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
+// Rastrear donde comenzó el mousedown
+const mouseDownOnBackdrop = ref(false);
+
+const handleBackdropMouseDown = () => {
+  mouseDownOnBackdrop.value = true;
+};
+
+const handleBackdropMouseUp = () => {
+  // Solo cerrar si tanto mousedown como mouseup ocurrieron en el backdrop
+  if (mouseDownOnBackdrop.value) {
+    close();
+  }
+  mouseDownOnBackdrop.value = false;
+};
+
 const close = () => {
   emit('close');
 };
@@ -41,6 +63,7 @@ watch(() => props.show, (show) => {
     document.body.style.overflow = 'hidden';
   } else {
     document.body.style.overflow = '';
+    mouseDownOnBackdrop.value = false; // Reset al cerrar
   }
 }, { immediate: true });
 </script>
@@ -58,6 +81,7 @@ watch(() => props.show, (show) => {
   align-items: center;
   z-index: 1000;
 }
+
 .modal-content {
   background-color: white;
   border-radius: 8px;
@@ -68,6 +92,7 @@ watch(() => props.show, (show) => {
   flex-direction: column;
   max-height: 90vh;
 }
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -75,12 +100,14 @@ watch(() => props.show, (show) => {
   padding: 1rem 1.5rem;
   border-bottom: 1px solid #e2e8f0;
 }
+
 .modal-title {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #1a202c;
 }
+
 .btn-close {
   border: none;
   background: transparent;
@@ -88,11 +115,18 @@ watch(() => props.show, (show) => {
   font-weight: 300;
   cursor: pointer;
   color: #718096;
+  transition: color 0.2s ease;
 }
+
+.btn-close:hover {
+  color: #1a202c;
+}
+
 .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
 }
+
 .modal-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid #e2e8f0;
@@ -100,11 +134,15 @@ watch(() => props.show, (show) => {
   justify-content: flex-end;
   gap: 0.75rem;
 }
+
 /* Animación de entrada/salida */
-.modal-fade-enter-active, .modal-fade-leave-active {
+.modal-fade-enter-active, 
+.modal-fade-leave-active {
   transition: opacity 0.3s ease;
 }
-.modal-fade-enter-from, .modal-fade-leave-to {
+
+.modal-fade-enter-from, 
+.modal-fade-leave-to {
   opacity: 0;
 }
 </style>
