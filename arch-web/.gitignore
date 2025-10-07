@@ -30,3 +30,6 @@ coverage
 *.tsbuildinfo
 ules/
 package-lock.json
+
+/dist
+*.d.ts

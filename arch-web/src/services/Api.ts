@@ -73,7 +73,7 @@ export type EventCreateDto = {
   organizer?: string;
   externalUrl?: string;
   preferenceId?: string;
-  imageUrl?: string; // <-- AÑADIDO
+  imageUrl?: string;
 };
 
 export type EventUpdateDto = {
@@ -88,7 +88,7 @@ export type EventUpdateDto = {
   organizer?: string;
   externalUrl?: string;
   preferenceId?: string;
-  imageUrl?: string; // <-- AÑADIDO
+  imageUrl?: string;
 };
 
 export type EventImageCreateDto = {
@@ -110,9 +110,9 @@ export type EventImageDto = {
 // FUNCIÓN DE REQUEST GENÉRICA CON CAPTURA DE CÓDIGOS DE ERROR 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const authStore = useAuthStore();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(init?.headers || {}),
+    ...(init?.headers as Record<string, string> || {}),
   };
 
   if (authStore.isLoggedIn && authStore.token) {
@@ -204,7 +204,7 @@ export const FilesApi = {
     formData.append('file', file);
 
     const authStore = useAuthStore();
-    const headers: HeadersInit = {};
+    const headers: Record<string, string> = {};
     if (authStore.isLoggedIn && authStore.token) {
       headers['Authorization'] = `Bearer ${authStore.token}`;
     }
@@ -222,7 +222,6 @@ export const FilesApi = {
     });
   },
 };
-
 
 export const ImageApi = {
   upload: (data: EventImageCreateDto) =>
