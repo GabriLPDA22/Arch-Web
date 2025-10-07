@@ -32,4 +32,7 @@ ules/
 package-lock.json
 
 /dist
+# TypeScript declaration files (auto-generated)
 *.d.ts
+!env.d.ts
+!vite-env.d.ts
