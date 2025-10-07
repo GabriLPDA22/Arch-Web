@@ -8,7 +8,7 @@
         </div>
         <button class="create-btn" @click="openCreateModal">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
+            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
           </svg>
           Create Event
         </button>
@@ -19,7 +19,9 @@
       <div class="toolbar-top">
         <div class="search-box">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="search-icon">
-            <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"/>
+            <path
+              d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"
+            />
           </svg>
           <input
             type="text"
@@ -27,49 +29,57 @@
             placeholder="Search events..."
             class="search-input"
           />
-          <button 
-            v-if="searchQuery" 
-            class="clear-btn"
-            @click="searchQuery = ''"
-          >
+          <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+              <path
+                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+              />
             </svg>
           </button>
         </div>
 
         <div class="toolbar-right">
           <button class="icon-btn" @click="refreshEvents" :disabled="refreshing" title="Refresh">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" :class="{ spinning: refreshing }">
-              <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              :class="{ spinning: refreshing }"
+            >
+              <path
+                d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+              />
             </svg>
           </button>
 
           <div class="view-toggle">
-            <button 
-              class="toggle-btn" 
+            <button
+              class="toggle-btn"
               :class="{ active: viewMode === 'grid' }"
               @click="viewMode = 'grid'"
               title="Grid View"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3"/>
+                <path d="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3" />
               </svg>
             </button>
-            <button 
-              class="toggle-btn" 
+            <button
+              class="toggle-btn"
               :class="{ active: viewMode === 'list' }"
               @click="viewMode = 'list'"
               title="List View"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8V5H4M4,19H8V15H4M4,14H8V10H4V14Z"/>
+                <path
+                  d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8V5H4M4,19H8V15H4M4,14H8V10H4V14Z"
+                />
               </svg>
             </button>
           </div>
         </div>
       </div>
-      
+
       <div class="filters">
         <button
           v-for="filter in filters"
@@ -89,34 +99,42 @@
     </div>
 
     <div v-else-if="!loading && events.length === 0" class="empty-state">
-      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1"/>
+      <svg
+        width="80"
+        height="80"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <path
+          d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1"
+        />
       </svg>
       <h3>No events found</h3>
-      <p>{{ searchQuery ? 'Try a different search term' : 'Start by creating your first event' }}</p>
+      <p>
+        {{ searchQuery ? 'Try a different search term' : 'Start by creating your first event' }}
+      </p>
       <button class="create-btn-empty" @click="openCreateModal">Create Event</button>
     </div>
 
     <div v-else class="events-container" :class="viewMode">
-      <div 
-        v-for="event in events" 
-        :key="event.eventID" 
-        class="event-card"
-      >
+      <div v-for="event in events" :key="event.eventID" class="event-card">
         <div class="event-image">
-          <img 
-            :src="event.imageUrl || 'https://placehold.co/400x250/0d2954/dbb067?text=Event'" 
-            :alt="event.name"
-          />
+          <img :src="event.imageUrl || defaultEventImage" :alt="event.name" />
           <div class="event-actions">
             <button class="action-btn edit" @click.stop="openEditModal(event)" title="Edit">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/>
+                <path
+                  d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
+                />
               </svg>
             </button>
             <button class="action-btn delete" @click.stop="openDeleteModal(event)" title="Delete">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/>
+                <path
+                  d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+                />
               </svg>
             </button>
           </div>
@@ -131,7 +149,9 @@
           <h3 class="event-title">{{ event.name }}</h3>
           <div class="event-location">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z"/>
+              <path
+                d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z"
+              />
             </svg>
             <span>{{ event.address }}</span>
           </div>
@@ -146,13 +166,13 @@
       @page-changed="goToPage"
     />
 
-    <ModalComponent 
-      :show="isFormModalOpen" 
+    <ModalComponent
+      :show="isFormModalOpen"
       :title="isEditing ? 'Edit Event' : 'Create New Event'"
       @close="closeModals"
     >
       <EventForm ref="eventFormComponent" :initial-data="selectedEvent" />
-      
+
       <template #footer>
         <button class="btn-secondary" @click="closeModals">Cancel</button>
         <button class="btn-primary" :disabled="submitting" @click="handleSaveEvent">
@@ -161,19 +181,18 @@
       </template>
     </ModalComponent>
 
-    <ModalComponent 
-      :show="isDeleteModalOpen" 
-      title="Delete Event"
-      @close="closeModals"
-    >
+    <ModalComponent :show="isDeleteModalOpen" title="Delete Event" @close="closeModals">
       <div class="delete-warning">
         <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16"/>
+          <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
         </svg>
-        <p>Are you sure you want to delete <strong>{{ selectedEvent?.name }}</strong>?</p>
+        <p>
+          Are you sure you want to delete <strong>{{ selectedEvent?.name }}</strong
+          >?
+        </p>
         <p class="warning-text">This action cannot be undone.</p>
       </div>
-      
+
       <template #footer>
         <button class="btn-secondary" @click="closeModals">Cancel</button>
         <button class="btn-danger" @click="handleDeleteConfirm">Delete Event</button>
@@ -183,160 +202,161 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
-import { EventApi, FilesApi, type EventListDto, type EventDetailDto } from "@/services/Api";
-import { PreferencesService } from "@/services/PreferencesService";
-import EventForm from '@/components/EventForm.vue';
-import PaginationComponent from '@/components/PaginationComponent.vue';
-import ModalComponent from '@/components/ModalComponent.vue';
+import { ref, watch, onMounted } from 'vue'
+import { EventApi, FilesApi, type EventListDto, type EventDetailDto } from '@/services/Api'
+import { PreferencesService } from '@/services/PreferencesService'
+import EventForm from '@/components/EventForm.vue'
+import PaginationComponent from '@/components/PaginationComponent.vue'
+import ModalComponent from '@/components/ModalComponent.vue'
+
+// ✅ Imagen por defecto para eventos sin imagen
+import defaultEventImage from '@/assets/images/default_event_image.jpg'
 
 // State
-const events = ref<EventListDto[]>([]);
-const loading = ref(false);
-const refreshing = ref(false);
-const submitting = ref(false);
-const searchQuery = ref("");
-const viewMode = ref('grid');
-const activeFilterId = ref<string | null>(null);
+const events = ref<EventListDto[]>([])
+const loading = ref(false)
+const refreshing = ref(false)
+const submitting = ref(false)
+const searchQuery = ref('')
+const viewMode = ref('grid')
+const activeFilterId = ref<string | null>(null)
 
 // Pagination
-const currentPage = ref(1);
-const totalPages = ref(1);
-const totalEvents = ref(0);
-const pageSize = 12;
+const currentPage = ref(1)
+const totalPages = ref(1)
+const totalEvents = ref(0)
+const pageSize = 12
 
 // Modal state
-const isFormModalOpen = ref(false);
-const isDeleteModalOpen = ref(false);
-const isEditing = ref(false);
-const selectedEvent = ref<EventDetailDto | null>(null);
-const eventFormComponent = ref<any>(null);
+const isFormModalOpen = ref(false)
+const isDeleteModalOpen = ref(false)
+const isEditing = ref(false)
+const selectedEvent = ref<EventDetailDto | null>(null)
+const eventFormComponent = ref<any>(null)
 
 // Filters
-const filters = ref<{ label: string; id: string | null; }[]>([
-  { label: "All Events", id: null }
-]);
+const filters = ref<{ label: string; id: string | null }[]>([{ label: 'All Events', id: null }])
 
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Fetch events
 const fetchEvents = async (page = 1) => {
-  loading.value = true;
-  currentPage.value = page;
-  
+  loading.value = true
+  currentPage.value = page
+
   try {
     const pagedResult = await EventApi.list({
       q: searchQuery.value.trim() || undefined,
       page: currentPage.value,
       pageSize: pageSize,
       preferenceId: activeFilterId.value || undefined,
-    });
+    })
 
-    events.value = pagedResult.items || [];
-    totalPages.value = pagedResult.totalPages || 1;
-    totalEvents.value = pagedResult.totalCount || 0;
+    events.value = pagedResult.items || []
+    totalPages.value = pagedResult.totalPages || 1
+    totalEvents.value = pagedResult.totalCount || 0
   } catch (error) {
-    console.error("Failed to load events:", error);
-    events.value = [];
+    console.error('Failed to load events:', error)
+    events.value = []
   } finally {
-    loading.value = false;
-    refreshing.value = false;
+    loading.value = false
+    refreshing.value = false
   }
-};
+}
 
 // Refresh events
 const refreshEvents = async () => {
-  if (refreshing.value) return;
-  refreshing.value = true;
-  await fetchEvents(currentPage.value);
-};
+  if (refreshing.value) return
+  refreshing.value = true
+  await fetchEvents(currentPage.value)
+}
 
 // Load filters
 const loadFilters = async () => {
   try {
-    const preferences = await PreferencesService.getAll();
-    const dynamicFilters = preferences.map(p => ({
+    const preferences = await PreferencesService.getAll()
+    const dynamicFilters = preferences.map((p) => ({
       label: p.name,
       id: p.preferenceId,
-    }));
-    filters.value = [{ label: "All Events", id: null }, ...dynamicFilters];
+    }))
+    filters.value = [{ label: 'All Events', id: null }, ...dynamicFilters]
   } catch (error) {
-    console.error("Failed to load filters:", error);
+    console.error('Failed to load filters:', error)
   }
-};
+}
 
 // Select filter
 const selectFilter = (id: string | null) => {
-  activeFilterId.value = id;
-  fetchEvents(1);
-};
+  activeFilterId.value = id
+  fetchEvents(1)
+}
 
 // Watch search query
 watch(searchQuery, () => {
   if (searchTimeout) {
-    clearTimeout(searchTimeout);
+    clearTimeout(searchTimeout)
   }
   searchTimeout = setTimeout(() => {
-    fetchEvents(1);
-  }, 500);
-});
+    fetchEvents(1)
+  }, 500)
+})
 
 // Pagination
 const goToPage = (page: number) => {
-  fetchEvents(page);
-};
+  fetchEvents(page)
+}
 
 // Format date
 const formatDate = (iso?: string) => {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString('en-GB', { 
-    day: '2-digit', 
-    month: 'short', 
-    year: 'numeric' 
-  });
-};
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
 
 // Modal handlers
 const openCreateModal = () => {
-  isEditing.value = false;
-  selectedEvent.value = null;
-  isFormModalOpen.value = true;
-};
+  isEditing.value = false
+  selectedEvent.value = null
+  isFormModalOpen.value = true
+}
 
 const openEditModal = (event: EventListDto) => {
-  isEditing.value = true;
-  selectedEvent.value = event as EventDetailDto;
-  isFormModalOpen.value = true;
-};
+  isEditing.value = true
+  selectedEvent.value = event as EventDetailDto
+  isFormModalOpen.value = true
+}
 
 const openDeleteModal = (event: EventListDto) => {
-  selectedEvent.value = event as EventDetailDto;
-  isDeleteModalOpen.value = true;
-};
+  selectedEvent.value = event as EventDetailDto
+  isDeleteModalOpen.value = true
+}
 
 const closeModals = () => {
-  isFormModalOpen.value = false;
-  isDeleteModalOpen.value = false;
-  selectedEvent.value = null;
-  isEditing.value = false;
-};
+  isFormModalOpen.value = false
+  isDeleteModalOpen.value = false
+  selectedEvent.value = null
+  isEditing.value = false
+}
 
 // Save event
 const handleSaveEvent = async () => {
-  if (!eventFormComponent.value) return;
-  
-  submitting.value = true;
+  if (!eventFormComponent.value) return
 
-  let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined;
+  submitting.value = true
+
+  let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined
 
   try {
-    const imageFile = eventFormComponent.value.imageFile;
+    const imageFile = eventFormComponent.value.imageFile
     if (imageFile) {
-      const uploadResult = await FilesApi.uploadImage(imageFile);
-      imageUrl = uploadResult.imageUrl;
+      const uploadResult = await FilesApi.uploadImage(imageFile)
+      imageUrl = uploadResult.imageUrl
     }
 
-    const form = eventFormComponent.value.form;
+    const form = eventFormComponent.value.form
     const payload = {
       name: form.name.trim(),
       description: form.description?.trim(),
@@ -349,41 +369,41 @@ const handleSaveEvent = async () => {
       preferenceId: form.preferenceId,
       externalUrl: form.externalUrl,
       imageUrl: imageUrl,
-    };
-
-    if (isEditing.value && selectedEvent.value?.eventID) {
-      await EventApi.update(selectedEvent.value.eventID, payload);
-    } else {
-      await EventApi.create(payload);
     }
 
-    await fetchEvents(isEditing.value ? currentPage.value : 1);
-    closeModals();
+    if (isEditing.value && selectedEvent.value?.eventID) {
+      await EventApi.update(selectedEvent.value.eventID, payload)
+    } else {
+      await EventApi.create(payload)
+    }
+
+    await fetchEvents(isEditing.value ? currentPage.value : 1)
+    closeModals()
   } catch (error) {
-    console.error("Failed to save event:", error);
+    console.error('Failed to save event:', error)
   } finally {
-    submitting.value = false;
+    submitting.value = false
   }
-};
+}
 
 // Delete event
 const handleDeleteConfirm = async () => {
-  if (!selectedEvent.value?.eventID) return;
-  
+  if (!selectedEvent.value?.eventID) return
+
   try {
-    await EventApi.remove(selectedEvent.value.eventID);
-    await fetchEvents(1);
-    closeModals();
+    await EventApi.remove(selectedEvent.value.eventID)
+    await fetchEvents(1)
+    closeModals()
   } catch (error) {
-    console.error("Failed to delete event:", error);
+    console.error('Failed to delete event:', error)
   }
-};
+}
 
 // Lifecycle
 onMounted(async () => {
-  await fetchEvents();
-  await loadFilters();
-});
+  await fetchEvents()
+  await loadFilters()
+})
 </script>
 
 <style scoped>
@@ -595,8 +615,12 @@ onMounted(async () => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* View Toggle */
