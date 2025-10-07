@@ -1,7 +1,7 @@
 // src/services/Api.ts
 import { useAuthStore } from "@/stores/auth.store";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5011";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://72.60.23.12";
 
 // --- TIPOS DE DATOS (DTOs) ---
 
