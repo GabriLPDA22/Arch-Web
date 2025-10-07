@@ -1,26 +1,32 @@
-# Vue.js SPA - Reescritura de URLs
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
   
-  # Si el archivo o directorio existe, sirve directamente
+  # 🔒 FORZAR HTTPS (MUY IMPORTANTE EN PRODUCCIÓN)
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  
+  # Si la ruta comienza con /api, no aplicar las reglas de SPA
+  # (Útil si tienes un backend en el mismo dominio)
+  RewriteRule ^api/ - [L]
+  
+  # Para todas las demás rutas que no sean archivos o directorios existentes
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  
-  # Si no existe, redirige todo a index.html
   RewriteRule . /index.html [L]
 </IfModule>
 
-# Compresión GZIP para mejor rendimiento
+# Habilitar compresión GZIP para mejorar el rendimiento
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml
+  AddOutputFilterByType DEFLATE font/woff font/woff2 image/svg+xml
 </IfModule>
 
-# Cache de assets estáticos
+# Configurar caché para archivos estáticos
 <IfModule mod_expires.c>
   ExpiresActive On
   
-  # Imágenes
+  # Imágenes - cache largo
   ExpiresByType image/jpg "access plus 1 year"
   ExpiresByType image/jpeg "access plus 1 year"
   ExpiresByType image/gif "access plus 1 year"
@@ -29,18 +35,18 @@
   ExpiresByType image/svg+xml "access plus 1 year"
   ExpiresByType image/x-icon "access plus 1 year"
   
-  # CSS y JavaScript
+  # CSS y JavaScript - 1 mes (o 1 año si usas hashes en nombres)
   ExpiresByType text/css "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
   ExpiresByType application/javascript "access plus 1 year"
-  ExpiresByType application/x-javascript "access plus 1 year"
   
-  # Fuentes
+  # Fuentes - cache largo
   ExpiresByType font/woff "access plus 1 year"
   ExpiresByType font/woff2 "access plus 1 year"
   ExpiresByType application/font-woff "access plus 1 year"
   ExpiresByType application/font-woff2 "access plus 1 year"
   
-  # HTML (sin cache)
+  # HTML - sin cache (para que siempre cargue la última versión)
   ExpiresByType text/html "access plus 0 seconds"
 </IfModule>
 
@@ -60,7 +66,10 @@
   # Evitar MIME sniffing
   Header always set X-Content-Type-Options "nosniff"
   
-  # Cache de assets con hash
+  # Referrer policy
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  
+  # Cache inmutable para assets con hash (Vite añade hash a los nombres)
   <FilesMatch "\.(js|css|jpg|jpeg|png|gif|webp|svg|ico|woff|woff2)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
