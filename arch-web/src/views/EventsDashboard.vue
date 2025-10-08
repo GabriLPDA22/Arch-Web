@@ -535,7 +535,7 @@ onMounted(async () => {
 
 .clear-btn {
   position: absolute;
-  right: 0.5rem;
+  right: -3.5rem;
   top: 50%;
   transform: translateY(-50%);
   background: #f3f4f6;
