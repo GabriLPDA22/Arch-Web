@@ -28,7 +28,7 @@
                 class="form-select"
                 :disabled="loadingPreferences"
               >
-                <option value="">
+                <option :value="null">
                   {{ loadingPreferences ? 'Loading categories...' : 'Choose a category' }}
                 </option>
                 <option
@@ -95,27 +95,20 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label"> Start Date & Time <span class="required">*</span> </label>
-            <div class="input-wrapper">
-              <input
-                v-model="form.startLocal"
-                class="form-input datetime-input"
-                type="datetime-local"
-                lang="en-GB"
-                required
-              />
-            </div>
+            <DateTimePicker
+              v-model="form.startLocal"
+              placeholder="Select start date & time"
+              :required="true"
+            />
           </div>
 
           <div class="form-group">
             <label class="form-label"> End Date & Time </label>
-            <div class="input-wrapper">
-              <input
-                v-model="form.endLocal"
-                class="form-input datetime-input"
-                type="datetime-local"
-                lang="en-GB"
-              />
-            </div>
+            <DateTimePicker
+              v-model="form.endLocal"
+              placeholder="Select end date & time"
+              :min-date="form.startLocal ? new Date(form.startLocal) : undefined"
+            />
           </div>
         </div>
       </div>
@@ -195,13 +188,19 @@
         </li>
       </ul>
     </div>
+
+    <div v-if="preferencesError" class="validation-summary" style="background: rgba(239, 68, 68, 0.1);">
+      <h4 class="validation-title">❌ Error loading categories:</h4>
+      <p style="color: #c53030; margin: 0;">{{ preferencesError }}</p>
+    </div>
   </form>
 </template>
 
 <script setup lang="ts">
 import { reactive, watch, computed, onMounted, ref } from 'vue'
 import type { EventDetailDto } from '@/services/Api'
-import { PreferencesService, type PreferenceDto } from '@/services/PreferencesService'
+import { PreferencesApi, type PreferenceDto } from '@/services/Api'
+import DateTimePicker from './CustomCalendar.vue'
 
 const props = defineProps<{
   initialData?: EventDetailDto | null
@@ -211,8 +210,8 @@ const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
 const preferences = ref<PreferenceDto[]>([])
 const loadingPreferences = ref(true)
+const preferencesError = ref<string | null>(null)
 
-// Convert ISO to local datetime format
 const fromIsoToLocal = (iso?: string): string => {
   if (!iso) return ''
   const dt = new Date(iso)
@@ -236,9 +235,12 @@ const form = reactive({
 
 const loadPreferences = async () => {
   try {
-    preferences.value = await PreferencesService.getAll()
-  } catch (error) {
-    console.error('Failed to load preferences:', error)
+    loadingPreferences.value = true
+    preferencesError.value = null
+    preferences.value = await PreferencesApi.getAll()
+  } catch (error: any) {
+    console.error('❌ Failed to load preferences:', error)
+    preferencesError.value = error.message || 'Failed to load categories'
   } finally {
     loadingPreferences.value = false
   }
@@ -259,56 +261,50 @@ const handleImageSelection = (event: Event) => {
 
 const validationErrors = computed(() => {
   const errors: string[] = []
-
-  if (!form.name.trim()) {
-    errors.push('Event name is required')
-  }
-
-  if (!form.startLocal) {
-    errors.push('Start date and time is required')
-  }
-
-  if (!form.address.trim()) {
-    errors.push('Address is required')
-  }
-
-  if (!form.postcode.trim()) {
-    errors.push('Postcode is required')
-  }
-
+  if (!form.name.trim()) errors.push('Event name is required')
+  if (!form.startLocal) errors.push('Start date and time is required')
+  if (!form.address.trim()) errors.push('Address is required')
+  if (!form.postcode.trim()) errors.push('Postcode is required')
   if (form.endLocal && form.startLocal && new Date(form.endLocal) <= new Date(form.startLocal)) {
     errors.push('End time must be after start time')
   }
-
-  if (form.price !== null && form.price < 0) {
-    errors.push('Price cannot be negative')
-  }
-
-  if (form.capacity !== null && form.capacity < 0) {
-    errors.push('Capacity cannot be negative')
-  }
-
+  if (form.price !== null && form.price < 0) errors.push('Price cannot be negative')
+  if (form.capacity !== null && form.capacity < 0) errors.push('Capacity cannot be negative')
   return errors
 })
 
+// ✅ --- LÓGICA CORREGIDA ---
+// Este 'watch' observa tanto los datos del evento como la lista de preferencias.
+// Solo se ejecuta para rellenar el formulario cuando AMBAS cosas están listas.
 watch(
-  () => props.initialData,
-  (newData) => {
-    form.name = newData?.name ?? ''
-    form.startLocal = fromIsoToLocal(newData?.startDate)
-    form.endLocal = fromIsoToLocal(newData?.endDate)
-    form.capacity = newData?.capacity ?? null
-    form.price = newData?.price ?? null
-    form.postcode = newData?.postcode ?? ''
-    form.preferenceId = newData?.preferenceId ?? null
-    form.address = newData?.address ?? ''
-    form.externalUrl = newData?.externalUrl ?? ''
-    form.description = newData?.description ?? ''
+  [() => props.initialData, preferences],
+  ([newData, prefs]) => {
+    // Si tenemos los datos del evento Y la lista de preferencias ya se ha cargado...
+    if (newData && prefs.length > 0) {
+      form.name = newData.name ?? ''
+      form.startLocal = fromIsoToLocal(newData.startDate)
+      form.endLocal = fromIsoToLocal(newData.endDate)
+      form.capacity = newData.capacity ?? null
+      form.price = newData.price ?? null
+      form.postcode = newData.postcode ?? ''
+      form.preferenceId = newData.preferenceId ?? null
+      form.address = newData.address ?? ''
+      form.externalUrl = newData.externalUrl ?? ''
+      form.description = newData.description ?? ''
 
-    imageFile.value = null
-    imagePreviewUrl.value = newData?.imageUrl || null
+      imageFile.value = null
+      imagePreviewUrl.value = newData.imageUrl || null
+    } else if (!newData) {
+        // Si no hay datos (ej. al crear un evento nuevo), reseteamos el formulario
+        Object.assign(form, {
+            name: '', startLocal: '', endLocal: '', capacity: null, price: null,
+            postcode: '', preferenceId: null, address: '', externalUrl: '', description: ''
+        });
+        imageFile.value = null;
+        imagePreviewUrl.value = null;
+    }
   },
-  { immediate: true },
+  { deep: true, immediate: true }
 )
 
 onMounted(() => {
@@ -319,7 +315,15 @@ defineExpose({ form, validationErrors, imageFile })
 </script>
 
 <style scoped>
-/* --- ESTILOS AÑADIDOS para la subida de imagen --- */
+.modern-form {
+  color: #1a202c;
+  box-sizing: border-box;
+}
+
+.modern-form * {
+  box-sizing: border-box;
+}
+
 .image-upload-wrapper {
   position: relative;
   width: 100%;
@@ -333,10 +337,12 @@ defineExpose({ form, validationErrors, imageFile })
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .image-upload-wrapper:hover {
   border-color: #dbb067;
   background-color: #f8f9fa;
 }
+
 .file-input {
   position: absolute;
   width: 100%;
@@ -344,19 +350,16 @@ defineExpose({ form, validationErrors, imageFile })
   opacity: 0;
   cursor: pointer;
 }
+
 .image-preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .image-placeholder {
   color: #a0aec0;
   font-weight: 500;
-}
-/* --- FIN de estilos añadidos --- */
-
-.modern-form {
-  color: #1a202c;
 }
 
 .form-sections {
@@ -398,6 +401,8 @@ defineExpose({ form, validationErrors, imageFile })
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .form-group.full-width {
@@ -425,6 +430,8 @@ defineExpose({ form, validationErrors, imageFile })
   border-radius: 0.75rem;
   transition: all 0.3s ease;
   overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .input-wrapper:focus-within,
@@ -446,6 +453,7 @@ defineExpose({ form, validationErrors, imageFile })
   color: #1a202c;
   font-size: 1rem;
   font-weight: 500;
+  box-sizing: border-box;
 }
 
 .form-input::placeholder,
@@ -467,10 +475,10 @@ defineExpose({ form, validationErrors, imageFile })
   min-height: 100px;
   resize: vertical;
   font-family: inherit;
-}
-
-.datetime-input {
-  font-family: inherit;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  line-height: 1.6;
 }
 
 .price-input {
@@ -489,7 +497,6 @@ defineExpose({ form, validationErrors, imageFile })
   padding-left: 0.5rem;
 }
 
-/* Validation Summary */
 .validation-summary {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
@@ -529,7 +536,6 @@ defineExpose({ form, validationErrors, imageFile })
   left: -1rem;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .form-row {
     grid-template-columns: 1fr;
@@ -549,7 +555,6 @@ defineExpose({ form, validationErrors, imageFile })
   }
 }
 
-/* Custom scrollbar for textarea */
 .form-textarea::-webkit-scrollbar {
   width: 8px;
 }

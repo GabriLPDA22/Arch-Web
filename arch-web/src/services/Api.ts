@@ -1,7 +1,7 @@
 // src/services/Api.ts
 import { useAuthStore } from "@/stores/auth.store";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://72.60.23.12";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://api.arch-api.co.uk";
 
 // --- TIPOS DE DATOS (DTOs) ---
 
@@ -38,7 +38,7 @@ export type EventListDto = {
   capacity?: number;
   price: number;
   organizer?: string;
-  preferenceName?: string;
+  preferenceName?: string; // cambio de id a name
   imageUrl?: string;
   externalUrl?: string;
 };
@@ -107,7 +107,19 @@ export type EventImageDto = {
   uploadedAt: string;
 };
 
-// FUNCIÓN DE REQUEST GENÉRICA CON CAPTURA DE CÓDIGOS DE ERROR 
+export type PreferenceDto = {
+  preferenceId: string;
+  name: string;
+};
+
+export type CreatePreferenceDto = {
+  name: string;
+};
+
+export type UpdatePreferenceDto = {
+  name: string;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const authStore = useAuthStore();
   const headers: Record<string, string> = {
@@ -125,17 +137,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    // 🔥 MEJORA: Intentar parsear el JSON de error para obtener mensaje y código
     try {
       const errorData = await res.json();
       const error = new Error(errorData.message || `HTTP ${res.status}`) as any;
       
-      // 👉 Adjuntar el código de error si existe (ej: "NOT_ADMIN")
       if (errorData.code) {
         error.code = errorData.code;
       }
       
-      // También adjuntar la respuesta completa por si necesitamos más info
       error.response = {
         data: errorData,
         status: res.status
@@ -143,7 +152,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       
       throw error;
     } catch (parseError) {
-      // Si no se puede parsear como JSON, usar el texto plano
       const text = await res.text().catch(() => "");
       throw new Error(text || `HTTP ${res.status}`);
     }
@@ -197,7 +205,29 @@ export const EventApi = {
     }),
 };
 
-// NUEVO CLIENTE PARA SUBIDA DE ARCHIVOS
+export const PreferencesApi = {
+  getAll: () => request<PreferenceDto[]>(`/api/preferences`),
+  
+  getById: (id: string) => request<PreferenceDto>(`/api/preferences/${id}`),
+  
+  create: (data: CreatePreferenceDto) =>
+    request<PreferenceDto>(`/api/preferences`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  update: (id: string, data: UpdatePreferenceDto) =>
+    request<void>(`/api/preferences/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  
+  delete: (id: string) =>
+    request<void>(`/api/preferences/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
 export const FilesApi = {
   uploadImage: (file: File) => {
     const formData = new FormData();

@@ -98,7 +98,7 @@
       <p>Loading events...</p>
     </div>
 
-    <div v-else-if="!loading && events.length === 0" class="empty-state">
+    <div v-else-if="!loading && filteredEvents.length === 0" class="empty-state">
       <svg
         width="80"
         height="80"
@@ -119,7 +119,7 @@
     </div>
 
     <div v-else class="events-container" :class="viewMode">
-      <div v-for="event in events" :key="event.eventID" class="event-card">
+      <div v-for="event in paginatedEvents" :key="event.eventID" class="event-card">
         <div class="event-image">
           <img :src="event.imageUrl || defaultEventImage" :alt="event.name" />
           <div class="event-actions">
@@ -160,7 +160,7 @@
     </div>
 
     <PaginationComponent
-      v-if="!loading && events.length > 0"
+      v-if="!loading && filteredEvents.length > 0"
       :current-page="currentPage"
       :total-pages="totalPages"
       @page-changed="goToPage"
@@ -202,79 +202,87 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
-import { EventApi, FilesApi, type EventListDto, type EventDetailDto } from '@/services/Api'
-import { PreferencesService } from '@/services/PreferencesService'
+import { ref, watch, onMounted, computed } from 'vue'
+import { EventApi, FilesApi, type EventListDto, type EventDetailDto, PreferencesApi } from '@/services/Api'
 import EventForm from '@/components/EventForm.vue'
 import PaginationComponent from '@/components/PaginationComponent.vue'
 import ModalComponent from '@/components/ModalComponent.vue'
-
-// ✅ Imagen por defecto para eventos sin imagen
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
 
-// State
-const events = ref<EventListDto[]>([])
+const allEvents = ref<EventListDto[]>([])
 const loading = ref(false)
 const refreshing = ref(false)
 const submitting = ref(false)
 const searchQuery = ref('')
 const viewMode = ref('grid')
 const activeFilterId = ref<string | null>(null)
-
-// Pagination
 const currentPage = ref(1)
-const totalPages = ref(1)
-const totalEvents = ref(0)
 const pageSize = 12
-
-// Modal state
 const isFormModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedEvent = ref<EventDetailDto | null>(null)
 const eventFormComponent = ref<any>(null)
-
-// Filters
 const filters = ref<{ label: string; id: string | null }[]>([{ label: 'All Events', id: null }])
 
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-
-// Fetch events
-const fetchEvents = async (page = 1) => {
+const fetchEvents = async () => {
   loading.value = true
-  currentPage.value = page
-
   try {
-    const pagedResult = await EventApi.list({
-      q: searchQuery.value.trim() || undefined,
-      page: currentPage.value,
-      pageSize: pageSize,
-      preferenceId: activeFilterId.value || undefined,
-    })
-
-    events.value = pagedResult.items || []
-    totalPages.value = pagedResult.totalPages || 1
-    totalEvents.value = pagedResult.totalCount || 0
+    const pagedResult = await EventApi.list({ pageSize: 9999, page: 1 })
+    allEvents.value = pagedResult.items || []
   } catch (error) {
     console.error('Failed to load events:', error)
-    events.value = []
+    allEvents.value = []
   } finally {
     loading.value = false
     refreshing.value = false
   }
 }
 
-// Refresh events
+const filteredEvents = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  let eventsToFilter = allEvents.value
+
+  if (activeFilterId.value) {
+    const activeFilter = filters.value.find(f => f.id === activeFilterId.value)
+    if (activeFilter) {
+      eventsToFilter = eventsToFilter.filter(
+        (event) => event.preferenceName === activeFilter.label
+      )
+    }
+  }
+
+  if (query) {
+    eventsToFilter = eventsToFilter.filter(
+      (event) =>
+        (event.name && event.name.toLowerCase().includes(query)) ||
+        (event.address && event.address.toLowerCase().includes(query)) ||
+        (event.preferenceName && event.preferenceName.toLowerCase().includes(query))
+    )
+  }
+
+  return eventsToFilter
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredEvents.value.length / pageSize)
+})
+
+const paginatedEvents = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  const end = start + pageSize
+  return filteredEvents.value.slice(start, end)
+})
+
 const refreshEvents = async () => {
   if (refreshing.value) return
   refreshing.value = true
-  await fetchEvents(currentPage.value)
+  await fetchEvents()
 }
 
-// Load filters
 const loadFilters = async () => {
   try {
-    const preferences = await PreferencesService.getAll()
+    const preferences = await PreferencesApi.getAll()
     const dynamicFilters = preferences.map((p) => ({
       label: p.name,
       id: p.preferenceId,
@@ -285,28 +293,19 @@ const loadFilters = async () => {
   }
 }
 
-// Select filter
 const selectFilter = (id: string | null) => {
   activeFilterId.value = id
-  fetchEvents(1)
+  currentPage.value = 1
 }
 
-// Watch search query
 watch(searchQuery, () => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout)
-  }
-  searchTimeout = setTimeout(() => {
-    fetchEvents(1)
-  }, 500)
+  currentPage.value = 1
 })
 
-// Pagination
 const goToPage = (page: number) => {
-  fetchEvents(page)
+  currentPage.value = page
 }
 
-// Format date
 const formatDate = (iso?: string) => {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-GB', {
@@ -316,17 +315,24 @@ const formatDate = (iso?: string) => {
   })
 }
 
-// Modal handlers
 const openCreateModal = () => {
   isEditing.value = false
   selectedEvent.value = null
   isFormModalOpen.value = true
 }
 
-const openEditModal = (event: EventListDto) => {
+const openEditModal = async (event: EventListDto) => {
   isEditing.value = true
-  selectedEvent.value = event as EventDetailDto
+  selectedEvent.value = null
   isFormModalOpen.value = true
+
+  try {
+    const fullEventDetails = await EventApi.get(event.eventID)
+    selectedEvent.value = fullEventDetails
+  } catch (error) {
+    console.error('Failed to fetch event details for editing:', error)
+    closeModals()
+  }
 }
 
 const openDeleteModal = (event: EventListDto) => {
@@ -341,12 +347,9 @@ const closeModals = () => {
   isEditing.value = false
 }
 
-// Save event
 const handleSaveEvent = async () => {
   if (!eventFormComponent.value) return
-
   submitting.value = true
-
   let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined
 
   try {
@@ -377,7 +380,7 @@ const handleSaveEvent = async () => {
       await EventApi.create(payload)
     }
 
-    await fetchEvents(isEditing.value ? currentPage.value : 1)
+    await fetchEvents()
     closeModals()
   } catch (error) {
     console.error('Failed to save event:', error)
@@ -386,20 +389,17 @@ const handleSaveEvent = async () => {
   }
 }
 
-// Delete event
 const handleDeleteConfirm = async () => {
   if (!selectedEvent.value?.eventID) return
-
   try {
     await EventApi.remove(selectedEvent.value.eventID)
-    await fetchEvents(1)
+    await fetchEvents()
     closeModals()
   } catch (error) {
     console.error('Failed to delete event:', error)
   }
 }
 
-// Lifecycle
 onMounted(async () => {
   await fetchEvents()
   await loadFilters()
@@ -486,7 +486,6 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-/* MODIFICADO: Contenedor para la fila superior */
 .toolbar-top {
   display: flex;
   justify-content: space-between;
@@ -988,7 +987,6 @@ onMounted(async () => {
     padding-bottom: 1.5rem;
   }
 
-  /* MODIFICADO: Ajuste para la nueva estructura */
   .toolbar-top {
     flex-direction: column;
     align-items: stretch;

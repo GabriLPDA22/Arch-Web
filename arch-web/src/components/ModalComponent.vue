@@ -87,7 +87,7 @@ watch(() => props.show, (show) => {
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
   width: 90%;
-  max-width: 600px;
+  max-width: 750px;
   display: flex;
   flex-direction: column;
   max-height: 90vh;
