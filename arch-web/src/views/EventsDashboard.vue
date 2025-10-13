@@ -80,16 +80,36 @@
         </div>
       </div>
 
-      <div class="filters">
-        <button
-          v-for="filter in filters"
-          :key="filter.id || 'all'"
-          class="filter-btn"
-          :class="{ active: activeFilterId === filter.id }"
-          @click="selectFilter(filter.id)"
-        >
-          {{ filter.label }}
-        </button>
+      <div class="filters-wrapper">
+        <div class="filter-section">
+          <h3 class="filter-group-title">Status</h3>
+          <div class="filters-group">
+            <button
+              v-for="filter in statusFilters"
+              :key="filter.id || 'all'"
+              class="filter-btn"
+              :class="{ active: activeFilterId === filter.id }"
+              @click="selectFilter(filter.id)"
+            >
+              {{ filter.label }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="categoryFilters.length > 0" class="filter-section">
+          <h3 class="filter-group-title">Categories</h3>
+          <div class="filters-group">
+            <button
+              v-for="filter in categoryFilters"
+              :key="filter.id"
+              class="filter-btn"
+              :class="{ active: activeFilterId === filter.id }"
+              @click="selectFilter(filter.id)"
+            >
+              {{ filter.label }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -119,7 +139,15 @@
     </div>
 
     <div v-else class="events-container" :class="viewMode">
-      <div v-for="event in paginatedEvents" :key="event.eventID" class="event-card">
+      <div
+        v-for="event in paginatedEvents"
+        :key="event.eventID"
+        class="event-card"
+        :class="{ 'is-finished': isEventFinished(event) }"
+      >
+        <div v-if="isEventFinished(event)" class="finished-overlay">
+          <span class="finished-text">Event Finished</span>
+        </div>
         <div class="event-image">
           <img :src="event.imageUrl || defaultEventImage" :alt="event.name" />
           <div class="event-actions">
@@ -140,7 +168,6 @@
           </div>
           <div class="event-price">£{{ event.price?.toFixed(2) || '0.00' }}</div>
         </div>
-
         <div class="event-content">
           <div class="event-meta">
             <span class="event-category">{{ event.preferenceName || 'General' }}</span>
@@ -172,7 +199,6 @@
       @close="closeModals"
     >
       <EventForm ref="eventFormComponent" :initial-data="selectedEvent" />
-
       <template #footer>
         <button class="btn-secondary" @click="closeModals">Cancel</button>
         <button class="btn-primary" :disabled="submitting" @click="handleSaveEvent">
@@ -192,7 +218,6 @@
         </p>
         <p class="warning-text">This action cannot be undone.</p>
       </div>
-
       <template #footer>
         <button class="btn-secondary" @click="closeModals">Cancel</button>
         <button class="btn-danger" @click="handleDeleteConfirm">Delete Event</button>
@@ -223,7 +248,19 @@ const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedEvent = ref<EventDetailDto | null>(null)
 const eventFormComponent = ref<any>(null)
-const filters = ref<{ label: string; id: string | null }[]>([{ label: 'All Events', id: null }])
+const filters = ref<{ label: string; id: string | null }[]>([])
+
+const isEventFinished = (event: EventListDto): boolean => {
+  const eventEndDateString = event.endDate || event.startDate
+  if (!eventEndDateString) return false
+  const eventEndDate = new Date(eventEndDateString)
+  const now = new Date()
+  eventEndDate.setHours(23, 59, 59, 999)
+  return now > eventEndDate
+}
+
+const statusFilters = computed(() => filters.value.filter(f => ['all', 'active', 'finished', null].includes(f.id)));
+const categoryFilters = computed(() => filters.value.filter(f => !['all', 'active', 'finished', null].includes(f.id)));
 
 const fetchEvents = async () => {
   loading.value = true
@@ -240,15 +277,17 @@ const fetchEvents = async () => {
 }
 
 const filteredEvents = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
   let eventsToFilter = allEvents.value
+  const query = searchQuery.value.trim().toLowerCase()
 
-  if (activeFilterId.value) {
+  if (activeFilterId.value === 'active') {
+    eventsToFilter = eventsToFilter.filter(event => !isEventFinished(event));
+  } else if (activeFilterId.value === 'finished') {
+    eventsToFilter = eventsToFilter.filter(event => isEventFinished(event));
+  } else if (activeFilterId.value) {
     const activeFilter = filters.value.find(f => f.id === activeFilterId.value)
     if (activeFilter) {
-      eventsToFilter = eventsToFilter.filter(
-        (event) => event.preferenceName === activeFilter.label
-      )
+      eventsToFilter = eventsToFilter.filter(event => event.preferenceName === activeFilter.label)
     }
   }
 
@@ -281,15 +320,21 @@ const refreshEvents = async () => {
 }
 
 const loadFilters = async () => {
+  const staticFilters = [
+    { label: 'All Events', id: null },
+    { label: 'Active Events', id: 'active' },
+    { label: 'Finished Events', id: 'finished' },
+  ];
   try {
     const preferences = await PreferencesApi.getAll()
     const dynamicFilters = preferences.map((p) => ({
       label: p.name,
       id: p.preferenceId,
     }))
-    filters.value = [{ label: 'All Events', id: null }, ...dynamicFilters]
+    filters.value = [...staticFilters, ...dynamicFilters]
   } catch (error) {
     console.error('Failed to load filters:', error)
+    filters.value = staticFilters;
   }
 }
 
@@ -325,7 +370,6 @@ const openEditModal = async (event: EventListDto) => {
   isEditing.value = true
   selectedEvent.value = null
   isFormModalOpen.value = true
-
   try {
     const fullEventDetails = await EventApi.get(event.eventID)
     selectedEvent.value = fullEventDetails
@@ -379,7 +423,6 @@ const handleSaveEvent = async () => {
     } else {
       await EventApi.create(payload)
     }
-
     await fetchEvents()
     closeModals()
   } catch (error) {
@@ -412,7 +455,6 @@ onMounted(async () => {
   min-height: 100vh;
 }
 
-/* ===== HEADER ===== */
 .dashboard-header {
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
@@ -476,7 +518,6 @@ onMounted(async () => {
   transform: translateY(0);
 }
 
-/* ===== TOOLBAR ===== */
 .toolbar {
   display: flex;
   flex-direction: column;
@@ -500,7 +541,6 @@ onMounted(async () => {
   align-items: center;
 }
 
-/* Search Box */
 .search-box {
   position: relative;
   flex: 1;
@@ -555,8 +595,29 @@ onMounted(async () => {
   color: #374151;
 }
 
-/* Filters */
-.filters {
+.filters-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.filter-group-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-left: 0.25rem;
+  margin: 0;
+}
+
+.filters-group {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
@@ -585,7 +646,6 @@ onMounted(async () => {
   color: #ffffff;
 }
 
-/* Icon Button */
 .icon-btn {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -622,7 +682,6 @@ onMounted(async () => {
   }
 }
 
-/* View Toggle */
 .view-toggle {
   display: flex;
   background: #ffffff;
@@ -653,13 +712,13 @@ onMounted(async () => {
   color: #ffffff;
 }
 
-/* ===== LOADING & EMPTY STATES ===== */
-.loading-state {
+.loading-state, .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 4rem 2rem;
+  text-align: center;
   color: #6b7280;
 }
 
@@ -671,16 +730,6 @@ onMounted(async () => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-bottom: 1rem;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-  color: #9ca3af;
 }
 
 .empty-state svg {
@@ -714,7 +763,6 @@ onMounted(async () => {
   background: #1a3d6e;
 }
 
-/* ===== EVENTS GRID ===== */
 .events-container {
   display: grid;
   gap: 1.5rem;
@@ -732,6 +780,7 @@ onMounted(async () => {
 }
 
 .event-card {
+  position: relative;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
@@ -747,7 +796,7 @@ onMounted(async () => {
 
 .events-container.list .event-card {
   display: flex;
-  flex-direction: row;
+  height: 180px; /* <-- ALTURA FIJA PARA LA VISTA DE LISTA */
 }
 
 .event-image {
@@ -759,7 +808,7 @@ onMounted(async () => {
 
 .events-container.list .event-image {
   width: 280px;
-  height: auto;
+  height: 100%; /* <-- IMAGEN OCUPA EL 100% DE LA ALTURA DE LA TARJETA */
   flex-shrink: 0;
 }
 
@@ -805,16 +854,13 @@ onMounted(async () => {
   background: rgba(59, 130, 246, 0.9);
   color: #ffffff;
 }
-
 .action-btn.edit:hover {
   background: rgba(37, 99, 235, 1);
 }
-
 .action-btn.delete {
   background: rgba(239, 68, 68, 0.9);
   color: #ffffff;
 }
-
 .action-btn.delete:hover {
   background: rgba(220, 38, 38, 1);
 }
@@ -834,6 +880,9 @@ onMounted(async () => {
 
 .event-content {
   padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Centra el contenido verticalmente en la vista de lista */
 }
 
 .event-meta {
@@ -883,10 +932,7 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-/* ===== MODAL BUTTONS ===== */
-.btn-primary,
-.btn-secondary,
-.btn-danger {
+.btn-primary, .btn-secondary, .btn-danger {
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 10px;
@@ -895,124 +941,39 @@ onMounted(async () => {
   transition: all 0.2s ease;
   font-size: 0.95rem;
 }
+.btn-primary { background: #dbb067; color: #ffffff; }
+.btn-primary:hover { background: #c9a05a; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-secondary { background: #f3f4f6; color: #4b5563; }
+.btn-secondary:hover { background: #e5e7eb; }
+.btn-danger { background: #ef4444; color: #ffffff; }
+.btn-danger:hover { background: #dc2626; }
 
-.btn-primary {
-  background: #dbb067;
-  color: #ffffff;
-}
+.delete-warning { text-align: center; padding: 1rem; }
+.delete-warning svg { color: #f59e0b; margin-bottom: 1rem; }
+.delete-warning p { color: #4b5563; margin: 0 0 0.5rem 0; font-size: 1rem; }
+.delete-warning strong { color: #1a202c; }
+.warning-text { color: #9ca3af; font-size: 0.875rem; }
 
-.btn-primary:hover {
-  background: #c9a05a;
-}
+.event-card.is-finished { position: relative; }
+.event-card.is-finished .event-image,
+.event-card.is-finished .event-content { filter: grayscale(90%); opacity: 0.7; }
+.finished-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; z-index: 10; border-radius: 16px; pointer-events: none; }
+.events-container.grid .event-card.is-finished .finished-overlay { align-items: flex-start; padding-top: 30%; }
+.finished-text { font-size: 1.6rem; font-weight: 700; color: #ef4444; padding: 0.75rem 1.5rem; border: 3px solid #ef4444; border-radius: 12px; background: rgba(255, 255, 255, 0.9); transform: rotate(-10deg); user-select: none; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); }
 
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.btn-secondary:hover {
-  background: #e5e7eb;
-}
-
-.btn-danger {
-  background: #ef4444;
-  color: #ffffff;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-/* Delete Warning */
-.delete-warning {
-  text-align: center;
-  padding: 1rem;
-}
-
-.delete-warning svg {
-  color: #f59e0b;
-  margin-bottom: 1rem;
-}
-
-.delete-warning p {
-  color: #4b5563;
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-}
-
-.delete-warning strong {
-  color: #1a202c;
-}
-
-.warning-text {
-  color: #9ca3af;
-  font-size: 0.875rem;
-}
-
-/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-  .dashboard-header,
-  .toolbar,
-  .events-container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .dashboard-header {
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-  }
-
-  .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .page-title {
-    font-size: 1.75rem;
-  }
-
-  .create-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .toolbar {
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-  }
-
-  .toolbar-top {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .search-box {
-    max-width: 100%;
-  }
-
-  .toolbar-right {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .events-container.grid {
-    grid-template-columns: 1fr;
-  }
-
-  .events-container.list .event-card {
-    flex-direction: column;
-  }
-
-  .events-container.list .event-image {
-    width: 100%;
-    height: 200px;
-  }
+  .dashboard-header, .toolbar, .events-container { padding-left: 1rem; padding-right: 1rem; }
+  .dashboard-header { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  .header-content { flex-direction: column; align-items: flex-start; }
+  .page-title { font-size: 1.75rem; }
+  .create-btn { width: 100%; justify-content: center; }
+  .toolbar { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  .toolbar-top { flex-direction: column; align-items: stretch; gap: 1rem; }
+  .search-box { max-width: 100%; }
+  .toolbar-right { width: 100%; justify-content: space-between; }
+  .events-container.grid { grid-template-columns: 1fr; }
+  .events-container.list .event-card { flex-direction: column; height: auto; /* En móvil, la altura vuelve a ser automática */ }
+  .events-container.list .event-image { width: 100%; height: 200px; }
 }
 </style>
