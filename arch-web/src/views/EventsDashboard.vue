@@ -86,7 +86,7 @@
           <div class="filters-group">
             <button
               v-for="filter in statusFilters"
-              :key="filter.id || 'all'"
+              :key="filter.id"
               class="filter-btn"
               :class="{ active: activeFilterId === filter.id }"
               @click="selectFilter(filter.id)"
@@ -228,7 +228,13 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
-import { EventApi, FilesApi, type EventListDto, type EventDetailDto, PreferencesApi } from '@/services/Api'
+import {
+  EventApi,
+  FilesApi,
+  type EventListDto,
+  type EventDetailDto,
+  PreferencesApi,
+} from '@/services/Api'
 import EventForm from '@/components/EventForm.vue'
 import PaginationComponent from '@/components/PaginationComponent.vue'
 import ModalComponent from '@/components/ModalComponent.vue'
@@ -240,7 +246,7 @@ const refreshing = ref(false)
 const submitting = ref(false)
 const searchQuery = ref('')
 const viewMode = ref('grid')
-const activeFilterId = ref<string | null>(null)
+const activeFilterId = ref<string | null>('all') // Default to 'all'
 const currentPage = ref(1)
 const pageSize = 12
 const isFormModalOpen = ref(false)
@@ -248,7 +254,7 @@ const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedEvent = ref<EventDetailDto | null>(null)
 const eventFormComponent = ref<any>(null)
-const filters = ref<{ label: string; id: string | null }[]>([])
+const filters = ref<{ label: string; id: string }[]>([])
 
 const isEventFinished = (event: EventListDto): boolean => {
   const eventEndDateString = event.endDate || event.startDate
@@ -259,8 +265,12 @@ const isEventFinished = (event: EventListDto): boolean => {
   return now > eventEndDate
 }
 
-const statusFilters = computed(() => filters.value.filter(f => ['all', 'active', 'finished', null].includes(f.id)));
-const categoryFilters = computed(() => filters.value.filter(f => !['all', 'active', 'finished', null].includes(f.id)));
+const statusFilters = computed(() =>
+  filters.value.filter((f) => ['all', 'active', 'finished'].includes(f.id!)),
+)
+const categoryFilters = computed(() =>
+  filters.value.filter((f) => !['all', 'active', 'finished'].includes(f.id!)),
+)
 
 const fetchEvents = async () => {
   loading.value = true
@@ -281,13 +291,13 @@ const filteredEvents = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
 
   if (activeFilterId.value === 'active') {
-    eventsToFilter = eventsToFilter.filter(event => !isEventFinished(event));
+    eventsToFilter = eventsToFilter.filter((event) => !isEventFinished(event))
   } else if (activeFilterId.value === 'finished') {
-    eventsToFilter = eventsToFilter.filter(event => isEventFinished(event));
-  } else if (activeFilterId.value) {
-    const activeFilter = filters.value.find(f => f.id === activeFilterId.value)
+    eventsToFilter = eventsToFilter.filter((event) => isEventFinished(event))
+  } else if (activeFilterId.value && activeFilterId.value !== 'all') {
+    const activeFilter = filters.value.find((f) => f.id === activeFilterId.value)
     if (activeFilter) {
-      eventsToFilter = eventsToFilter.filter(event => event.preferenceName === activeFilter.label)
+      eventsToFilter = eventsToFilter.filter((event) => event.preferenceName === activeFilter.label)
     }
   }
 
@@ -296,7 +306,7 @@ const filteredEvents = computed(() => {
       (event) =>
         (event.name && event.name.toLowerCase().includes(query)) ||
         (event.address && event.address.toLowerCase().includes(query)) ||
-        (event.preferenceName && event.preferenceName.toLowerCase().includes(query))
+        (event.preferenceName && event.preferenceName.toLowerCase().includes(query)),
     )
   }
 
@@ -321,10 +331,10 @@ const refreshEvents = async () => {
 
 const loadFilters = async () => {
   const staticFilters = [
-    { label: 'All Events', id: null },
+    { label: 'All Events', id: 'all' },
     { label: 'Active Events', id: 'active' },
     { label: 'Finished Events', id: 'finished' },
-  ];
+  ]
   try {
     const preferences = await PreferencesApi.getAll()
     const dynamicFilters = preferences.map((p) => ({
@@ -334,7 +344,7 @@ const loadFilters = async () => {
     filters.value = [...staticFilters, ...dynamicFilters]
   } catch (error) {
     console.error('Failed to load filters:', error)
-    filters.value = staticFilters;
+    filters.value = staticFilters
   }
 }
 
@@ -712,7 +722,8 @@ onMounted(async () => {
   color: #ffffff;
 }
 
-.loading-state, .empty-state {
+.loading-state,
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -796,7 +807,7 @@ onMounted(async () => {
 
 .events-container.list .event-card {
   display: flex;
-  height: 180px; /* <-- ALTURA FIJA PARA LA VISTA DE LISTA */
+  height: 180px;
 }
 
 .event-image {
@@ -808,7 +819,7 @@ onMounted(async () => {
 
 .events-container.list .event-image {
   width: 280px;
-  height: 100%; /* <-- IMAGEN OCUPA EL 100% DE LA ALTURA DE LA TARJETA */
+  height: 100%;
   flex-shrink: 0;
 }
 
@@ -882,7 +893,7 @@ onMounted(async () => {
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Centra el contenido verticalmente en la vista de lista */
+  justify-content: center;
 }
 
 .event-meta {
@@ -932,7 +943,9 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.btn-primary, .btn-secondary, .btn-danger {
+.btn-primary,
+.btn-secondary,
+.btn-danger {
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 10px;
@@ -941,39 +954,141 @@ onMounted(async () => {
   transition: all 0.2s ease;
   font-size: 0.95rem;
 }
-.btn-primary { background: #dbb067; color: #ffffff; }
-.btn-primary:hover { background: #c9a05a; }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-secondary { background: #f3f4f6; color: #4b5563; }
-.btn-secondary:hover { background: #e5e7eb; }
-.btn-danger { background: #ef4444; color: #ffffff; }
-.btn-danger:hover { background: #dc2626; }
+.btn-primary {
+  background: #dbb067;
+  color: #ffffff;
+}
+.btn-primary:hover {
+  background: #c9a05a;
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+.btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+.btn-danger:hover {
+  background: #dc2626;
+}
 
-.delete-warning { text-align: center; padding: 1rem; }
-.delete-warning svg { color: #f59e0b; margin-bottom: 1rem; }
-.delete-warning p { color: #4b5563; margin: 0 0 0.5rem 0; font-size: 1rem; }
-.delete-warning strong { color: #1a202c; }
-.warning-text { color: #9ca3af; font-size: 0.875rem; }
+.delete-warning {
+  text-align: center;
+  padding: 1rem;
+}
+.delete-warning svg {
+  color: #f59e0b;
+  margin-bottom: 1rem;
+}
+.delete-warning p {
+  color: #4b5563;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+.delete-warning strong {
+  color: #1a202c;
+}
+.warning-text {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
 
-.event-card.is-finished { position: relative; }
+.event-card.is-finished {
+  position: relative;
+}
 .event-card.is-finished .event-image,
-.event-card.is-finished .event-content { filter: grayscale(90%); opacity: 0.7; }
-.finished-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; z-index: 10; border-radius: 16px; pointer-events: none; }
-.events-container.grid .event-card.is-finished .finished-overlay { align-items: flex-start; padding-top: 30%; }
-.finished-text { font-size: 1.6rem; font-weight: 700; color: #ef4444; padding: 0.75rem 1.5rem; border: 3px solid #ef4444; border-radius: 12px; background: rgba(255, 255, 255, 0.9); transform: rotate(-10deg); user-select: none; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); }
+.event-card.is-finished .event-content {
+  filter: grayscale(90%);
+  opacity: 0.7;
+}
+.finished-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 16px;
+  pointer-events: none;
+}
+.events-container.grid .event-card.is-finished .finished-overlay {
+  align-items: flex-start;
+  padding-top: 30%;
+}
+.finished-text {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ef4444;
+  padding: 0.75rem 1.5rem;
+  border: 3px solid #ef4444;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  transform: rotate(-10deg);
+  user-select: none;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
 
 @media (max-width: 768px) {
-  .dashboard-header, .toolbar, .events-container { padding-left: 1rem; padding-right: 1rem; }
-  .dashboard-header { padding-top: 1.5rem; padding-bottom: 1.5rem; }
-  .header-content { flex-direction: column; align-items: flex-start; }
-  .page-title { font-size: 1.75rem; }
-  .create-btn { width: 100%; justify-content: center; }
-  .toolbar { padding-top: 1.5rem; padding-bottom: 1.5rem; }
-  .toolbar-top { flex-direction: column; align-items: stretch; gap: 1rem; }
-  .search-box { max-width: 100%; }
-  .toolbar-right { width: 100%; justify-content: space-between; }
-  .events-container.grid { grid-template-columns: 1fr; }
-  .events-container.list .event-card { flex-direction: column; height: auto; /* En móvil, la altura vuelve a ser automática */ }
-  .events-container.list .event-image { width: 100%; height: 200px; }
+  .dashboard-header,
+  .toolbar,
+  .events-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .dashboard-header {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .page-title {
+    font-size: 1.75rem;
+  }
+  .create-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .toolbar {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+  .toolbar-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .search-box {
+    max-width: 100%;
+  }
+  .toolbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .events-container.grid {
+    grid-template-columns: 1fr;
+  }
+  .events-container.list .event-card {
+    flex-direction: column;
+    height: auto;
+  }
+  .events-container.list .event-image {
+    width: 100%;
+    height: 200px;
+  }
 }
 </style>
