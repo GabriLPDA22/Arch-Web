@@ -15,26 +15,64 @@
       </div>
     </div>
 
-    <div
-      v-if="deleteStatusMessage"
-      class="status-notification"
-      :class="{ error: deleteIsError, success: !deleteIsError }"
-    >
-      {{ deleteStatusMessage }}
-      <button type="button" @click="deleteStatusMessage = null" class="close-status">×</button>
+    <!-- ✅ Barra de búsqueda -->
+    <div class="search-container">
+      <div class="search-wrapper">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"
+          />
+        </svg>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search by name or email..."
+          class="search-input"
+          @input="handleSearchInput"
+        />
+        <button v-if="searchQuery" @click="clearSearch" class="clear-btn" title="Clear search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
+
     <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
       <p>Loading users...</p>
+    </div>
+
+    <div v-else-if="users.length === 0" class="empty-state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"
+        />
+      </svg>
+      <h3>No users found</h3>
+      <p v-if="searchQuery">Try adjusting your search criteria</p>
+      <p v-else>Get started by creating your first user</p>
     </div>
 
     <div v-else class="users-table-container">
       <table class="users-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th @click="handleSort('name')" class="sortable">
+              Name
+              <span v-if="sortBy === 'name'" class="sort-icon">{{
+                sortOrder === 'asc' ? '▲' : '▼'
+              }}</span>
+            </th>
             <th>Email</th>
-            <th>Role</th>
+            <th @click="handleSort('role')" class="sortable">
+              Role
+              <span v-if="sortBy === 'role'" class="sort-icon">{{
+                sortOrder === 'asc' ? '▲' : '▼'
+              }}</span>
+            </th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -78,7 +116,14 @@
       :title="isEditing ? 'Edit User' : 'Create New User'"
       @close="closeModals"
     >
-      <UserForm ref="userFormComponent" :user-id="selectedUserId" @user-saved="handleUserSaved" />
+      <UserForm
+        ref="userFormComponent"
+        :user-id="selectedUserId"
+        @user-saved="handleUserSaved"
+        @user-created="handleUserCreated"
+        @user-updated="handleUserUpdated"
+        @error="handleFormError"
+      />
     </ModalComponent>
 
     <ModalComponent :show="isDeleteModalOpen" title="Delete User" @close="closeModals">
@@ -103,9 +148,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { UserApi, type UserListDto } from '@/services/Api'
-import PaginationComponent from '@/components/PaginationComponent.vue'
-import ModalComponent from '@/components/ModalComponent.vue'
-import UserForm from '@/components/UserForm.vue'
+import { useToast } from '@/composables/useToast'
+import PaginationComponent from '@/components/ui/PaginationComponent.vue'
+import ModalComponent from '@/components/ui/ModalComponent.vue'
+import UserForm from '@/components/forms/UserForm.vue'
+
+const { success, error } = useToast()
 
 const users = ref<UserListDto[]>([])
 const loading = ref(true)
@@ -113,38 +161,65 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const pageSize = 10
 
+const sortBy = ref('name')
+const sortOrder = ref('asc')
+const searchQuery = ref('')
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
 const isFormModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedUserId = ref<string | null>(null)
 const userToDelete = ref<UserListDto | null>(null)
 
-// ✅ NUEVOS ESTADOS PARA LA NOTIFICACIÓN DE ELIMINACIÓN
-const deleteStatusMessage = ref<string | null>(null)
-const deleteIsError = ref(false)
-
-const showDeleteStatus = (message: string, isErrorType = false) => {
-  deleteStatusMessage.value = message
-  deleteIsError.value = isErrorType
-  // Ocultar mensaje después de 5 segundos
-  if (!isErrorType) {
-    setTimeout(() => {
-      deleteStatusMessage.value = null
-    }, 5000)
-  }
-}
-
 const fetchUsers = async () => {
   loading.value = true
   try {
-    const result = await UserApi.list({ page: currentPage.value, pageSize: pageSize })
+    const result = await UserApi.list({
+      q: searchQuery.value || undefined,
+      page: currentPage.value,
+      pageSize: pageSize,
+      sortBy: sortBy.value,
+      sortOrder: sortOrder.value,
+    })
     users.value = result.items
     totalPages.value = result.totalPages
-  } catch (error) {
-    console.error('Failed to load users:', error)
+  } catch (err: any) {
+    console.error('Failed to load users:', err)
+    error(
+      'Error Loading Users',
+      err?.response?.data?.message || 'Failed to fetch users from server',
+    )
   } finally {
     loading.value = false
   }
+}
+
+const handleSearchInput = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1
+    fetchUsers()
+  }, 500)
+}
+
+const clearSearch = () => {
+  searchQuery.value = ''
+  currentPage.value = 1
+  fetchUsers()
+}
+
+const handleSort = (column: 'name' | 'role') => {
+  if (sortBy.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = column
+    sortOrder.value = 'asc'
+  }
+  fetchUsers()
 }
 
 const goToPage = (page: number) => {
@@ -156,14 +231,12 @@ const openCreateModal = () => {
   isEditing.value = false
   selectedUserId.value = null
   isFormModalOpen.value = true
-  deleteStatusMessage.value = null // Limpiar notif al abrir modal
 }
 
 const openEditModal = (user: UserListDto) => {
   isEditing.value = true
   selectedUserId.value = user.userID
   isFormModalOpen.value = true
-  deleteStatusMessage.value = null // Limpiar notif al abrir modal
 }
 
 const openDeleteModal = (user: UserListDto) => {
@@ -177,18 +250,37 @@ const closeModals = () => {
   userToDelete.value = null
 }
 
+// ✅ Handler cuando se crea un usuario
+const handleUserCreated = () => {
+  closeModals()
+  selectedUserId.value = null
+  fetchUsers()
+  success('User Created!', 'The new user has been created successfully.')
+}
+
+// ✅ Handler cuando se actualiza un usuario
+const handleUserUpdated = () => {
+  closeModals()
+  selectedUserId.value = null
+  fetchUsers()
+  success('User Updated!', 'The user information has been updated successfully.')
+}
+
+// ✅ Handler genérico (para compatibilidad)
 const handleUserSaved = () => {
   closeModals()
   selectedUserId.value = null
   fetchUsers()
 }
 
-// ✅ CORRECCIÓN: Manejo de errores y mensajes personalizados
+// ✅ Handler de errores del formulario
+const handleFormError = (errorMessage: string) => {
+  error('Operation Failed', errorMessage)
+}
+
+// ✅ Confirmación de eliminación con toast
 const handleDeleteConfirm = async () => {
   if (!userToDelete.value?.userID) return
-
-  // Limpiar mensaje anterior
-  deleteStatusMessage.value = null
 
   try {
     await UserApi.delete(userToDelete.value.userID)
@@ -197,12 +289,14 @@ const handleDeleteConfirm = async () => {
       currentPage.value--
     }
 
-    handleUserSaved() // Cierra el modal y recarga usuarios
-    showDeleteStatus('User deleted successfully.', false) 
-  } catch (error: any) {
-    console.error('Failed to delete user:', error)
-    const errorMessage = error?.response?.data?.message || 'Unknown error while deleting user'
-    showDeleteStatus(`Error: ${errorMessage}`, true) 
+    closeModals()
+    fetchUsers()
+    success('User Deleted!', `${userToDelete.value.name} has been removed from the system.`)
+  } catch (err: any) {
+    console.error('Failed to delete user:', err)
+    const errorMessage =
+      err?.response?.data?.message || 'An unknown error occurred while deleting the user'
+    error('Deletion Failed', errorMessage)
   }
 }
 
@@ -210,49 +304,112 @@ onMounted(fetchUsers)
 </script>
 
 <style scoped>
-/* Estilos para la notificación de estado en el dashboard */
-.status-notification {
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 1.5rem auto 0; /* Centrar debajo del header */
+.search-container {
+  padding: 0 2.5rem;
   max-width: 1600px;
-  transition: all 0.3s ease;
+  margin: 1.5rem auto 0;
 }
 
-.status-notification.error {
-  background-color: #fee2e2;
-  color: #c53030;
-  border: 1px solid #fecaca;
+.search-wrapper {
+  position: relative;
+  max-width: 500px;
 }
 
-.status-notification.success {
-  background-color: #d1fae5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
 }
 
-.close-status {
-  background: none;
+.search-input {
+  width: 100%;
+  padding: 0.875rem 3rem 0.875rem 3rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1f2937;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #dbb067;
+  box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.1);
+}
+
+.clear-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
   border: none;
-  color: inherit;
-  font-size: 1.5rem;
+  color: #9ca3af;
   cursor: pointer;
-  line-height: 1;
-  margin-left: 1rem;
-  padding: 0;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  padding: 0.25rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
-.close-status:hover {
-  opacity: 1;
+.clear-btn:hover {
+  color: #6b7280;
+  background: #f3f4f6;
 }
 
-/* Resto de estilos del dashboard (se mantienen) */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.empty-state svg {
+  color: #d1d5db;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.users-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.users-table th.sortable:hover {
+  background-color: #f0f2f5;
+}
+
+.sort-icon {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 .dashboard {
   padding: 0;
   min-height: 100vh;
@@ -405,6 +562,11 @@ onMounted(fetchUsers)
 .delete-warning svg {
   color: #f59e0b;
   margin-bottom: 1rem;
+}
+.warning-text {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
 }
 .btn-secondary {
   background: #f3f4f6;

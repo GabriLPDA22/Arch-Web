@@ -2,7 +2,7 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="logo-container">
-        <img src="../assets/images/ARCH_Logo.svg" alt="ARCH Logo" class="logo-image" />
+        <img src="@/assets/images/ARCH_Logo.svg" alt="ARCH Logo" class="logo-image" />
         <div class="logo-text-wrapper">
           <h2 class="logo-title">ARCH</h2>
           <p class="logo-subtitle">Admin Panel</p>

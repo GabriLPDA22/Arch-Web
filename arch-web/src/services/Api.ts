@@ -1,214 +1,216 @@
 // src/services/Api.ts
-import { useAuthStore } from "@/stores/auth.store";
+import { useAuthStore } from '@/stores/auth.store'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 if (!BASE_URL) {
-  throw new Error("VITE_API_BASE_URL is not defined in the environment files. Please check your .env files.");
+  throw new Error(
+    'VITE_API_BASE_URL is not defined in the environment files. Please check your .env files.',
+  )
 }
 
 // --- TIPOS DE DATOS (DTOs) ---
 
 export type UserAuthDto = {
-  userID: string;
-  email: string;
-  name: string;
-  userType: 'admin' | 'user';
-};
+  userID: string
+  email: string
+  name: string
+  userType: 'admin' | 'user'
+}
 
 export type AuthResponseDto = {
-  user: UserAuthDto;
-  token: string;
-  message?: string;
-};
+  user: UserAuthDto
+  token: string
+  message?: string
+}
 
 // ✅ NUEVOS TIPOS PARA USER MANAGEMENT
 export type UserListDto = {
-  userID: string;
-  name: string;
-  email: string;
-  userType: 'admin' | 'user';
-  isVerified: boolean;
-  createdAt?: string;
-  preferences?: string[];
-};
+  userID: string
+  name: string
+  email: string
+  userType: 'admin' | 'user'
+  isVerified: boolean
+  createdAt?: string
+  preferences?: string[]
+}
 
 export type UserDetailDto = {
-  userID: string;
-  name: string;
-  email: string;
-  userType: 'admin' | 'user';
-  isVerified: boolean;
-  dateOfBirth?: string;
-  profilePicture?: string;
-  preferences?: string[];
-  createdAt?: string;
-};
+  userID: string
+  name: string
+  email: string
+  userType: 'admin' | 'user'
+  isVerified: boolean
+  dateOfBirth?: string
+  profilePicture?: string
+  preferences?: string[]
+  createdAt?: string
+}
 
 export type UserCreateDto = {
-  name: string;
-  email: string;
-  password: string;
-  userType: 'admin' | 'user';
-  preferences?: string[];
-};
+  name: string
+  email: string
+  password: string
+  userType: 'admin' | 'user'
+  preferences?: string[]
+}
 
 export type UserUpdateDto = {
-  name?: string;
-  email?: string;
-  password?: string;
-  userType?: 'admin' | 'user';
-  preferences?: string[];
-  dateOfBirth?: string;
-  profilePicture?: string;
-};
+  name?: string
+  email?: string
+  password?: string
+  userType?: 'admin' | 'user'
+  preferences?: string[]
+  dateOfBirth?: string
+  profilePicture?: string
+}
 
 export type PagedResult<T> = {
-  items: T[];
-  totalCount: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
+  items: T[]
+  totalCount: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
 
 export type EventListDto = {
-  eventID: string;
-  name: string;
-  startDate: string;
-  endDate?: string;
-  address: string;
-  postcode: string;
-  description?: string;
-  status: string;
-  capacity?: number;
-  price: number;
-  organizer?: string;
-  preferenceName?: string;
-  imageUrl?: string;
-  externalUrl?: string;
-};
+  eventID: string
+  name: string
+  startDate: string
+  endDate?: string
+  address: string
+  postcode: string
+  description?: string
+  status: string
+  capacity?: number
+  price: number
+  organizer?: string
+  preferenceName?: string
+  imageUrl?: string
+  externalUrl?: string
+}
 
 export type EventDetailDto = {
-  eventID: string;
-  name: string;
-  startDate: string;
-  endDate?: string;
-  address: string;
-  postcode: string;
-  details?: string;
-  description?: string;
-  status: string;
-  capacity?: number;
-  price: number;
-  organizer?: string;
-  preferenceId?: string;
-  externalUrl?: string;
-  imageUrl?: string;
-};
+  eventID: string
+  name: string
+  startDate: string
+  endDate?: string
+  address: string
+  postcode: string
+  details?: string
+  description?: string
+  status: string
+  capacity?: number
+  price: number
+  organizer?: string
+  preferenceId?: string
+  externalUrl?: string
+  imageUrl?: string
+}
 
 export type EventCreateDto = {
-  name: string;
-  startDate: string;
-  endDate?: string;
-  address: string;
-  postcode: string;
-  description?: string;
-  capacity?: number;
-  price?: number;
-  organizer?: string;
-  externalUrl?: string;
-  preferenceId?: string;
-  imageUrl?: string;
-};
+  name: string
+  startDate: string
+  endDate?: string
+  address: string
+  postcode: string
+  description?: string
+  capacity?: number
+  price?: number
+  organizer?: string
+  externalUrl?: string
+  preferenceId?: string
+  imageUrl?: string
+}
 
 export type EventUpdateDto = {
-  name?: string;
-  startDate?: string;
-  endDate?: string;
-  address?: string;
-  postcode?: string;
-  description?: string;
-  capacity?: number;
-  price?: number;
-  organizer?: string;
-  externalUrl?: string;
-  preferenceId?: string;
-  imageUrl?: string;
-};
+  name?: string
+  startDate?: string
+  endDate?: string
+  address?: string
+  postcode?: string
+  description?: string
+  capacity?: number
+  price?: number
+  organizer?: string
+  externalUrl?: string
+  preferenceId?: string
+  imageUrl?: string
+}
 
 export type EventImageCreateDto = {
-  EventID: string;
-  ImageURL: string;
-  IsPrimary?: boolean;
-  Caption?: string;
-};
+  EventID: string
+  ImageURL: string
+  IsPrimary?: boolean
+  Caption?: string
+}
 
 export type EventImageDto = {
-  imageID: string;
-  eventID: string;
-  imageURL: string;
-  isPrimary: boolean;
-  caption?: string;
-  uploadedAt: string;
-};
+  imageID: string
+  eventID: string
+  imageURL: string
+  isPrimary: boolean
+  caption?: string
+  uploadedAt: string
+}
 
 export type PreferenceDto = {
-  preferenceId: string;
-  name: string;
-};
+  preferenceId: string
+  name: string
+}
 
 export type CreatePreferenceDto = {
-  name: string;
-};
+  name: string
+}
 
 export type UpdatePreferenceDto = {
-  name: string;
-};
+  name: string
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const authStore = useAuthStore();
+  const authStore = useAuthStore()
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(init?.headers as Record<string, string> || {}),
-  };
+    'Content-Type': 'application/json',
+    ...((init?.headers as Record<string, string>) || {}),
+  }
 
   if (authStore.isLoggedIn && authStore.token) {
-    headers['Authorization'] = `Bearer ${authStore.token}`;
+    headers['Authorization'] = `Bearer ${authStore.token}`
   }
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
     headers,
-  });
+  })
 
   if (!res.ok) {
     if (res.status === 401) {
-      console.error("Received 401 Unauthorized. Logging out.");
-      authStore.logout();
+      console.error('Received 401 Unauthorized. Logging out.')
+      authStore.logout()
     }
 
     try {
-      const errorData = await res.json();
-      const error = new Error(errorData.message || `HTTP ${res.status}`) as any;
-      
+      const errorData = await res.json()
+      const error = new Error(errorData.message || `HTTP ${res.status}`) as any
+
       if (errorData.code) {
-        error.code = errorData.code;
+        error.code = errorData.code
       }
-      
+
       error.response = {
         data: errorData,
-        status: res.status
-      };
-      
-      throw error;
+        status: res.status,
+      }
+
+      throw error
     } catch (parseError) {
-      const text = await res.text().catch(() => "");
-      throw new Error(text || `HTTP ${res.status}`);
+      const text = await res.text().catch(() => '')
+      throw new Error(text || `HTTP ${res.status}`)
     }
   }
-  
-  if (res.status === 204) return undefined as unknown as T;
-  return res.json() as Promise<T>;
+
+  if (res.status === 204) return undefined as unknown as T
+  return res.json() as Promise<T>
 }
 
 // --- CLIENTES DE API ---
@@ -219,126 +221,140 @@ export const AuthApi = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
-};
+}
 
-// ✅ NUEVO: UserApi para gestión de usuarios
+// ✅ CORREGIDO: UserApi con soporte para sortBy y sortOrder
 export const UserApi = {
-  list: (params?: { q?: string, page?: number, pageSize?: number }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.q) searchParams.append("q", params.q);
-    if (params?.page) searchParams.append("page", params.page.toString());
-    if (params?.pageSize) searchParams.append("pageSize", params.pageSize.toString());
-    return request<PagedResult<UserListDto>>(`/api/Users?${searchParams.toString()}`);
+  list: (params?: {
+    q?: string
+    page?: number
+    pageSize?: number
+    sortBy?: string
+    sortOrder?: string
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.q) searchParams.append('q', params.q)
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+    if (params?.sortBy) searchParams.append('sortBy', params.sortBy)
+    if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
+    return request<PagedResult<UserListDto>>(`/api/Users?${searchParams.toString()}`)
   },
-  
+
   get: (id: string) => request<UserDetailDto>(`/api/Users/${id}`),
-  
+
   create: (data: UserCreateDto) =>
     request<UserDetailDto>(`/api/Users`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: string, data: UserUpdateDto) =>
     request<UserDetailDto>(`/api/Users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: string) =>
     request<void>(`/api/Users/${id}`, {
       method: 'DELETE',
     }),
-};
+}
 
 export const EventApi = {
-  list: (params?: { q?: string, page?: number, pageSize?: number, preferenceId?: string }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.q) searchParams.append("q", params.q);
-    if (params?.page) searchParams.append("page", params.page.toString());
-    if (params?.pageSize) searchParams.append("pageSize", params.pageSize.toString());
-    if (params?.preferenceId) searchParams.append("categoryId", params.preferenceId);
-    return request<PagedResult<EventListDto>>(`/api/Events/discover?${searchParams.toString()}`);
+  list: (params?: { q?: string; page?: number; pageSize?: number; preferenceId?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.q) searchParams.append('q', params.q)
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+    if (params?.preferenceId) searchParams.append('categoryId', params.preferenceId)
+    return request<PagedResult<EventListDto>>(`/api/Events/discover?${searchParams.toString()}`)
   },
-  listForAdmin: (params?: { q?: string, page?: number, pageSize?: number, preferenceId?: string, status?: string }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.q) searchParams.append("q", params.q);
-    if (params?.page) searchParams.append("page", params.page.toString());
-    if (params?.pageSize) searchParams.append("pageSize", params.pageSize.toString());
-    if (params?.preferenceId) searchParams.append("categoryId", params.preferenceId);
-    if (params?.status) searchParams.append("status", params.status);
-    
-    return request<PagedResult<EventListDto>>(`/api/Events/admin-list?${searchParams.toString()}`);
+  listForAdmin: (params?: {
+    q?: string
+    page?: number
+    pageSize?: number
+    preferenceId?: string
+    status?: string
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.q) searchParams.append('q', params.q)
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+    if (params?.preferenceId) searchParams.append('categoryId', params.preferenceId)
+    if (params?.status) searchParams.append('status', params.status)
+
+    return request<PagedResult<EventListDto>>(`/api/Events/admin-list?${searchParams.toString()}`)
   },
   get: (id: string) => request<EventDetailDto>(`/api/Events/${id}`),
   create: (data: EventCreateDto) =>
     request<EventDetailDto>(`/api/Events`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (id: string, data: EventUpdateDto) =>
     request<EventDetailDto>(`/api/Events/${id}`, {
-      method: "PUT",
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
   remove: (id: string) =>
     request<void>(`/api/Events/${id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     }),
-};
+}
 
 export const PreferencesApi = {
   getAll: () => request<PreferenceDto[]>(`/api/preferences`),
-  
+
   getById: (id: string) => request<PreferenceDto>(`/api/preferences/${id}`),
-  
+
   create: (data: CreatePreferenceDto) =>
     request<PreferenceDto>(`/api/preferences`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: string, data: UpdatePreferenceDto) =>
     request<void>(`/api/preferences/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: string) =>
     request<void>(`/api/preferences/${id}`, {
       method: 'DELETE',
     }),
-};
+}
 
 export const FilesApi = {
   uploadImage: (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
+    const formData = new FormData()
+    formData.append('file', file)
 
-    const authStore = useAuthStore();
-    const headers: Record<string, string> = {};
+    const authStore = useAuthStore()
+    const headers: Record<string, string> = {}
     if (authStore.isLoggedIn && authStore.token) {
-      headers['Authorization'] = `Bearer ${authStore.token}`;
+      headers['Authorization'] = `Bearer ${authStore.token}`
     }
 
     return fetch(`${BASE_URL}/api/Files/upload`, {
       method: 'POST',
       body: formData,
       headers,
-    }).then(async res => {
+    }).then(async (res) => {
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `HTTP ${res.status}`);
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `HTTP ${res.status}`)
       }
-      return res.json() as Promise<{ imageUrl: string }>;
-    });
+      return res.json() as Promise<{ imageUrl: string }>
+    })
   },
-};
+}
 
 export const ImageApi = {
   upload: (data: EventImageCreateDto) =>
     request<EventImageDto>(`/api/EventImages`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(data),
     }),
-};
+}

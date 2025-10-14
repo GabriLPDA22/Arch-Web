@@ -120,7 +120,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/stores/auth.store';
-import MaterialIcons from '@/components/MaterialIcons.vue';
+import MaterialIcons from '@/components/common/MaterialIcons.vue';
 
 const authStore = useAuthStore();
 

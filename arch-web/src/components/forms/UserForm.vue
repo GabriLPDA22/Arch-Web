@@ -1,10 +1,5 @@
 <template>
   <form @submit.prevent="saveUser" class="modern-form">
-    <div v-if="statusMessage" class="status-message" :class="{ error: isError, success: !isError }">
-      {{ statusMessage }}
-      <button type="button" @click="statusMessage = null" class="close-status">×</button>
-    </div>
-
     <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
       <p>Loading user data...</p>
@@ -169,12 +164,20 @@
           Saving...
         </span>
         <span v-else class="btn-content">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"
-            />
-          </svg>
-          Save User
+          <template v-if="isEditing">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"
+              />
+            </svg>
+            Save User
+          </template>
+          <template v-else>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+            </svg>
+            Create User
+          </template>
         </span>
       </button>
     </div>
@@ -186,14 +189,14 @@ import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { UserApi, PreferencesApi, type PreferenceDto, type UserDetailDto } from '@/services/Api'
 
 const props = defineProps<{ userId?: string | null }>()
-const emit = defineEmits(['user-saved'])
+
+// ✅ Eventos actualizados para trabajar con toasts
+const emit = defineEmits(['user-saved', 'user-created', 'user-updated', 'error'])
 
 const maxPreferences = 5
 const isEditing = computed(() => !!props.userId)
 const loading = ref(false)
 const searchQuery = ref('')
-const statusMessage = ref<string | null>(null)
-const isError = ref(false)
 
 const form = reactive({
   name: '',
@@ -234,17 +237,6 @@ const removePreference = (preferenceId: string) => {
   }
 }
 
-// Function to show custom status messages
-const showStatus = (message: string, isErrorType = false) => {
-  statusMessage.value = message
-  isError.value = isErrorType
-  if (!isErrorType) {
-    setTimeout(() => {
-      statusMessage.value = null
-    }, 5000)
-  }
-}
-
 const fetchUserData = async (id: string) => {
   loading.value = true
   try {
@@ -269,7 +261,8 @@ const fetchUserData = async (id: string) => {
     }
   } catch (error: any) {
     console.error('Failed to load user data:', error)
-    showStatus('Error loading user data. Please check the console.', true)
+    const errorMessage = error?.response?.data?.message || 'Failed to load user data'
+    emit('error', errorMessage)
   } finally {
     loading.value = false
   }
@@ -293,14 +286,14 @@ watch(
   { immediate: true },
 )
 
+// ✅ Función saveUser actualizada para emitir eventos correctos
 const saveUser = async () => {
   if (selectedPreferenceIds.value.length > maxPreferences) {
-    showStatus(`You can select a maximum of ${maxPreferences} preferences.`, true)
+    emit('error', `You can select a maximum of ${maxPreferences} preferences.`)
     return
   }
 
   submitting.value = true
-  statusMessage.value = null
 
   try {
     const preferenceNames = selectedPreferenceIds.value
@@ -321,18 +314,21 @@ const saveUser = async () => {
 
     if (isEditing.value) {
       await UserApi.update(props.userId!, payload)
-      showStatus('User updated successfully.', false)
+      // ✅ Emitir evento específico para actualización
+      emit('user-updated')
+      emit('user-saved') // Mantener compatibilidad
     } else {
       await UserApi.create(payload)
-      showStatus('User created successfully.', false)
+      // ✅ Emitir evento específico para creación
+      emit('user-created')
+      emit('user-saved') // Mantener compatibilidad
     }
-
-    emit('user-saved')
   } catch (error: any) {
     console.error('Save failed:', error)
     const errorMessage =
       error?.response?.data?.message || error?.message || 'Unknown error while saving user'
-    showStatus(`Error: ${errorMessage}`, true)
+    // ✅ Emitir evento de error
+    emit('error', errorMessage)
   } finally {
     submitting.value = false
   }
@@ -341,10 +337,11 @@ const saveUser = async () => {
 onMounted(async () => {
   loadingPreferences.value = true
   try {
-    allPreferences.value = await PreferencesApi.getAll()
-  } catch (error: any) {
+    const prefs = await PreferencesApi.getAll()
+    allPreferences.value = prefs
+  } catch (error) {
     console.error('Failed to load preferences:', error)
-    showStatus('Error loading preferences list. Please refresh.', true)
+    emit('error', 'Failed to load preferences')
   } finally {
     loadingPreferences.value = false
   }
@@ -353,55 +350,10 @@ onMounted(async () => {
 
 <style scoped>
 .modern-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
-
-/* --- CUSTOM STATUS MESSAGE STYLES --- */
-.status-message {
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: -0.5rem;
-  transition: all 0.3s ease;
-  z-index: 10;
-}
-
-.status-message.error {
-  background-color: #fee2e2;
-  color: #c53030;
-  border: 1px solid #fecaca;
-}
-
-.status-message.success {
-  background-color: #d1fae5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
-}
-
-.close-status {
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 1.5rem;
-  cursor: pointer;
-  line-height: 1;
-  margin-left: 1rem;
-  padding: 0;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-
-.close-status:hover {
-  opacity: 1;
-}
-/* --- END CUSTOM STATUS MESSAGE STYLES --- */
-
 .form-sections {
   display: flex;
   flex-direction: column;
@@ -411,20 +363,20 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  min-width: 0;
 }
 .form-label {
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #4a5568;
+  color: #374151;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 .required {
-  color: #ef4444;
+  color: #dc2626;
 }
 .optional-hint {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 400;
   color: #9ca3af;
   font-style: italic;
@@ -432,40 +384,44 @@ onMounted(async () => {
 .form-input,
 .form-select {
   width: 100%;
-  padding: 0.875rem 1rem;
+  padding: 0.75rem 1rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   font-size: 1rem;
+  background: #ffffff;
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
 .form-input:focus,
 .form-select:focus {
   border-color: #dbb067;
-  box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.2);
+  box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.1);
   outline: none;
+}
+.form-select {
+  cursor: pointer;
 }
 .preferences-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 0.5rem;
 }
 .preferences-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: #f3f4f6;
-  color: #4b5563;
+  color: #6b7280;
   padding: 0.25rem 0.625rem;
   border-radius: 12px;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   transition: all 0.2s ease;
 }
 .preferences-count.limit-reached {
-  background: #fee2e2;
+  background: #fef2f2;
   color: #dc2626;
 }
 .limit-warning {

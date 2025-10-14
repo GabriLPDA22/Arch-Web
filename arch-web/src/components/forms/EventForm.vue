@@ -191,7 +191,7 @@
 import { reactive, watch, computed, onMounted, ref } from 'vue'
 import type { EventDetailDto } from '@/services/Api'
 import { PreferencesApi, type PreferenceDto } from '@/services/Api'
-import DateTimePicker from './CustomCalendar.vue'
+import DateTimePicker from '../calendar/CustomCalendar.vue'
 
 const props = defineProps<{
   initialData?: EventDetailDto | null

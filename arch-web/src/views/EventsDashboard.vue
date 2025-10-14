@@ -239,9 +239,9 @@ import {
   type EventDetailDto,
   PreferencesApi,
 } from '@/services/Api'
-import EventForm from '@/components/EventForm.vue'
-import PaginationComponent from '@/components/PaginationComponent.vue'
-import ModalComponent from '@/components/ModalComponent.vue'
+import EventForm from '@/components/forms/EventForm.vue'
+import PaginationComponent from '@/components/ui/PaginationComponent.vue'
+import ModalComponent from '@/components/ui/ModalComponent.vue'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
 
 const events = ref<EventListDto[]>([])
