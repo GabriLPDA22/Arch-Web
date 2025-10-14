@@ -1,7 +1,13 @@
 // src/services/Api.ts
 import { useAuthStore } from "@/stores/auth.store";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://api.arch-api.co.uk";
+// LEEMOS LA VARIABLE DEL ARCHIVO .ENV CORRESPONDIENTE
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is not defined in the environment files. Please check your .env files.");
+}
+
 
 // --- TIPOS DE DATOS (DTOs) ---
 
@@ -38,7 +44,7 @@ export type EventListDto = {
   capacity?: number;
   price: number;
   organizer?: string;
-  preferenceName?: string; // cambio de id a name
+  preferenceName?: string;
   imageUrl?: string;
   externalUrl?: string;
 };
@@ -130,6 +136,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (authStore.isLoggedIn && authStore.token) {
     headers['Authorization'] = `Bearer ${authStore.token}`;
   }
+  
+  // ✅ LÍNEA DE DEPURACIÓN ELIMINADA
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -137,6 +145,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      console.error("Received 401 Unauthorized. Logging out.");
+      authStore.logout();
+    }
+
     try {
       const errorData = await res.json();
       const error = new Error(errorData.message || `HTTP ${res.status}`) as any;
@@ -174,19 +187,21 @@ export const AuthApi = {
 export const EventApi = {
   list: (params?: { q?: string, page?: number, pageSize?: number, preferenceId?: string }) => {
     const searchParams = new URLSearchParams();
-    if (params?.q) {
-      searchParams.append("q", params.q);
-    }
-    if (params?.page) {
-      searchParams.append("page", params.page.toString());
-    }
-    if (params?.pageSize) {
-      searchParams.append("pageSize", params.pageSize.toString());
-    }
-    if (params?.preferenceId) {
-      searchParams.append("categoryId", params.preferenceId);
-    }
+    if (params?.q) searchParams.append("q", params.q);
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.pageSize) searchParams.append("pageSize", params.pageSize.toString());
+    if (params?.preferenceId) searchParams.append("categoryId", params.preferenceId);
     return request<PagedResult<EventListDto>>(`/api/Events/discover?${searchParams.toString()}`);
+  },
+  listForAdmin: (params?: { q?: string, page?: number, pageSize?: number, preferenceId?: string, status?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.q) searchParams.append("q", params.q);
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.pageSize) searchParams.append("pageSize", params.pageSize.toString());
+    if (params?.preferenceId) searchParams.append("categoryId", params.preferenceId);
+    if (params?.status) searchParams.append("status", params.status);
+    
+    return request<PagedResult<EventListDto>>(`/api/Events/admin-list?${searchParams.toString()}`);
   },
   get: (id: string) => request<EventDetailDto>(`/api/Events/${id}`),
   create: (data: EventCreateDto) =>

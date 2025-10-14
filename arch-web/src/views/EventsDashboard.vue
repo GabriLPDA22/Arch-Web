@@ -39,13 +39,13 @@
         </div>
 
         <div class="toolbar-right">
-          <button class="icon-btn" @click="refreshEvents" :disabled="refreshing" title="Refresh">
+          <button class="icon-btn" @click="fetchEvents" :disabled="loading" title="Refresh">
             <svg
               width="20"
               height="20"
               viewBox="0 0 24 24"
               fill="currentColor"
-              :class="{ spinning: refreshing }"
+              :class="{ spinning: loading }"
             >
               <path
                 d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
@@ -89,7 +89,7 @@
               :key="filter.id"
               class="filter-btn"
               :class="{ active: activeFilterId === filter.id }"
-              @click="selectFilter(filter.id)"
+              @click="activeFilterId = filter.id"
             >
               {{ filter.label }}
             </button>
@@ -104,7 +104,7 @@
               :key="filter.id"
               class="filter-btn"
               :class="{ active: activeFilterId === filter.id }"
-              @click="selectFilter(filter.id)"
+              @click="activeFilterId = filter.id"
             >
               {{ filter.label }}
             </button>
@@ -118,7 +118,7 @@
       <p>Loading events...</p>
     </div>
 
-    <div v-else-if="!loading && filteredEvents.length === 0" class="empty-state">
+    <div v-else-if="!loading && events.length === 0" class="empty-state">
       <svg
         width="80"
         height="80"
@@ -140,7 +140,7 @@
 
     <div v-else class="events-container" :class="viewMode">
       <div
-        v-for="event in paginatedEvents"
+        v-for="(event, index) in events"
         :key="event.eventID"
         class="event-card"
         :class="{ 'is-finished': isEventFinished(event) }"
@@ -149,7 +149,11 @@
           <span class="finished-text">Event Finished</span>
         </div>
         <div class="event-image">
-          <img :src="event.imageUrl || defaultEventImage" :alt="event.name" />
+          <img 
+            :src="event.imageUrl || defaultEventImage" 
+            :alt="event.name"
+            :fetchpriority="index === 0 ? 'high' : 'auto'"
+          />
           <div class="event-actions">
             <button class="action-btn edit" @click.stop="openEditModal(event)" title="Edit">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -187,7 +191,7 @@
     </div>
 
     <PaginationComponent
-      v-if="!loading && filteredEvents.length > 0"
+      v-if="!loading && events.length > 0"
       :current-page="currentPage"
       :total-pages="totalPages"
       @page-changed="goToPage"
@@ -240,21 +244,29 @@ import PaginationComponent from '@/components/PaginationComponent.vue'
 import ModalComponent from '@/components/ModalComponent.vue'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
 
-const allEvents = ref<EventListDto[]>([])
-const loading = ref(false)
-const refreshing = ref(false)
+const events = ref<EventListDto[]>([])
+const loading = ref(true)
 const submitting = ref(false)
 const searchQuery = ref('')
 const viewMode = ref('grid')
-const activeFilterId = ref<string | null>('all') // Default to 'all'
+const activeFilterId = ref<string | null>('all')
 const currentPage = ref(1)
+const totalPages = ref(1)
 const pageSize = 12
 const isFormModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedEvent = ref<EventDetailDto | null>(null)
 const eventFormComponent = ref<any>(null)
+// ✅ CORRECCIÓN: El 'id' ahora es solo de tipo 'string'
 const filters = ref<{ label: string; id: string }[]>([])
+
+const statusFilters = computed(() =>
+  filters.value.filter((f) => ['all', 'active', 'finished'].includes(f.id)),
+)
+const categoryFilters = computed(() =>
+  filters.value.filter((f) => !['all', 'active', 'finished'].includes(f.id)),
+)
 
 const isEventFinished = (event: EventListDto): boolean => {
   const eventEndDateString = event.endDate || event.startDate
@@ -265,69 +277,43 @@ const isEventFinished = (event: EventListDto): boolean => {
   return now > eventEndDate
 }
 
-const statusFilters = computed(() =>
-  filters.value.filter((f) => ['all', 'active', 'finished'].includes(f.id!)),
-)
-const categoryFilters = computed(() =>
-  filters.value.filter((f) => !['all', 'active', 'finished'].includes(f.id!)),
-)
-
 const fetchEvents = async () => {
   loading.value = true
+  const params: any = {
+    q: searchQuery.value,
+    page: currentPage.value,
+    pageSize: pageSize,
+  };
+
+  const filter = activeFilterId.value;
+  if (filter === 'active' || filter === 'finished') {
+    params.status = filter;
+  } else if (filter && filter !== 'all') {
+    params.preferenceId = filter;
+  }
+
   try {
-    const pagedResult = await EventApi.list({ pageSize: 9999, page: 1 })
-    allEvents.value = pagedResult.items || []
+    const pagedResult = await EventApi.listForAdmin(params);
+    events.value = pagedResult.items || [];
+    totalPages.value = pagedResult.totalPages || 1;
   } catch (error) {
-    console.error('Failed to load events:', error)
-    allEvents.value = []
+    console.error('Failed to load events:', error);
+    events.value = [];
+    totalPages.value = 1;
   } finally {
-    loading.value = false
-    refreshing.value = false
+    loading.value = false;
   }
 }
 
-const filteredEvents = computed(() => {
-  let eventsToFilter = allEvents.value
-  const query = searchQuery.value.trim().toLowerCase()
+watch([searchQuery, activeFilterId], () => {
+  currentPage.value = 1;
+  fetchEvents();
+});
 
-  if (activeFilterId.value === 'active') {
-    eventsToFilter = eventsToFilter.filter((event) => !isEventFinished(event))
-  } else if (activeFilterId.value === 'finished') {
-    eventsToFilter = eventsToFilter.filter((event) => isEventFinished(event))
-  } else if (activeFilterId.value && activeFilterId.value !== 'all') {
-    const activeFilter = filters.value.find((f) => f.id === activeFilterId.value)
-    if (activeFilter) {
-      eventsToFilter = eventsToFilter.filter((event) => event.preferenceName === activeFilter.label)
-    }
-  }
-
-  if (query) {
-    eventsToFilter = eventsToFilter.filter(
-      (event) =>
-        (event.name && event.name.toLowerCase().includes(query)) ||
-        (event.address && event.address.toLowerCase().includes(query)) ||
-        (event.preferenceName && event.preferenceName.toLowerCase().includes(query)),
-    )
-  }
-
-  return eventsToFilter
-})
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredEvents.value.length / pageSize)
-})
-
-const paginatedEvents = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  const end = start + pageSize
-  return filteredEvents.value.slice(start, end)
-})
-
-const refreshEvents = async () => {
-  if (refreshing.value) return
-  refreshing.value = true
-  await fetchEvents()
-}
+const goToPage = (page: number) => {
+  currentPage.value = page;
+  fetchEvents();
+};
 
 const loadFilters = async () => {
   const staticFilters = [
@@ -335,30 +321,32 @@ const loadFilters = async () => {
     { label: 'Active Events', id: 'active' },
     { label: 'Finished Events', id: 'finished' },
   ]
+  
+  const cachedPreferences = localStorage.getItem('preferencesCache');
+  const cacheTimestamp = localStorage.getItem('preferencesCacheTimestamp');
+  const now = new Date().getTime();
+  
+  if (cachedPreferences && cacheTimestamp && (now - parseInt(cacheTimestamp, 10)) < 3600000) {
+    const dynamicFilters = JSON.parse(cachedPreferences);
+    filters.value = [...staticFilters, ...dynamicFilters];
+    return;
+  }
+
   try {
-    const preferences = await PreferencesApi.getAll()
+    const preferences = await PreferencesApi.getAll();
     const dynamicFilters = preferences.map((p) => ({
       label: p.name,
       id: p.preferenceId,
-    }))
-    filters.value = [...staticFilters, ...dynamicFilters]
+    }));
+    
+    localStorage.setItem('preferencesCache', JSON.stringify(dynamicFilters));
+    localStorage.setItem('preferencesCacheTimestamp', now.toString());
+
+    filters.value = [...staticFilters, ...dynamicFilters];
   } catch (error) {
     console.error('Failed to load filters:', error)
     filters.value = staticFilters
   }
-}
-
-const selectFilter = (id: string | null) => {
-  activeFilterId.value = id
-  currentPage.value = 1
-}
-
-watch(searchQuery, () => {
-  currentPage.value = 1
-})
-
-const goToPage = (page: number) => {
-  currentPage.value = page
 }
 
 const formatDate = (iso?: string) => {
@@ -371,49 +359,49 @@ const formatDate = (iso?: string) => {
 }
 
 const openCreateModal = () => {
-  isEditing.value = false
-  selectedEvent.value = null
-  isFormModalOpen.value = true
+  isEditing.value = false;
+  selectedEvent.value = null;
+  isFormModalOpen.value = true;
 }
 
 const openEditModal = async (event: EventListDto) => {
-  isEditing.value = true
-  selectedEvent.value = null
-  isFormModalOpen.value = true
+  isEditing.value = true;
+  selectedEvent.value = null;
+  isFormModalOpen.value = true;
   try {
-    const fullEventDetails = await EventApi.get(event.eventID)
-    selectedEvent.value = fullEventDetails
+    const fullEventDetails = await EventApi.get(event.eventID);
+    selectedEvent.value = fullEventDetails;
   } catch (error) {
-    console.error('Failed to fetch event details for editing:', error)
-    closeModals()
+    console.error('Failed to fetch event details for editing:', error);
+    closeModals();
   }
 }
 
 const openDeleteModal = (event: EventListDto) => {
-  selectedEvent.value = event as EventDetailDto
-  isDeleteModalOpen.value = true
+  selectedEvent.value = event as EventDetailDto;
+  isDeleteModalOpen.value = true;
 }
 
 const closeModals = () => {
-  isFormModalOpen.value = false
-  isDeleteModalOpen.value = false
-  selectedEvent.value = null
-  isEditing.value = false
+  isFormModalOpen.value = false;
+  isDeleteModalOpen.value = false;
+  selectedEvent.value = null;
+  isEditing.value = false;
 }
 
 const handleSaveEvent = async () => {
-  if (!eventFormComponent.value) return
-  submitting.value = true
-  let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined
+  if (!eventFormComponent.value) return;
+  submitting.value = true;
+  let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined;
 
   try {
-    const imageFile = eventFormComponent.value.imageFile
+    const imageFile = eventFormComponent.value.imageFile;
     if (imageFile) {
-      const uploadResult = await FilesApi.uploadImage(imageFile)
-      imageUrl = uploadResult.imageUrl
+      const uploadResult = await FilesApi.uploadImage(imageFile);
+      imageUrl = uploadResult.imageUrl;
     }
 
-    const form = eventFormComponent.value.form
+    const form = eventFormComponent.value.form;
     const payload = {
       name: form.name.trim(),
       description: form.description?.trim(),
@@ -426,36 +414,36 @@ const handleSaveEvent = async () => {
       preferenceId: form.preferenceId,
       externalUrl: form.externalUrl,
       imageUrl: imageUrl,
-    }
+    };
 
     if (isEditing.value && selectedEvent.value?.eventID) {
-      await EventApi.update(selectedEvent.value.eventID, payload)
+      await EventApi.update(selectedEvent.value.eventID, payload);
     } else {
-      await EventApi.create(payload)
+      await EventApi.create(payload);
     }
-    await fetchEvents()
-    closeModals()
+    await fetchEvents();
+    closeModals();
   } catch (error) {
-    console.error('Failed to save event:', error)
+    console.error('Failed to save event:', error);
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
 }
 
 const handleDeleteConfirm = async () => {
-  if (!selectedEvent.value?.eventID) return
+  if (!selectedEvent.value?.eventID) return;
   try {
-    await EventApi.remove(selectedEvent.value.eventID)
-    await fetchEvents()
-    closeModals()
+    await EventApi.remove(selectedEvent.value.eventID);
+    await fetchEvents();
+    closeModals();
   } catch (error) {
-    console.error('Failed to delete event:', error)
+    console.error('Failed to delete event:', error);
   }
 }
 
-onMounted(async () => {
-  await fetchEvents()
-  await loadFilters()
+onMounted(() => {
+  fetchEvents();
+  loadFilters();
 })
 </script>
 

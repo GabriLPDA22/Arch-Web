@@ -36,3 +36,7 @@ package-lock.json
 *.d.ts
 !env.d.ts
 !vite-env.d.ts
+
+.env.local
+.env.development
+.env.production
