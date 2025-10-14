@@ -1,13 +1,11 @@
 // src/services/Api.ts
 import { useAuthStore } from "@/stores/auth.store";
 
-// LEEMOS LA VARIABLE DEL ARCHIVO .ENV CORRESPONDIENTE
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 if (!BASE_URL) {
   throw new Error("VITE_API_BASE_URL is not defined in the environment files. Please check your .env files.");
 }
-
 
 // --- TIPOS DE DATOS (DTOs) ---
 
@@ -22,6 +20,47 @@ export type AuthResponseDto = {
   user: UserAuthDto;
   token: string;
   message?: string;
+};
+
+// ✅ NUEVOS TIPOS PARA USER MANAGEMENT
+export type UserListDto = {
+  userID: string;
+  name: string;
+  email: string;
+  userType: 'admin' | 'user';
+  isVerified: boolean;
+  createdAt?: string;
+  preferences?: string[];
+};
+
+export type UserDetailDto = {
+  userID: string;
+  name: string;
+  email: string;
+  userType: 'admin' | 'user';
+  isVerified: boolean;
+  dateOfBirth?: string;
+  profilePicture?: string;
+  preferences?: string[];
+  createdAt?: string;
+};
+
+export type UserCreateDto = {
+  name: string;
+  email: string;
+  password: string;
+  userType: 'admin' | 'user';
+  preferences?: string[];
+};
+
+export type UserUpdateDto = {
+  name?: string;
+  email?: string;
+  password?: string;
+  userType?: 'admin' | 'user';
+  preferences?: string[];
+  dateOfBirth?: string;
+  profilePicture?: string;
 };
 
 export type PagedResult<T> = {
@@ -136,8 +175,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (authStore.isLoggedIn && authStore.token) {
     headers['Authorization'] = `Bearer ${authStore.token}`;
   }
-  
-  // ✅ LÍNEA DE DEPURACIÓN ELIMINADA
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -181,6 +218,36 @@ export const AuthApi = {
     request<AuthResponseDto>(`/api/Auth/login`, {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+};
+
+// ✅ NUEVO: UserApi para gestión de usuarios
+export const UserApi = {
+  list: (params?: { q?: string, page?: number, pageSize?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.q) searchParams.append("q", params.q);
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.pageSize) searchParams.append("pageSize", params.pageSize.toString());
+    return request<PagedResult<UserListDto>>(`/api/Users?${searchParams.toString()}`);
+  },
+  
+  get: (id: string) => request<UserDetailDto>(`/api/Users/${id}`),
+  
+  create: (data: UserCreateDto) =>
+    request<UserDetailDto>(`/api/Users`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  update: (id: string, data: UserUpdateDto) =>
+    request<UserDetailDto>(`/api/Users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  
+  delete: (id: string) =>
+    request<void>(`/api/Users/${id}`, {
+      method: 'DELETE',
     }),
 };
 

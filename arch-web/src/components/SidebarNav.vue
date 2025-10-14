@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import Sidebar from './Sidebar.vue'
+import Sidebar from './SidebarComponet.vue'
 </script>
 
 

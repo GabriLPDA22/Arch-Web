@@ -1,4 +1,3 @@
-<!-- Ruta: arch-web/src/components/Sidebar.vue -->
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
@@ -14,9 +13,20 @@
     <nav class="navigation">
       <RouterLink to="/admin/events" class="nav-item" active-class="active">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
-          <path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z"/>
+          <path
+            d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z"
+          />
         </svg>
         <span class="nav-text">Events</span>
+      </RouterLink>
+
+      <RouterLink to="/admin/users" class="nav-item" active-class="active">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
+          <path
+            d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"
+          />
+        </svg>
+        <span class="nav-text">Users</span>
       </RouterLink>
     </nav>
 
@@ -33,7 +43,9 @@
 
       <button class="logout-btn" @click="handleLogout">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M16,17V14H9V10H16V7L21,12L16,17M14,2A2,2 0 0,1 16,4V6H14V4H5V20H14V18H16V20A2,2 0 0,1 14,22H5A2,2 0 0,1 3,20V4A2,2 0 0,1 5,2H14Z"/>
+          <path
+            d="M16,17V14H9V10H16V7L21,12L16,17M14,2A2,2 0 0,1 16,4V6H14V4H5V20H14V18H16V20A2,2 0 0,1 14,22H5A2,2 0 0,1 3,20V4A2,2 0 0,1 5,2H14Z"
+          />
         </svg>
         <span>Logout</span>
       </button>
@@ -44,7 +56,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth.store'  // o prueba con '../stores/auth.store'
+import { useAuthStore } from '@/stores/auth.store'
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -1,5 +1,10 @@
 <template>
   <form class="modern-form">
+    <div v-if="statusMessage" class="status-message" :class="{ error: isError, success: !isError }">
+      {{ statusMessage }}
+      <button type="button" @click="statusMessage = null" class="close-status">×</button>
+    </div>
+
     <div class="form-sections">
       <div class="form-section">
         <h3 class="section-title">Basic Information</h3>
@@ -179,20 +184,6 @@
         </div>
       </div>
     </div>
-
-    <div v-if="validationErrors.length > 0" class="validation-summary">
-      <h4 class="validation-title">⚠️ Please fix the following issues:</h4>
-      <ul class="validation-list">
-        <li v-for="error in validationErrors" :key="error" class="validation-error">
-          {{ error }}
-        </li>
-      </ul>
-    </div>
-
-    <div v-if="preferencesError" class="validation-summary" style="background: rgba(239, 68, 68, 0.1);">
-      <h4 class="validation-title">❌ Error loading categories:</h4>
-      <p style="color: #c53030; margin: 0;">{{ preferencesError }}</p>
-    </div>
   </form>
 </template>
 
@@ -210,7 +201,21 @@ const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
 const preferences = ref<PreferenceDto[]>([])
 const loadingPreferences = ref(true)
-const preferencesError = ref<string | null>(null)
+
+// Add status message logic
+const statusMessage = ref<string | null>(null)
+const isError = ref(false)
+
+// Function to show custom status messages
+const showStatus = (message: string, isErrorType = false) => {
+  statusMessage.value = message
+  isError.value = isErrorType
+  if (!isErrorType) {
+    setTimeout(() => {
+      statusMessage.value = null
+    }, 5000)
+  }
+}
 
 const fromIsoToLocal = (iso?: string): string => {
   if (!iso) return ''
@@ -236,11 +241,11 @@ const form = reactive({
 const loadPreferences = async () => {
   try {
     loadingPreferences.value = true
-    preferencesError.value = null
     preferences.value = await PreferencesApi.getAll()
   } catch (error: any) {
-    console.error('❌ Failed to load preferences:', error)
-    preferencesError.value = error.message || 'Failed to load categories'
+    console.error('Failed to load categories:', error)
+    // Use custom status message
+    showStatus(error.message || 'Error loading categories. Please refresh.', true)
   } finally {
     loadingPreferences.value = false
   }
@@ -273,13 +278,11 @@ const validationErrors = computed(() => {
   return errors
 })
 
-// ✅ --- LÓGICA CORREGIDA ---
-// Este 'watch' observa tanto los datos del evento como la lista de preferencias.
-// Solo se ejecuta para rellenar el formulario cuando AMBAS cosas están listas.
+// This 'watch' observes both the event data and the list of preferences.
 watch(
   [() => props.initialData, preferences],
   ([newData, prefs]) => {
-    // Si tenemos los datos del evento Y la lista de preferencias ya se ha cargado...
+    // If we have the event data AND the preferences list is ready...
     if (newData && prefs.length > 0) {
       form.name = newData.name ?? ''
       form.startLocal = fromIsoToLocal(newData.startDate)
@@ -295,26 +298,39 @@ watch(
       imageFile.value = null
       imagePreviewUrl.value = newData.imageUrl || null
     } else if (!newData) {
-        // Si no hay datos (ej. al crear un evento nuevo), reseteamos el formulario
-        Object.assign(form, {
-            name: '', startLocal: '', endLocal: '', capacity: null, price: null,
-            postcode: '', preferenceId: null, address: '', externalUrl: '', description: ''
-        });
-        imageFile.value = null;
-        imagePreviewUrl.value = null;
+      // If no data (e.g., creating a new event), reset the form
+      Object.assign(form, {
+        name: '',
+        startLocal: '',
+        endLocal: '',
+        capacity: null,
+        price: null,
+        postcode: '',
+        preferenceId: null,
+        address: '',
+        externalUrl: '',
+        description: '',
+      })
+      imageFile.value = null
+      imagePreviewUrl.value = null
     }
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: true },
 )
 
 onMounted(() => {
   loadPreferences()
 })
 
-defineExpose({ form, validationErrors, imageFile })
+// Expose the necessary variables for the parent component to call save logic and validation
+defineExpose({ form, validationErrors, imageFile, showStatus })
 </script>
 
 <style scoped>
+/*
+  Note: Styles for .status-message, .status-message.error, .status-message.success, 
+  and .close-status are the same as in UserForm.vue for consistency.
+*/
 .modern-form {
   color: #1a202c;
   box-sizing: border-box;
@@ -323,6 +339,49 @@ defineExpose({ form, validationErrors, imageFile })
 .modern-form * {
   box-sizing: border-box;
 }
+
+/* --- CUSTOM STATUS MESSAGE STYLES --- */
+.status-message {
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.status-message.error {
+  background-color: #fee2e2;
+  color: #c53030;
+  border: 1px solid #fecaca;
+}
+
+.status-message.success {
+  background-color: #d1fae5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.close-status {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  margin-left: 1rem;
+  padding: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.close-status:hover {
+  opacity: 1;
+}
+/* --- END CUSTOM STATUS MESSAGE STYLES --- */
 
 .image-upload-wrapper {
   position: relative;
