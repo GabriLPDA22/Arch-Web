@@ -209,7 +209,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
   }
 
+  // Manejar respuestas sin contenido (204 No Content o body vacío)
   if (res.status === 204) return undefined as unknown as T
+  
+  // Verificar si hay contenido antes de parsear JSON
+  const contentType = res.headers.get('content-type')
+  const contentLength = res.headers.get('content-length')
+  
+  // Si no hay content-type de JSON o content-length es "0", retornar undefined
+  if (!contentType?.includes('application/json') || contentLength === '0') {
+    return undefined as unknown as T
+  }
+  
   return res.json() as Promise<T>
 }
 

@@ -242,7 +242,10 @@ import {
 import EventForm from '@/components/forms/EventForm.vue'
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
+import { useToast } from '@/composables/useToast'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
+
+const { success, error } = useToast()
 
 const events = ref<EventListDto[]>([])
 const loading = ref(true)
@@ -296,8 +299,12 @@ const fetchEvents = async () => {
     const pagedResult = await EventApi.listForAdmin(params);
     events.value = pagedResult.items || [];
     totalPages.value = pagedResult.totalPages || 1;
-  } catch (error) {
-    console.error('Failed to load events:', error);
+  } catch (err: any) {
+    console.error('Failed to load events:', err);
+    error(
+      'Error Loading Events',
+      err?.response?.data?.message || 'Failed to fetch events from server'
+    )
     events.value = [];
     totalPages.value = 1;
   } finally {
@@ -418,13 +425,17 @@ const handleSaveEvent = async () => {
 
     if (isEditing.value && selectedEvent.value?.eventID) {
       await EventApi.update(selectedEvent.value.eventID, payload);
+      success('Event Updated!', 'The event information has been updated successfully.')
     } else {
       await EventApi.create(payload);
+      success('Event Created!', 'The new event has been created successfully.')
     }
     await fetchEvents();
     closeModals();
-  } catch (error) {
-    console.error('Failed to save event:', error);
+  } catch (err: any) {
+    console.error('Failed to save event:', err);
+    const errorMessage = err?.response?.data?.message || 'An unknown error occurred while saving the event'
+    error('Operation Failed', errorMessage)
   } finally {
     submitting.value = false;
   }
@@ -432,12 +443,20 @@ const handleSaveEvent = async () => {
 
 const handleDeleteConfirm = async () => {
   if (!selectedEvent.value?.eventID) return;
+  
+  // Guardar el nombre antes de cerrar el modal (que pone selectedEvent a null)
+  const deletedEventName = selectedEvent.value.name;
+  
   try {
     await EventApi.remove(selectedEvent.value.eventID);
-    await fetchEvents();
+    
     closeModals();
-  } catch (error) {
-    console.error('Failed to delete event:', error);
+    await fetchEvents();
+    success('Event Deleted!', `${deletedEventName} has been removed successfully.`)
+  } catch (err: any) {
+    console.error('Failed to delete event:', err);
+    const errorMessage = err?.response?.data?.message || 'An unknown error occurred while deleting the event'
+    error('Deletion Failed', errorMessage)
   }
 }
 

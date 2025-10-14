@@ -282,6 +282,9 @@ const handleFormError = (errorMessage: string) => {
 const handleDeleteConfirm = async () => {
   if (!userToDelete.value?.userID) return
 
+  // Guardar el nombre antes de cerrar el modal (que pone userToDelete a null)
+  const deletedUserName = userToDelete.value.name
+
   try {
     await UserApi.delete(userToDelete.value.userID)
 
@@ -291,7 +294,7 @@ const handleDeleteConfirm = async () => {
 
     closeModals()
     fetchUsers()
-    success('User Deleted!', `${userToDelete.value.name} has been removed from the system.`)
+    success('User Deleted!', `${deletedUserName} has been removed from the system.`)
   } catch (err: any) {
     console.error('Failed to delete user:', err)
     const errorMessage =
