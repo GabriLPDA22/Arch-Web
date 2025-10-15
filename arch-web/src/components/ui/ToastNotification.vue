@@ -1,12 +1,12 @@
 <!-- src/components/ToastNotification.vue -->
 <template>
-  <!-- Overlay que bloquea el scroll -->
+  <!-- Overlay that blocks scrolling -->
   <Teleport to="body">
     <Transition name="overlay">
       <div v-if="isVisible" class="toast-overlay" @click="handleOverlayClick">
         <Transition name="toast" appear>
           <div v-if="isVisible" :class="['toast-container', `toast-${type}`]" @click.stop>
-            <!-- Icono animado -->
+            <!-- Animated icon -->
             <div class="toast-icon-wrapper">
               <div class="toast-icon-bg"></div>
               <div class="toast-icon">
@@ -72,15 +72,22 @@
               </div>
             </div>
 
-            <!-- Contenido -->
+            <!-- Content -->
             <div class="toast-content">
               <h3 class="toast-title">{{ title }}</h3>
               <p class="toast-message">{{ message }}</p>
             </div>
 
-            <!-- Botón de cerrar -->
+            <!-- Close button -->
             <button class="toast-close" @click="close" aria-label="Close notification">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </button>
@@ -92,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onUnmounted, watch } from 'vue'
 
 interface Props {
   type?: 'success' | 'error' | 'warning' | 'info'
@@ -116,7 +123,7 @@ let timeoutId: ReturnType<typeof setTimeout> | null = null
 
 const close = () => {
   isVisible.value = false
-  // Pequeño delay antes de emitir para que la animación termine
+  // Small delay before emitting to let animation finish
   setTimeout(() => {
     emit('close')
   }, 300)
@@ -131,10 +138,10 @@ watch(
   (newVal) => {
     if (newVal) {
       isVisible.value = true
-      // Bloquear scroll del body
+      // Block body scroll
       document.body.style.overflow = 'hidden'
 
-      // Auto-cerrar si hay duración
+      // Auto-close if duration is set
       if (props.duration > 0) {
         if (timeoutId) clearTimeout(timeoutId)
         timeoutId = setTimeout(() => {
@@ -143,24 +150,22 @@ watch(
       }
     } else {
       isVisible.value = false
-      // Restaurar scroll del body
+      // Restore body scroll
       document.body.style.overflow = ''
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
-// Limpiar al desmontar
-onMounted(() => {
-  return () => {
-    document.body.style.overflow = ''
-    if (timeoutId) clearTimeout(timeoutId)
-  }
+// Clean up on unmount
+onUnmounted(() => {
+  document.body.style.overflow = ''
+  if (timeoutId) clearTimeout(timeoutId)
 })
 </script>
 
 <style scoped>
-/* Overlay que bloquea todo */
+/* Overlay that blocks everything */
 .toast-overlay {
   position: fixed;
   top: 0;
@@ -176,7 +181,7 @@ onMounted(() => {
   padding: 1rem;
 }
 
-/* Contenedor del toast */
+/* Toast container */
 .toast-container {
   position: relative;
   background: #ffffff;
@@ -192,7 +197,7 @@ onMounted(() => {
   gap: 1.25rem;
 }
 
-/* Wrapper del icono con animación */
+/* Icon wrapper with animation */
 .toast-icon-wrapper {
   position: relative;
   width: 80px;
@@ -222,7 +227,7 @@ onMounted(() => {
   animation: iconPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
-/* Estilos por tipo de alerta */
+/* Styles by alert type */
 .toast-success .toast-icon-bg {
   background: rgba(34, 197, 94, 0.1);
 }
@@ -259,7 +264,7 @@ onMounted(() => {
   color: #ffffff;
 }
 
-/* Contenido del texto */
+/* Text content */
 .toast-content {
   flex: 1;
 }
@@ -279,7 +284,7 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-/* Botón de cerrar */
+/* Close button */
 .toast-close {
   position: absolute;
   top: 1rem;
@@ -303,7 +308,11 @@ onMounted(() => {
   transform: scale(1.1);
 }
 
-/* Animaciones */
+.toast-close:active {
+  transform: scale(0.95);
+}
+
+/* Animations */
 @keyframes pulse {
   0%,
   100% {
@@ -330,7 +339,7 @@ onMounted(() => {
   }
 }
 
-/* Transiciones del overlay */
+/* Overlay transitions */
 .overlay-enter-active,
 .overlay-leave-active {
   transition: all 0.3s ease;
@@ -342,7 +351,7 @@ onMounted(() => {
   backdrop-filter: blur(0px);
 }
 
-/* Transiciones del toast */
+/* Toast transitions */
 .toast-enter-active {
   transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }

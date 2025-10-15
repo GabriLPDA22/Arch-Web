@@ -10,7 +10,7 @@ if (!BASE_URL) {
 }
 
 // --- TIPOS DE DATOS (DTOs) ---
-
+// (Todos tus tipos de datos permanecen igual)
 export type UserAuthDto = {
   userID: string
   email: string
@@ -166,6 +166,7 @@ export type UpdatePreferenceDto = {
   name: string
 }
 
+// ✅ SECCIÓN CRÍTICA MODIFICADA
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const authStore = useAuthStore()
   const headers: Record<string, string> = {
@@ -183,29 +184,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
+    // Intenta parsear la respuesta de error como JSON.
+    // Si falla (por ejemplo, es una página de error HTML), data será null.
+    const data = await res.json().catch(() => null)
+
+    // Crea un objeto de error personalizado que imita la estructura de Axios,
+    // ya que nuestra función handleApiError está diseñada para funcionar con ella.
+    const error = {
+      message: data?.title || data?.message || `Request failed with status ${res.status}`,
+      response: {
+        data: data,
+        status: res.status,
+      },
+    }
+
+    // Si fue un error 401, activa el logout.
     if (res.status === 401) {
       console.error('Received 401 Unauthorized. Logging out.')
       authStore.logout()
     }
 
-    try {
-      const errorData = await res.json()
-      const error = new Error(errorData.message || `HTTP ${res.status}`) as any
-
-      if (errorData.code) {
-        error.code = errorData.code
-      }
-
-      error.response = {
-        data: errorData,
-        status: res.status,
-      }
-
-      throw error
-    } catch (parseError) {
-      const text = await res.text().catch(() => '')
-      throw new Error(text || `HTTP ${res.status}`)
-    }
+    throw error
   }
 
   if (res.status === 204) return undefined as unknown as T
@@ -228,7 +227,6 @@ export const AuthApi = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
-  // ✅ NUEVO MÉTODO AÑADIDO
   verifySession: () => request<UserDetailDto>('/api/Users/me'),
 }
 
@@ -351,8 +349,16 @@ export const FilesApi = {
       headers,
     }).then(async (res) => {
       if (!res.ok) {
-        const text = await res.text().catch(() => '')
-        throw new Error(text || `HTTP ${res.status}`)
+        // ✅ APLICAMOS LA MISMA LÓGICA DE ERROR AQUÍ
+        const data = await res.json().catch(() => null)
+        const error = {
+          message: data?.message || `Image upload failed with status ${res.status}`,
+          response: {
+            data: data,
+            status: res.status,
+          },
+        }
+        throw error
       }
       return res.json() as Promise<{ imageUrl: string }>
     })

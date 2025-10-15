@@ -242,12 +242,12 @@ import {
 import EventForm from '@/components/forms/EventForm.vue'
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
-import { useToast } from '@/composables/useToast'
-import { useAuthStore } from '@/stores/auth.store' // ✅ AÑADIDO
+import { useAuthStore } from '@/stores/auth.store'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
+// ✅ CAMBIO: Importaciones centralizadas
+import { successMessages, handleApiError } from '@/utils/validators'
 
-const { success, error } = useToast()
-const authStore = useAuthStore() // ✅ AÑADIDO
+const authStore = useAuthStore()
 
 const events = ref<EventListDto[]>([])
 const loading = ref(true)
@@ -302,12 +302,8 @@ const fetchEvents = async () => {
     totalPages.value = pagedResult.totalPages || 1
   } catch (err: any) {
     console.error('Failed to load events:', err)
-    // ✅ CAMBIO: Solo mostramos el error si el usuario está logueado.
     if (authStore.isLoggedIn) {
-      error(
-        'Error Loading Events',
-        err?.response?.data?.message || 'Failed to fetch events from server',
-      )
+      handleApiError(err) // ✅ CAMBIO
     }
     events.value = []
     totalPages.value = 1
@@ -354,8 +350,9 @@ const loadFilters = async () => {
     localStorage.setItem('preferencesCacheTimestamp', now.toString())
 
     filters.value = [...staticFilters, ...dynamicFilters]
-  } catch (error) {
+  } catch (error: any) { // ✅ CAMBIO: Especificamos 'any'
     console.error('Failed to load filters:', error)
+    handleApiError(error) // ✅ CAMBIO
     filters.value = staticFilters
   }
 }
@@ -382,8 +379,9 @@ const openEditModal = async (event: EventListDto) => {
   try {
     const fullEventDetails = await EventApi.get(event.eventID)
     selectedEvent.value = fullEventDetails
-  } catch (error) {
+  } catch (error: any) { // ✅ CAMBIO: Especificamos 'any'
     console.error('Failed to fetch event details for editing:', error)
+    handleApiError(error) // ✅ CAMBIO
     closeModals()
   }
 }
@@ -429,18 +427,16 @@ const handleSaveEvent = async () => {
 
     if (isEditing.value && selectedEvent.value?.eventID) {
       await EventApi.update(selectedEvent.value.eventID, payload)
-      success('Event Updated!', 'The event information has been updated successfully.')
+      successMessages.updated('event') // ✅ CAMBIO
     } else {
       await EventApi.create(payload)
-      success('Event Created!', 'The new event has been created successfully.')
+      successMessages.created('event') // ✅ CAMBIO
     }
     await fetchEvents()
     closeModals()
   } catch (err: any) {
     console.error('Failed to save event:', err)
-    const errorMessage =
-      err?.response?.data?.message || 'An unknown error occurred while saving the event'
-    error('Operation Failed', errorMessage)
+    handleApiError(err) // ✅ CAMBIO
   } finally {
     submitting.value = false
   }
@@ -449,29 +445,22 @@ const handleSaveEvent = async () => {
 const handleDeleteConfirm = async () => {
   if (!selectedEvent.value?.eventID) return
 
-  const deletedEventName = selectedEvent.value.name
-
   try {
     await EventApi.remove(selectedEvent.value.eventID)
-
     closeModals()
     await fetchEvents()
-    success('Event Deleted!', `${deletedEventName} has been removed successfully.`)
+    successMessages.deleted('event') // ✅ CAMBIO
   } catch (err: any) {
     console.error('Failed to delete event:', err)
-    const errorMessage =
-      err?.response?.data?.message || 'An unknown error occurred while deleting the event'
-    error('Deletion Failed', errorMessage)
+    handleApiError(err) // ✅ CAMBIO
   }
 }
 
 onMounted(() => {
-  // ✅ CAMBIO: Solo cargamos los datos si el usuario está autenticado.
   if (authStore.isLoggedIn) {
     fetchEvents()
     loadFilters()
   } else {
-    // Si no está logueado, evitamos la llamada a la API y el estado de carga.
     loading.value = false
   }
 })

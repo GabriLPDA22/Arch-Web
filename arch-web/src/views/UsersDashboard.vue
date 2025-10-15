@@ -66,9 +66,9 @@
               }}</span>
             </th>
             <th>Email</th>
-            <th @click="handleSort('role')" class="sortable">
+            <th @click="handleSort('userType')" class="sortable">
               Role
-              <span v-if="sortBy === 'role'" class="sort-icon">{{
+              <span v-if="sortBy === 'userType'" class="sort-icon">{{
                 sortOrder === 'asc' ? '▲' : '▼'
               }}</span>
             </th>
@@ -121,7 +121,6 @@
         @user-saved="handleUserSaved"
         @user-created="handleUserCreated"
         @user-updated="handleUserUpdated"
-        @error="handleFormError"
       />
     </ModalComponent>
 
@@ -147,14 +146,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { UserApi, type UserListDto } from '@/services/Api'
-import { useToast } from '@/composables/useToast'
-import { useAuthStore } from '@/stores/auth.store' // ✅ AÑADIDO
+import { useAuthStore } from '@/stores/auth.store'
+import { successMessages, handleApiError } from '@/utils/validators' // ✅ CAMBIO: Importaciones centralizadas
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
 import UserForm from '@/components/forms/UserForm.vue'
+import { useToast } from '@/composables/useToast'
 
-const { success, error } = useToast()
-const authStore = useAuthStore() // ✅ AÑADIDO
+const authStore = useAuthStore()
+const { success } = useToast() // Aún podemos necesitar 'success' para casos especiales
 
 const users = ref<UserListDto[]>([])
 const loading = ref(true)
@@ -188,10 +188,7 @@ const fetchUsers = async () => {
   } catch (err: any) {
     console.error('Failed to load users:', err)
     if (authStore.isLoggedIn) {
-      error(
-        'Error Loading Users',
-        err?.response?.data?.message || 'Failed to fetch users from server',
-      )
+      handleApiError(err) // ✅ CAMBIO
     }
   } finally {
     loading.value = false
@@ -202,7 +199,6 @@ const handleSearchInput = () => {
   if (searchTimeout) {
     clearTimeout(searchTimeout)
   }
-
   searchTimeout = setTimeout(() => {
     currentPage.value = 1
     fetchUsers()
@@ -215,7 +211,7 @@ const clearSearch = () => {
   fetchUsers()
 }
 
-const handleSort = (column: 'name' | 'role') => {
+const handleSort = (column: 'name' | 'userType') => {
   if (sortBy.value === column) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   } else {
@@ -251,50 +247,42 @@ const closeModals = () => {
   isFormModalOpen.value = false
   isDeleteModalOpen.value = false
   userToDelete.value = null
+  selectedUserId.value = null
 }
 
 const handleUserCreated = () => {
   closeModals()
-  selectedUserId.value = null
   fetchUsers()
-  success('User Created!', 'The new user has been created successfully.')
+  successMessages.created('user') // ✅ CAMBIO
 }
 
-// ✅ LÓGICA MODIFICADA PARA FORZAR LOGOUT
 const handleUserUpdated = () => {
-  const updatedUserId = selectedUserId.value; // Guardar el ID antes de limpiar
-  
+  const updatedUserId = selectedUserId.value
   closeModals()
-  selectedUserId.value = null
-  fetchUsers() // Actualizar la lista para que todos vean el cambio
+  fetchUsers()
 
-  // Comprobar si el usuario actualizado es el usuario actual
   if (updatedUserId && updatedUserId === authStore.user?.userID) {
-    // Si es así, mostrar mensaje y desloguear
-    success('Role Changed', 'Your own role has been updated. You will now be logged out.', { autoClose: 3500 });
+    success('Role Changed', 'Your own role has been updated. You will now be logged out.', {
+      duration: 3500,
+    })
     setTimeout(() => {
-      authStore.logout();
-    }, 3500); // Esperar 3.5 segundos para que el usuario lea el toast
+      authStore.logout()
+    }, 3500)
   } else {
-    // Si es otro usuario, mostrar el mensaje de éxito normal
-    success('User Updated!', 'The user information has been updated successfully.');
+    successMessages.updated('user') // ✅ CAMBIO
   }
 }
 
 const handleUserSaved = () => {
   closeModals()
-  selectedUserId.value = null
   fetchUsers()
 }
 
-const handleFormError = (errorMessage: string) => {
-  error('Operation Failed', errorMessage)
-}
+// ✅ ELIMINADO: La función handleFormError ya no es necesaria
+// const handleFormError = ...
 
 const handleDeleteConfirm = async () => {
   if (!userToDelete.value?.userID) return
-
-  const deletedUserName = userToDelete.value.name
 
   try {
     await UserApi.delete(userToDelete.value.userID)
@@ -305,12 +293,10 @@ const handleDeleteConfirm = async () => {
 
     closeModals()
     fetchUsers()
-    success('User Deleted!', `${deletedUserName} has been removed from the system.`)
+    successMessages.deleted('user') // ✅ CAMBIO
   } catch (err: any) {
     console.error('Failed to delete user:', err)
-    const errorMessage =
-      err?.response?.data?.message || 'An unknown error occurred while deleting the user'
-    error('Deletion Failed', errorMessage)
+    handleApiError(err) // ✅ CAMBIO
   }
 }
 
@@ -318,13 +304,13 @@ onMounted(() => {
   if (authStore.isLoggedIn) {
     fetchUsers()
   } else {
-    loading.value = false;
+    loading.value = false
   }
 })
 </script>
 
+
 <style scoped>
-/* Tus estilos permanecen igual */
 .search-container {
   padding: 0 2.5rem;
   max-width: 1600px;
@@ -546,13 +532,10 @@ onMounted(() => {
   background-color: #eff6ff;
   color: #1e40af;
 }
-
-/* ✅ AÑADIDO: Estilo para el nuevo rol de moderador */
 .role-badge.moderator {
-  background-color: #fefce8; /* Un amarillo claro */
-  color: #854d0e;      /* Un marrón/dorado oscuro */
+  background-color: #fefce8;
+  color: #854d0e;
 }
-
 .actions-cell {
   text-align: right;
 }

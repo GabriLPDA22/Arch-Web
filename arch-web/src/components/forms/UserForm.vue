@@ -188,10 +188,11 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { UserApi, PreferencesApi, type PreferenceDto, type UserDetailDto } from '@/services/Api'
+import { handleApiError } from '@/utils/validators'
 
 const props = defineProps<{ userId?: string | null }>()
 
-const emit = defineEmits(['user-saved', 'user-created', 'user-updated', 'error'])
+const emit = defineEmits(['user-saved', 'user-created', 'user-updated'])
 
 const maxPreferences = 5
 const isEditing = computed(() => !!props.userId)
@@ -202,7 +203,6 @@ const form = reactive({
   name: '',
   email: '',
   password: '',
-  // ✅ CAMBIO: Actualizado el tipo para incluir 'moderator'
   userType: 'user' as 'admin' | 'user' | 'moderator',
 })
 
@@ -260,10 +260,9 @@ const fetchUserData = async (id: string) => {
     } else {
       selectedPreferenceIds.value = []
     }
-  } catch (error: any) {
+  } catch (error: any) { // ✅ CAMBIO: Especificamos el tipo 'any'
     console.error('Failed to load user data:', error)
-    const errorMessage = error?.response?.data?.message || 'Failed to load user data'
-    emit('error', errorMessage)
+    handleApiError(error)
   } finally {
     loading.value = false
   }
@@ -288,11 +287,6 @@ watch(
 )
 
 const saveUser = async () => {
-  if (selectedPreferenceIds.value.length > maxPreferences) {
-    emit('error', `You can select a maximum of ${maxPreferences} preferences.`)
-    return
-  }
-
   submitting.value = true
 
   try {
@@ -321,11 +315,9 @@ const saveUser = async () => {
       emit('user-created')
       emit('user-saved')
     }
-  } catch (error: any) {
+  } catch (error: any) { // ✅ CAMBIO: Especificamos el tipo 'any'
     console.error('Save failed:', error)
-    const errorMessage =
-      error?.response?.data?.message || error?.message || 'Unknown error while saving user'
-    emit('error', errorMessage)
+    handleApiError(error)
   } finally {
     submitting.value = false
   }
@@ -336,9 +328,9 @@ onMounted(async () => {
   try {
     const prefs = await PreferencesApi.getAll()
     allPreferences.value = prefs
-  } catch (error) {
+  } catch (error: any) { // ✅ CAMBIO: Especificamos el tipo 'any'
     console.error('Failed to load preferences:', error)
-    emit('error', 'Failed to load preferences')
+    handleApiError(error)
   } finally {
     loadingPreferences.value = false
   }
