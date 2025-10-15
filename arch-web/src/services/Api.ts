@@ -15,7 +15,7 @@ export type UserAuthDto = {
   userID: string
   email: string
   name: string
-  userType: 'admin' | 'user'
+  userType: 'admin' | 'user' | 'moderator'
 }
 
 export type AuthResponseDto = {
@@ -24,12 +24,11 @@ export type AuthResponseDto = {
   message?: string
 }
 
-// ✅ NUEVOS TIPOS PARA USER MANAGEMENT
 export type UserListDto = {
   userID: string
   name: string
   email: string
-  userType: 'admin' | 'user'
+  userType: 'admin' | 'user' | 'moderator'
   isVerified: boolean
   createdAt?: string
   preferences?: string[]
@@ -39,7 +38,7 @@ export type UserDetailDto = {
   userID: string
   name: string
   email: string
-  userType: 'admin' | 'user'
+  userType: 'admin' | 'user' | 'moderator'
   isVerified: boolean
   dateOfBirth?: string
   profilePicture?: string
@@ -51,7 +50,7 @@ export type UserCreateDto = {
   name: string
   email: string
   password: string
-  userType: 'admin' | 'user'
+  userType: 'admin' | 'user' | 'moderator'
   preferences?: string[]
 }
 
@@ -59,7 +58,7 @@ export type UserUpdateDto = {
   name?: string
   email?: string
   password?: string
-  userType?: 'admin' | 'user'
+  userType?: 'admin' | 'user' | 'moderator'
   preferences?: string[]
   dateOfBirth?: string
   profilePicture?: string
@@ -209,18 +208,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
   }
 
-  // Manejar respuestas sin contenido (204 No Content o body vacío)
   if (res.status === 204) return undefined as unknown as T
-  
-  // Verificar si hay contenido antes de parsear JSON
+
   const contentType = res.headers.get('content-type')
   const contentLength = res.headers.get('content-length')
-  
-  // Si no hay content-type de JSON o content-length es "0", retornar undefined
+
   if (!contentType?.includes('application/json') || contentLength === '0') {
     return undefined as unknown as T
   }
-  
+
   return res.json() as Promise<T>
 }
 
@@ -232,9 +228,10 @@ export const AuthApi = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  // ✅ NUEVO MÉTODO AÑADIDO
+  verifySession: () => request<UserDetailDto>('/api/Users/me'),
 }
 
-// ✅ CORREGIDO: UserApi con soporte para sortBy y sortOrder
 export const UserApi = {
   list: (params?: {
     q?: string

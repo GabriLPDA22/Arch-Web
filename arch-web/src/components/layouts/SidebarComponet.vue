@@ -11,7 +11,7 @@
     </div>
 
     <nav class="navigation">
-      <RouterLink to="/admin/events" class="nav-item" active-class="active">
+      <RouterLink v-if="authStore.canManagePanel" to="/admin/events" class="nav-item" active-class="active">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
           <path
             d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z"
@@ -20,7 +20,7 @@
         <span class="nav-text">Events</span>
       </RouterLink>
 
-      <RouterLink to="/admin/users" class="nav-item" active-class="active">
+      <RouterLink v-if="authStore.isAdmin" to="/admin/users" class="nav-item" active-class="active">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
           <path
             d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"
@@ -37,7 +37,7 @@
         </div>
         <div class="user-info">
           <span class="user-name">{{ userName }}</span>
-          <span class="user-role">Administrator</span>
+          <span class="user-role">{{ authStore.user?.userType }}</span>
         </div>
       </div>
 
@@ -61,12 +61,12 @@ import { useAuthStore } from '@/stores/auth.store'
 const router = useRouter()
 const authStore = useAuthStore()
 
-const userName = computed(() => authStore.user?.email?.split('@')[0] || 'Admin')
+// ✅ CAMBIO: Usamos el getter del store para consistencia
+const userName = computed(() => authStore.userName)
 const userInitial = computed(() => userName.value.charAt(0).toUpperCase())
 
-const handleLogout = async () => {
-  await authStore.logout()
-  router.push('/login')
+const handleLogout = () => {
+  authStore.logout()
 }
 </script>
 
@@ -213,6 +213,7 @@ const handleLogout = async () => {
 .user-role {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.6);
+  text-transform: capitalize; /* ✅ Añadido para que se vea "Admin" o "Moderator" */
 }
 
 .logout-btn {
@@ -256,7 +257,7 @@ const handleLogout = async () => {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-w: 768px) {
   .sidebar {
     width: 100%;
     position: relative;

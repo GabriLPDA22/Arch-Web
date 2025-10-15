@@ -15,7 +15,6 @@
       </div>
     </div>
 
-    <!-- ✅ Barra de búsqueda -->
     <div class="search-container">
       <div class="search-wrapper">
         <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -149,11 +148,13 @@
 import { ref, onMounted } from 'vue'
 import { UserApi, type UserListDto } from '@/services/Api'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth.store' // ✅ AÑADIDO
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
 import UserForm from '@/components/forms/UserForm.vue'
 
 const { success, error } = useToast()
+const authStore = useAuthStore() // ✅ AÑADIDO
 
 const users = ref<UserListDto[]>([])
 const loading = ref(true)
@@ -186,10 +187,12 @@ const fetchUsers = async () => {
     totalPages.value = result.totalPages
   } catch (err: any) {
     console.error('Failed to load users:', err)
-    error(
-      'Error Loading Users',
-      err?.response?.data?.message || 'Failed to fetch users from server',
-    )
+    if (authStore.isLoggedIn) {
+      error(
+        'Error Loading Users',
+        err?.response?.data?.message || 'Failed to fetch users from server',
+      )
+    }
   } finally {
     loading.value = false
   }
@@ -250,7 +253,6 @@ const closeModals = () => {
   userToDelete.value = null
 }
 
-// ✅ Handler cuando se crea un usuario
 const handleUserCreated = () => {
   closeModals()
   selectedUserId.value = null
@@ -258,31 +260,40 @@ const handleUserCreated = () => {
   success('User Created!', 'The new user has been created successfully.')
 }
 
-// ✅ Handler cuando se actualiza un usuario
+// ✅ LÓGICA MODIFICADA PARA FORZAR LOGOUT
 const handleUserUpdated = () => {
+  const updatedUserId = selectedUserId.value; // Guardar el ID antes de limpiar
+  
   closeModals()
   selectedUserId.value = null
-  fetchUsers()
-  success('User Updated!', 'The user information has been updated successfully.')
+  fetchUsers() // Actualizar la lista para que todos vean el cambio
+
+  // Comprobar si el usuario actualizado es el usuario actual
+  if (updatedUserId && updatedUserId === authStore.user?.userID) {
+    // Si es así, mostrar mensaje y desloguear
+    success('Role Changed', 'Your own role has been updated. You will now be logged out.', { autoClose: 3500 });
+    setTimeout(() => {
+      authStore.logout();
+    }, 3500); // Esperar 3.5 segundos para que el usuario lea el toast
+  } else {
+    // Si es otro usuario, mostrar el mensaje de éxito normal
+    success('User Updated!', 'The user information has been updated successfully.');
+  }
 }
 
-// ✅ Handler genérico (para compatibilidad)
 const handleUserSaved = () => {
   closeModals()
   selectedUserId.value = null
   fetchUsers()
 }
 
-// ✅ Handler de errores del formulario
 const handleFormError = (errorMessage: string) => {
   error('Operation Failed', errorMessage)
 }
 
-// ✅ Confirmación de eliminación con toast
 const handleDeleteConfirm = async () => {
   if (!userToDelete.value?.userID) return
 
-  // Guardar el nombre antes de cerrar el modal (que pone userToDelete a null)
   const deletedUserName = userToDelete.value.name
 
   try {
@@ -303,10 +314,17 @@ const handleDeleteConfirm = async () => {
   }
 }
 
-onMounted(fetchUsers)
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    fetchUsers()
+  } else {
+    loading.value = false;
+  }
+})
 </script>
 
 <style scoped>
+/* Tus estilos permanecen igual */
 .search-container {
   padding: 0 2.5rem;
   max-width: 1600px;
@@ -528,6 +546,13 @@ onMounted(fetchUsers)
   background-color: #eff6ff;
   color: #1e40af;
 }
+
+/* ✅ AÑADIDO: Estilo para el nuevo rol de moderador */
+.role-badge.moderator {
+  background-color: #fefce8; /* Un amarillo claro */
+  color: #854d0e;      /* Un marrón/dorado oscuro */
+}
+
 .actions-cell {
   text-align: right;
 }

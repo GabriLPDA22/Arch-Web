@@ -41,6 +41,7 @@
         <select v-model="form.userType" class="form-select">
           <option value="user">User</option>
           <option value="admin">Admin</option>
+          <option value="moderator">Moderator</option>
         </select>
       </div>
 
@@ -190,7 +191,6 @@ import { UserApi, PreferencesApi, type PreferenceDto, type UserDetailDto } from 
 
 const props = defineProps<{ userId?: string | null }>()
 
-// ✅ Eventos actualizados para trabajar con toasts
 const emit = defineEmits(['user-saved', 'user-created', 'user-updated', 'error'])
 
 const maxPreferences = 5
@@ -202,7 +202,8 @@ const form = reactive({
   name: '',
   email: '',
   password: '',
-  userType: 'user' as 'admin' | 'user',
+  // ✅ CAMBIO: Actualizado el tipo para incluir 'moderator'
+  userType: 'user' as 'admin' | 'user' | 'moderator',
 })
 
 const selectedPreferenceIds = ref<string[]>([])
@@ -286,7 +287,6 @@ watch(
   { immediate: true },
 )
 
-// ✅ Función saveUser actualizada para emitir eventos correctos
 const saveUser = async () => {
   if (selectedPreferenceIds.value.length > maxPreferences) {
     emit('error', `You can select a maximum of ${maxPreferences} preferences.`)
@@ -314,20 +314,17 @@ const saveUser = async () => {
 
     if (isEditing.value) {
       await UserApi.update(props.userId!, payload)
-      // ✅ Emitir evento específico para actualización
       emit('user-updated')
-      emit('user-saved') // Mantener compatibilidad
+      emit('user-saved')
     } else {
       await UserApi.create(payload)
-      // ✅ Emitir evento específico para creación
       emit('user-created')
-      emit('user-saved') // Mantener compatibilidad
+      emit('user-saved')
     }
   } catch (error: any) {
     console.error('Save failed:', error)
     const errorMessage =
       error?.response?.data?.message || error?.message || 'Unknown error while saving user'
-    // ✅ Emitir evento de error
     emit('error', errorMessage)
   } finally {
     submitting.value = false
@@ -349,6 +346,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* Tus estilos permanecen igual */
 .modern-form {
   width: 100%;
   max-width: 100%;

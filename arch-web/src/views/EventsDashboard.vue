@@ -149,8 +149,8 @@
           <span class="finished-text">Event Finished</span>
         </div>
         <div class="event-image">
-          <img 
-            :src="event.imageUrl || defaultEventImage" 
+          <img
+            :src="event.imageUrl || defaultEventImage"
             :alt="event.name"
             :fetchpriority="index === 0 ? 'high' : 'auto'"
           />
@@ -243,9 +243,11 @@ import EventForm from '@/components/forms/EventForm.vue'
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth.store' // ✅ AÑADIDO
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
 
 const { success, error } = useToast()
+const authStore = useAuthStore() // ✅ AÑADIDO
 
 const events = ref<EventListDto[]>([])
 const loading = ref(true)
@@ -261,7 +263,6 @@ const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedEvent = ref<EventDetailDto | null>(null)
 const eventFormComponent = ref<any>(null)
-// ✅ CORRECCIÓN: El 'id' ahora es solo de tipo 'string'
 const filters = ref<{ label: string; id: string }[]>([])
 
 const statusFilters = computed(() =>
@@ -286,41 +287,44 @@ const fetchEvents = async () => {
     q: searchQuery.value,
     page: currentPage.value,
     pageSize: pageSize,
-  };
+  }
 
-  const filter = activeFilterId.value;
+  const filter = activeFilterId.value
   if (filter === 'active' || filter === 'finished') {
-    params.status = filter;
+    params.status = filter
   } else if (filter && filter !== 'all') {
-    params.preferenceId = filter;
+    params.preferenceId = filter
   }
 
   try {
-    const pagedResult = await EventApi.listForAdmin(params);
-    events.value = pagedResult.items || [];
-    totalPages.value = pagedResult.totalPages || 1;
+    const pagedResult = await EventApi.listForAdmin(params)
+    events.value = pagedResult.items || []
+    totalPages.value = pagedResult.totalPages || 1
   } catch (err: any) {
-    console.error('Failed to load events:', err);
-    error(
-      'Error Loading Events',
-      err?.response?.data?.message || 'Failed to fetch events from server'
-    )
-    events.value = [];
-    totalPages.value = 1;
+    console.error('Failed to load events:', err)
+    // ✅ CAMBIO: Solo mostramos el error si el usuario está logueado.
+    if (authStore.isLoggedIn) {
+      error(
+        'Error Loading Events',
+        err?.response?.data?.message || 'Failed to fetch events from server',
+      )
+    }
+    events.value = []
+    totalPages.value = 1
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
 watch([searchQuery, activeFilterId], () => {
-  currentPage.value = 1;
-  fetchEvents();
-});
+  currentPage.value = 1
+  fetchEvents()
+})
 
 const goToPage = (page: number) => {
-  currentPage.value = page;
-  fetchEvents();
-};
+  currentPage.value = page
+  fetchEvents()
+}
 
 const loadFilters = async () => {
   const staticFilters = [
@@ -328,28 +332,28 @@ const loadFilters = async () => {
     { label: 'Active Events', id: 'active' },
     { label: 'Finished Events', id: 'finished' },
   ]
-  
-  const cachedPreferences = localStorage.getItem('preferencesCache');
-  const cacheTimestamp = localStorage.getItem('preferencesCacheTimestamp');
-  const now = new Date().getTime();
-  
-  if (cachedPreferences && cacheTimestamp && (now - parseInt(cacheTimestamp, 10)) < 3600000) {
-    const dynamicFilters = JSON.parse(cachedPreferences);
-    filters.value = [...staticFilters, ...dynamicFilters];
-    return;
+
+  const cachedPreferences = localStorage.getItem('preferencesCache')
+  const cacheTimestamp = localStorage.getItem('preferencesCacheTimestamp')
+  const now = new Date().getTime()
+
+  if (cachedPreferences && cacheTimestamp && now - parseInt(cacheTimestamp, 10) < 3600000) {
+    const dynamicFilters = JSON.parse(cachedPreferences)
+    filters.value = [...staticFilters, ...dynamicFilters]
+    return
   }
 
   try {
-    const preferences = await PreferencesApi.getAll();
+    const preferences = await PreferencesApi.getAll()
     const dynamicFilters = preferences.map((p) => ({
       label: p.name,
       id: p.preferenceId,
-    }));
-    
-    localStorage.setItem('preferencesCache', JSON.stringify(dynamicFilters));
-    localStorage.setItem('preferencesCacheTimestamp', now.toString());
+    }))
 
-    filters.value = [...staticFilters, ...dynamicFilters];
+    localStorage.setItem('preferencesCache', JSON.stringify(dynamicFilters))
+    localStorage.setItem('preferencesCacheTimestamp', now.toString())
+
+    filters.value = [...staticFilters, ...dynamicFilters]
   } catch (error) {
     console.error('Failed to load filters:', error)
     filters.value = staticFilters
@@ -366,49 +370,49 @@ const formatDate = (iso?: string) => {
 }
 
 const openCreateModal = () => {
-  isEditing.value = false;
-  selectedEvent.value = null;
-  isFormModalOpen.value = true;
+  isEditing.value = false
+  selectedEvent.value = null
+  isFormModalOpen.value = true
 }
 
 const openEditModal = async (event: EventListDto) => {
-  isEditing.value = true;
-  selectedEvent.value = null;
-  isFormModalOpen.value = true;
+  isEditing.value = true
+  selectedEvent.value = null
+  isFormModalOpen.value = true
   try {
-    const fullEventDetails = await EventApi.get(event.eventID);
-    selectedEvent.value = fullEventDetails;
+    const fullEventDetails = await EventApi.get(event.eventID)
+    selectedEvent.value = fullEventDetails
   } catch (error) {
-    console.error('Failed to fetch event details for editing:', error);
-    closeModals();
+    console.error('Failed to fetch event details for editing:', error)
+    closeModals()
   }
 }
 
 const openDeleteModal = (event: EventListDto) => {
-  selectedEvent.value = event as EventDetailDto;
-  isDeleteModalOpen.value = true;
+  selectedEvent.value = event as EventDetailDto
+  isDeleteModalOpen.value = true
 }
 
 const closeModals = () => {
-  isFormModalOpen.value = false;
-  isDeleteModalOpen.value = false;
-  selectedEvent.value = null;
-  isEditing.value = false;
+  isFormModalOpen.value = false
+  isDeleteModalOpen.value = false
+  selectedEvent.value = null
+  isEditing.value = false
 }
 
 const handleSaveEvent = async () => {
-  if (!eventFormComponent.value) return;
-  submitting.value = true;
-  let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined;
+  if (!eventFormComponent.value) return
+  submitting.value = true
+  let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined
 
   try {
-    const imageFile = eventFormComponent.value.imageFile;
+    const imageFile = eventFormComponent.value.imageFile
     if (imageFile) {
-      const uploadResult = await FilesApi.uploadImage(imageFile);
-      imageUrl = uploadResult.imageUrl;
+      const uploadResult = await FilesApi.uploadImage(imageFile)
+      imageUrl = uploadResult.imageUrl
     }
 
-    const form = eventFormComponent.value.form;
+    const form = eventFormComponent.value.form
     const payload = {
       name: form.name.trim(),
       description: form.description?.trim(),
@@ -421,52 +425,60 @@ const handleSaveEvent = async () => {
       preferenceId: form.preferenceId,
       externalUrl: form.externalUrl,
       imageUrl: imageUrl,
-    };
+    }
 
     if (isEditing.value && selectedEvent.value?.eventID) {
-      await EventApi.update(selectedEvent.value.eventID, payload);
+      await EventApi.update(selectedEvent.value.eventID, payload)
       success('Event Updated!', 'The event information has been updated successfully.')
     } else {
-      await EventApi.create(payload);
+      await EventApi.create(payload)
       success('Event Created!', 'The new event has been created successfully.')
     }
-    await fetchEvents();
-    closeModals();
+    await fetchEvents()
+    closeModals()
   } catch (err: any) {
-    console.error('Failed to save event:', err);
-    const errorMessage = err?.response?.data?.message || 'An unknown error occurred while saving the event'
+    console.error('Failed to save event:', err)
+    const errorMessage =
+      err?.response?.data?.message || 'An unknown error occurred while saving the event'
     error('Operation Failed', errorMessage)
   } finally {
-    submitting.value = false;
+    submitting.value = false
   }
 }
 
 const handleDeleteConfirm = async () => {
-  if (!selectedEvent.value?.eventID) return;
-  
-  // Guardar el nombre antes de cerrar el modal (que pone selectedEvent a null)
-  const deletedEventName = selectedEvent.value.name;
-  
+  if (!selectedEvent.value?.eventID) return
+
+  const deletedEventName = selectedEvent.value.name
+
   try {
-    await EventApi.remove(selectedEvent.value.eventID);
-    
-    closeModals();
-    await fetchEvents();
+    await EventApi.remove(selectedEvent.value.eventID)
+
+    closeModals()
+    await fetchEvents()
     success('Event Deleted!', `${deletedEventName} has been removed successfully.`)
   } catch (err: any) {
-    console.error('Failed to delete event:', err);
-    const errorMessage = err?.response?.data?.message || 'An unknown error occurred while deleting the event'
+    console.error('Failed to delete event:', err)
+    const errorMessage =
+      err?.response?.data?.message || 'An unknown error occurred while deleting the event'
     error('Deletion Failed', errorMessage)
   }
 }
 
 onMounted(() => {
-  fetchEvents();
-  loadFilters();
+  // ✅ CAMBIO: Solo cargamos los datos si el usuario está autenticado.
+  if (authStore.isLoggedIn) {
+    fetchEvents()
+    loadFilters()
+  } else {
+    // Si no está logueado, evitamos la llamada a la API y el estado de carga.
+    loading.value = false
+  }
 })
 </script>
 
 <style scoped>
+/* Tus estilos permanecen igual */
 .dashboard {
   padding: 0;
   min-height: 100vh;

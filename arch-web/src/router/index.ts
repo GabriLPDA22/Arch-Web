@@ -5,8 +5,8 @@ import { useAuthStore } from '@/stores/auth.store'
 import LoginView from '@/views/LoginView.vue'
 import AdminLayout from '@/components/layouts/AdminLayout.vue'
 import EventsDashboard from '@/views/EventsDashboard.vue'
-import UsersDashboard from '@/views/UsersDashboard.vue' 
-import UnauthorizedView from '../views/UnauthorizedView.vue' 
+import UsersDashboard from '@/views/UsersDashboard.vue'
+import UnauthorizedView from '../views/UnauthorizedView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,7 +24,8 @@ const router = createRouter({
     {
       path: '/admin',
       component: AdminLayout,
-      meta: { requiresAdmin: true },
+      // ✅ CAMBIO: Ahora solo requiere poder gestionar el panel (admin o mod)
+      meta: { requiresPanelAccess: true },
       children: [
         {
           path: '',
@@ -35,11 +36,12 @@ const router = createRouter({
           name: 'admin-events',
           component: EventsDashboard,
         },
-        // ✅ NUEVA RUTA AÑADIDA
         {
           path: 'users',
           name: 'admin-users',
           component: UsersDashboard,
+          // ✅ CAMBIO: Esta ruta específica requiere ser admin
+          meta: { requiresAdmin: true },
         },
       ],
     },
@@ -55,17 +57,23 @@ router.beforeEach(async (to) => {
   const publicPages = ['/login', '/unauthorized']
   const authRequired = !publicPages.includes(to.path)
 
+  // Si no está logueado y la página no es pública, redirigir a login
   if (authRequired && !authStore.isLoggedIn) {
     authStore.returnUrl = to.fullPath
     return '/login'
   }
 
-  if (
-    authStore.isLoggedIn &&
-    to.matched.some((record) => record.meta.requiresAdmin) &&
-    !authStore.isAdmin
-  ) {
-    return '/unauthorized'
+  // ✅ NUEVA LÓGICA DE AUTORIZACIÓN POR ROLES
+  if (authStore.isLoggedIn) {
+    // Verificar acceso general al panel de administración
+    if (to.matched.some((record) => record.meta.requiresPanelAccess) && !authStore.canManagePanel) {
+      return '/unauthorized'
+    }
+
+    // Verificar acceso específico a rutas de solo admin
+    if (to.matched.some((record) => record.meta.requiresAdmin) && !authStore.isAdmin) {
+      return '/unauthorized'
+    }
   }
 })
 
