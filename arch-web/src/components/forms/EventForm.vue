@@ -79,17 +79,33 @@
         <h3 class="section-title">Event Image</h3>
         <div class="form-group">
           <label class="form-label"> Upload an image </label>
+          <p class="image-hint">Maximum file size: 5MB. Accepted formats: PNG, JPG, GIF</p>
           <div class="image-upload-wrapper">
             <input
               type="file"
-              accept="image/png, image/jpeg, image/gif"
+              accept="image/png, image/jpeg, image/gif, image/jpg"
               class="file-input"
               @change="handleImageSelection"
             />
             <div v-if="imagePreviewUrl" class="image-preview">
               <img :src="imagePreviewUrl" alt="Image preview" />
+              <button 
+                type="button" 
+                class="remove-image-btn"
+                @click="removeImage"
+              >
+                ✕
+              </button>
             </div>
-            <div v-else class="image-placeholder">Click to upload</div>
+            <div v-else class="image-placeholder">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-width="2"/>
+                <polyline points="17 8 12 3 7 8" stroke-width="2"/>
+                <line x1="12" y1="3" x2="12" y2="15" stroke-width="2"/>
+              </svg>
+              <p>Click to upload image</p>
+              <span class="file-size-hint">Max 5MB</span>
+            </div>
           </div>
         </div>
       </div>
@@ -244,7 +260,6 @@ const loadPreferences = async () => {
     preferences.value = await PreferencesApi.getAll()
   } catch (error: any) {
     console.error('Failed to load categories:', error)
-    // Use custom status message
     showStatus(error.message || 'Error loading categories. Please refresh.', true)
   } finally {
     loadingPreferences.value = false
@@ -256,11 +271,60 @@ const handleImageSelection = (event: Event) => {
   const file = target.files?.[0]
 
   if (file) {
+    // Validar tamaño del archivo (5MB = 5 * 1024 * 1024 bytes)
+    const maxSizeInBytes = 5 * 1024 * 1024 // 5MB
+    
+    if (file.size > maxSizeInBytes) {
+      // Mostrar mensaje de error
+      const sizeInMB = (file.size / (1024 * 1024)).toFixed(2)
+      showStatus(
+        `La imagen es demasiado grande (${sizeInMB}MB). El tamaño máximo permitido es 5MB.`,
+        true
+      )
+      
+      // Limpiar el input
+      target.value = ''
+      imageFile.value = null
+      imagePreviewUrl.value = null
+      return
+    }
+
+    // Validar tipo de archivo
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      showStatus(
+        'Formato de imagen no válido. Por favor, usa PNG, JPG o GIF.',
+        true
+      )
+      target.value = ''
+      imageFile.value = null
+      imagePreviewUrl.value = null
+      return
+    }
+
+    // Si todo está bien, procesar la imagen
     imageFile.value = file
     imagePreviewUrl.value = URL.createObjectURL(file)
+    
+    // Limpiar mensaje de error si había uno
+    if (isError.value) {
+      statusMessage.value = null
+      isError.value = false
+    }
   } else {
     imageFile.value = null
     imagePreviewUrl.value = null
+  }
+}
+
+const removeImage = () => {
+  imageFile.value = null
+  imagePreviewUrl.value = null
+  
+  // Limpiar el input file
+  const fileInput = document.querySelector('.file-input') as HTMLInputElement
+  if (fileInput) {
+    fileInput.value = ''
   }
 }
 
@@ -383,10 +447,17 @@ defineExpose({ form, validationErrors, imageFile, showStatus })
 }
 /* --- END CUSTOM STATUS MESSAGE STYLES --- */
 
+/* --- IMAGE UPLOAD STYLES --- */
+.image-hint {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0.5rem 0;
+}
+
 .image-upload-wrapper {
   position: relative;
   width: 100%;
-  height: 200px;
+  min-height: 200px;
   border: 2px dashed #e2e8f0;
   border-radius: 0.75rem;
   display: flex;
@@ -395,11 +466,12 @@ defineExpose({ form, validationErrors, imageFile, showStatus })
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s ease;
+  background: #ffffff;
 }
 
 .image-upload-wrapper:hover {
   border-color: #dbb067;
-  background-color: #f8f9fa;
+  background-color: #fffbf5;
 }
 
 .file-input {
@@ -408,17 +480,73 @@ defineExpose({ form, validationErrors, imageFile, showStatus })
   height: 100%;
   opacity: 0;
   cursor: pointer;
+  z-index: 1;
+}
+
+.image-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
 }
 
 .image-preview img {
   width: 100%;
   height: 100%;
+  min-height: 200px;
   object-fit: cover;
 }
 
+.remove-image-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  transition: all 0.2s ease;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+}
+
+.remove-image-btn:hover {
+  background: rgba(220, 38, 38, 1);
+  transform: scale(1.1);
+}
+
 .image-placeholder {
-  color: #a0aec0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #9ca3af;
+  padding: 2rem;
+  text-align: center;
+}
+
+.image-placeholder svg {
+  color: #d1d5db;
+}
+
+.image-placeholder p {
   font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+}
+
+.file-size-hint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
 }
 
 .form-sections {
