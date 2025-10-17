@@ -5,6 +5,195 @@
       <p>Loading user data...</p>
     </div>
     <div v-else class="form-sections">
+      <div class="form-group user-type-selector">
+        <label class="form-label">User Type <span class="required">*</span></label>
+        <div class="user-type-cards">
+          <label
+            class="user-type-card"
+            :class="{ active: form.userType === 'user' }"
+            @click="handleUserTypeChange('user')"
+          >
+            <input
+              type="radio"
+              name="userType"
+              value="user"
+              v-model="form.userType"
+              class="sr-only"
+            />
+            <div class="card-icon student">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M16,17V19H2V17S2,13 9,13 16,17 16,17M12.5,7.5A3.5,3.5 0 0,1 9,11A3.5,3.5 0 0,1 5.5,7.5A3.5,3.5 0 0,1 9,4A3.5,3.5 0 0,1 12.5,7.5M15.94,13C18.23,13.72 20,15.36 20,17V19H18V17C18,15.36 17.5,14.14 15.94,13M15,4A3.39,3.39 0 0,1 18.5,7.5A3.5,3.5 0 0,1 15,11V9A1.5,1.5 0 0,0 16.5,7.5A1.5,1.5 0 0,0 15,6V4Z"
+                />
+              </svg>
+            </div>
+            <div class="card-content">
+              <h4>Oxford</h4>
+              <p>Oxford University members</p>
+              <span class="email-requirement">Requires @ox.ac.uk email</span>
+            </div>
+          </label>
+
+          <label
+            class="user-type-card"
+            :class="{ active: form.userType === 'staff-user' }"
+            @click="handleUserTypeChange('staff-user')"
+          >
+            <input
+              type="radio"
+              name="userType"
+              value="staff-user"
+              v-model="form.userType"
+              class="sr-only"
+            />
+            <div class="card-icon staff">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
+                />
+              </svg>
+            </div>
+            <div class="card-content">
+              <h4>Staff</h4>
+              <p>Staff member / Organization</p>
+              <span class="email-requirement">Any email allowed</span>
+            </div>
+          </label>
+
+          <label
+            class="user-type-card"
+            :class="{ active: form.userType === 'moderator' }"
+            @click="handleUserTypeChange('moderator')"
+          >
+            <input
+              type="radio"
+              name="userType"
+              value="moderator"
+              v-model="form.userType"
+              class="sr-only"
+            />
+            <div class="card-icon moderator">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12,2L2,7V13C2,17.55 4.84,21.74 9,23C9,23 10,23 12,23C14,23 15,23 15,23C19.16,21.74 22,17.55 22,13V7L12,2M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z"
+                />
+              </svg>
+            </div>
+            <div class="card-content">
+              <h4>Moderator</h4>
+              <p>Content moderator</p>
+              <span class="email-requirement">Any email allowed</span>
+            </div>
+          </label>
+
+          <label
+            class="user-type-card"
+            :class="{ active: form.userType === 'admin' }"
+            @click="handleUserTypeChange('admin')"
+          >
+            <input
+              type="radio"
+              name="userType"
+              value="admin"
+              v-model="form.userType"
+              class="sr-only"
+            />
+            <div class="card-icon admin">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z"
+                />
+              </svg>
+            </div>
+            <div class="card-content">
+              <h4>Admin</h4>
+              <p>Full system access</p>
+              <span class="email-requirement">Any email allowed</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- ✅ Selector de subtipo Oxford -->
+      <transition name="slide-fade">
+        <div v-if="form.userType === 'user'" class="form-group oxford-subtype-selector">
+          <label class="form-label">
+            Oxford Member Type
+            <span class="required">*</span>
+            <span class="info-badge">Visual indicator</span>
+          </label>
+          <div class="subtype-options">
+            <label
+              class="subtype-option"
+              :class="{ active: oxfordSubtype === 'student' }"
+              @click="oxfordSubtype = 'student'"
+            >
+              <input
+                type="radio"
+                name="oxfordSubtype"
+                value="student"
+                v-model="oxfordSubtype"
+                class="sr-only"
+              />
+              <div class="subtype-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z"
+                  />
+                </svg>
+              </div>
+              <div class="subtype-text">
+                <span class="subtype-title">Student</span>
+                <span class="subtype-desc">Current student at Oxford</span>
+              </div>
+              <div class="check-mark" v-if="oxfordSubtype === 'student'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+                </svg>
+              </div>
+            </label>
+
+            <label
+              class="subtype-option"
+              :class="{ active: oxfordSubtype === 'professor' }"
+              @click="oxfordSubtype = 'professor'"
+            >
+              <input
+                type="radio"
+                name="oxfordSubtype"
+                value="professor"
+                v-model="oxfordSubtype"
+                class="sr-only"
+              />
+              <div class="subtype-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M16,11C17.66,11 18.99,9.66 18.99,8C18.99,6.34 17.66,5 16,5C14.34,5 13,6.34 13,8C13,9.66 14.34,11 16,11M8,11C9.66,11 10.99,9.66 10.99,8C10.99,6.34 9.66,5 8,5C6.34,5 5,6.34 5,8C5,9.66 6.34,11 8,11M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M16,13C15.71,13 15.38,13.02 15.03,13.05C16.19,13.89 17,15.02 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13Z"
+                  />
+                </svg>
+              </div>
+              <div class="subtype-text">
+                <span class="subtype-title">Professor</span>
+                <span class="subtype-desc">Faculty member</span>
+              </div>
+              <div class="check-mark" v-if="oxfordSubtype === 'professor'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+                </svg>
+              </div>
+            </label>
+          </div>
+          <p class="field-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+              />
+            </svg>
+            This will be saved in the name field for filtering (e.g., "John Doe [Student]")
+          </p>
+        </div>
+      </transition>
+
       <div class="form-group">
         <label class="form-label">Name <span class="required">*</span></label>
         <input v-model="form.name" class="form-input" type="text" required placeholder="John Doe" />
@@ -17,8 +206,16 @@
           class="form-input"
           type="email"
           required
-          placeholder="john.doe@example.com"
+          :placeholder="getEmailPlaceholder()"
         />
+        <p v-if="form.userType === 'user'" class="field-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+            />
+          </svg>
+          Must be an Oxford University email (@ox.ac.uk or @oxford.ac.uk)
+        </p>
       </div>
 
       <div class="form-group">
@@ -38,11 +235,28 @@
 
       <div class="form-group">
         <label class="form-label">Role <span class="required">*</span></label>
-        <select v-model="form.userType" class="form-select">
+        <select v-model="form.userType" class="form-select" :disabled="!canChangeRole">
           <option value="user">User</option>
-          <option value="admin">Admin</option>
+          <option value="staff-user">Staff User</option>
           <option value="moderator">Moderator</option>
+          <option value="admin">Admin</option>
         </select>
+        <p v-if="!canChangeRole" class="field-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9"
+            />
+          </svg>
+          Role is locked based on user type. Only admins can change roles when editing.
+        </p>
+        <p v-else class="field-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+            />
+          </svg>
+          Role determines system permissions
+        </p>
       </div>
 
       <div class="form-group">
@@ -159,7 +373,11 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn-primary" :disabled="submitting || loading">
+      <button
+        type="submit"
+        class="btn-primary"
+        :disabled="submitting || loading || (form.userType === 'user' && !oxfordSubtype)"
+      >
         <span v-if="submitting" class="btn-content">
           <div class="spinner-small"></div>
           Saving...
@@ -189,6 +407,9 @@
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { UserApi, PreferencesApi, type PreferenceDto, type UserDetailDto } from '@/services/Api'
 import { handleApiError } from '@/utils/validators'
+import { useAuthStore } from '@/stores/auth.store'
+
+const authStore = useAuthStore()
 
 const props = defineProps<{ userId?: string | null }>()
 
@@ -203,13 +424,19 @@ const form = reactive({
   name: '',
   email: '',
   password: '',
-  userType: 'user' as 'admin' | 'user' | 'moderator',
+  userType: 'user' as 'admin' | 'user' | 'staff-user' | 'moderator',
 })
+
+const oxfordSubtype = ref<'student' | 'professor'>('student')
 
 const selectedPreferenceIds = ref<string[]>([])
 const allPreferences = ref<PreferenceDto[]>([])
 const loadingPreferences = ref(false)
 const submitting = ref(false)
+
+const canChangeRole = computed(() => {
+  return authStore.isAdmin && isEditing.value
+})
 
 const canSelectMore = computed(() => selectedPreferenceIds.value.length < maxPreferences)
 
@@ -224,7 +451,7 @@ const filteredPreferences = computed(() => {
 const selectedPreferences = computed(() => {
   return selectedPreferenceIds.value
     .map((id) => allPreferences.value.find((p) => p.preferenceId === id))
-    .filter((p) => p !== undefined) as PreferenceDto[]
+    .filter((p): p is PreferenceDto => p !== undefined)
 })
 
 const isPreferenceSelected = (preferenceId: string) => {
@@ -238,12 +465,56 @@ const removePreference = (preferenceId: string) => {
   }
 }
 
+const getEmailPlaceholder = () => {
+  switch (form.userType) {
+    case 'user':
+      return 'student@ox.ac.uk'
+    case 'staff-user':
+      return 'staff@company.com'
+    case 'moderator':
+      return 'moderator@company.com'
+    default:
+      return 'email@example.com'
+  }
+}
+
+const handleUserTypeChange = (newType: 'admin' | 'user' | 'staff-user' | 'moderator') => {
+  if (!canChangeRole.value) {
+    form.userType = newType
+  }
+}
+
+// ✅ Extraer el subtipo del nombre si existe
+const extractOxfordSubtypeFromName = (name: string): 'student' | 'professor' | null => {
+  if (name.includes('[Student]')) return 'student'
+  if (name.includes('[Professor]')) return 'professor'
+  return null
+}
+
+// ✅ Limpiar el nombre de tags
+const cleanName = (name: string): string => {
+  return name.replace(/\s*\[(Student|Professor)\]\s*$/, '').trim()
+}
+
 const fetchUserData = async (id: string) => {
   loading.value = true
   try {
     const data = (await UserApi.get(id)) as UserDetailDto
 
-    form.name = data.name
+    // Extraer subtipo del nombre si es Oxford
+    if (data.userType === 'user') {
+      const subtype = extractOxfordSubtypeFromName(data.name)
+      if (subtype) {
+        oxfordSubtype.value = subtype
+        form.name = cleanName(data.name)
+      } else {
+        form.name = data.name
+        oxfordSubtype.value = 'student'
+      }
+    } else {
+      form.name = data.name
+    }
+
     form.email = data.email
     form.password = ''
     form.userType = data.userType
@@ -260,7 +531,7 @@ const fetchUserData = async (id: string) => {
     } else {
       selectedPreferenceIds.value = []
     }
-  } catch (error: any) { // ✅ CAMBIO: Especificamos el tipo 'any'
+  } catch (error: any) {
     console.error('Failed to load user data:', error)
     handleApiError(error)
   } finally {
@@ -281,12 +552,19 @@ watch(
       form.password = ''
       form.userType = 'user'
       selectedPreferenceIds.value = []
+      oxfordSubtype.value = 'student'
     }
   },
   { immediate: true },
 )
 
 const saveUser = async () => {
+  // ✅ Validar que si es Oxford, tenga subtipo
+  if (form.userType === 'user' && !oxfordSubtype.value) {
+    console.error('Oxford users must have a subtype selected')
+    return
+  }
+
   submitting.value = true
 
   try {
@@ -297,8 +575,18 @@ const saveUser = async () => {
       })
       .filter((name): name is string => name !== null)
 
+    // ✅ Añadir el subtipo al nombre si es Oxford
+    let finalName = form.name.trim()
+    if (form.userType === 'user' && oxfordSubtype.value) {
+      // Limpiar cualquier tag existente primero
+      finalName = cleanName(finalName)
+      // Añadir el nuevo tag
+      finalName = `${finalName} [${oxfordSubtype.value === 'student' ? 'Student' : 'Professor'}]`
+    }
+
     const payload: any = {
       ...form,
+      name: finalName,
       preferences: preferenceNames,
     }
 
@@ -315,7 +603,7 @@ const saveUser = async () => {
       emit('user-created')
       emit('user-saved')
     }
-  } catch (error: any) { // ✅ CAMBIO: Especificamos el tipo 'any'
+  } catch (error: any) {
     console.error('Save failed:', error)
     handleApiError(error)
   } finally {
@@ -328,7 +616,7 @@ onMounted(async () => {
   try {
     const prefs = await PreferencesApi.getAll()
     allPreferences.value = prefs
-  } catch (error: any) { // ✅ CAMBIO: Especificamos el tipo 'any'
+  } catch (error: any) {
     console.error('Failed to load preferences:', error)
     handleApiError(error)
   } finally {
@@ -338,22 +626,43 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Tus estilos permanecen igual */
+/* ... (todos los estilos anteriores se mantienen igual) ... */
 .modern-form {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
 }
+
 .form-sections {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
+
+.slide-fade-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-fade-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slide-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
+
 .form-label {
   font-size: 0.875rem;
   font-weight: 600;
@@ -361,16 +670,289 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.375rem;
+  flex-wrap: wrap;
 }
+
 .required {
   color: #dc2626;
 }
+
 .optional-hint {
   font-size: 0.8rem;
   font-weight: 400;
   color: #9ca3af;
   font-style: italic;
 }
+
+.info-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.field-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0;
+  padding-top: 0.25rem;
+}
+
+.field-hint svg {
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+.user-type-selector {
+  background: #f9fafb;
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.user-type-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.user-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.user-type-card:hover {
+  border-color: #dbb067;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(219, 176, 103, 0.15);
+}
+
+.user-type-card.active {
+  border-color: #dbb067;
+  background: #fffbf5;
+  box-shadow: 0 4px 12px rgba(219, 176, 103, 0.25);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.card-icon.student {
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.user-type-card.active .card-icon.student {
+  background: #6d28d9;
+  color: #ffffff;
+}
+
+.card-icon.staff {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.user-type-card.active .card-icon.staff {
+  background: #0369a1;
+  color: #ffffff;
+}
+
+.card-icon.moderator {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.user-type-card.active .card-icon.moderator {
+  background: #92400e;
+  color: #ffffff;
+}
+
+.card-icon.admin {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.user-type-card.active .card-icon.admin {
+  background: #991b1b;
+  color: #ffffff;
+}
+
+.card-content h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.card-content p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.email-requirement {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  background: #f3f4f6;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.user-type-card.active .email-requirement {
+  background: #dbb067;
+  color: #ffffff;
+}
+
+.oxford-subtype-selector {
+  background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 2px solid #dbb067;
+  box-shadow: 0 4px 12px rgba(219, 176, 103, 0.1);
+}
+
+.subtype-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.subtype-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.subtype-option:hover {
+  border-color: #dbb067;
+  transform: translateX(6px);
+  box-shadow: 0 4px 12px rgba(219, 176, 103, 0.15);
+}
+
+.subtype-option.active {
+  border-color: #dbb067;
+  background: linear-gradient(135deg, #fffbf5 0%, #ffffff 100%);
+  box-shadow: 0 6px 16px rgba(219, 176, 103, 0.25);
+  transform: translateX(8px);
+}
+
+.subtype-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+}
+
+.subtype-option.active .subtype-icon {
+  background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%);
+  color: #ffffff;
+  transform: rotate(-5deg) scale(1.05);
+}
+
+.subtype-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.subtype-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1f2937;
+  transition: color 0.2s ease;
+}
+
+.subtype-option.active .subtype-title {
+  color: #0d2954;
+}
+
+.subtype-desc {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.check-mark {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  animation: checkBounce 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes checkBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 .form-input,
 .form-select {
   width: 100%;
@@ -382,131 +964,191 @@ onMounted(async () => {
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
+
 .form-input:focus,
 .form-select:focus {
   border-color: #dbb067;
   box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.1);
   outline: none;
 }
+
 .form-select {
   cursor: pointer;
 }
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #dbb067;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #dbb067;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
 .preferences-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
 .preferences-count {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   background: #f3f4f6;
   color: #6b7280;
-  padding: 0.25rem 0.625rem;
+  padding: 0.125rem 0.5rem;
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  transition: all 0.2s ease;
 }
+
 .preferences-count.limit-reached {
-  background: #fef2f2;
-  color: #dc2626;
+  background: #fef3c7;
+  color: #92400e;
 }
+
 .limit-warning {
-  font-size: 0.875rem;
-  color: #dc2626;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 8px;
+  font-size: 0.8rem;
   font-weight: 500;
-  animation: fadeIn 0.3s ease;
 }
+
 .preferences-loading {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.75rem;
   padding: 2rem;
+  justify-content: center;
   color: #6b7280;
 }
+
 .preferences-container {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  background: #f9fafb;
+  border-radius: 0.5rem;
   overflow: hidden;
 }
+
 .search-box {
   position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  box-sizing: border-box;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
 }
+
 .search-icon {
   position: absolute;
-  left: 1rem;
+  left: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
   color: #9ca3af;
   pointer-events: none;
 }
+
 .search-input {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  padding: 0.625rem 2.5rem 0.625rem 2.5rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
   background: #ffffff;
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
+
 .search-input:focus {
   border-color: #dbb067;
   box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.1);
   outline: none;
 }
+
 .clear-search {
   position: absolute;
-  right: 0.75rem;
+  right: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
   background: transparent;
   border: none;
   color: #9ca3af;
   cursor: pointer;
   padding: 0.25rem;
+  border-radius: 4px;
   display: flex;
   align-items: center;
-  transition: color 0.2s ease;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
+
 .clear-search:hover {
-  color: #4b5563;
+  background: #f3f4f6;
+  color: #6b7280;
 }
+
 .preferences-list {
-  max-height: 240px;
+  max-height: 300px;
   overflow-y: auto;
-  overflow-x: hidden;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
+  gap: 0.375rem;
   background: #ffffff;
   min-width: 0;
 }
+
 .preferences-list::-webkit-scrollbar {
   width: 8px;
 }
+
 .preferences-list::-webkit-scrollbar-track {
   background: #f3f4f6;
   border-radius: 4px;
 }
+
 .preferences-list::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 4px;
 }
+
 .preferences-list::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
 .preference-item {
   display: flex;
   align-items: center;
@@ -517,23 +1159,15 @@ onMounted(async () => {
   cursor: pointer;
   min-width: 0;
 }
+
 .preference-item:hover:not(.disabled) {
   background: #f3f4f6;
 }
-.preference-item.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.preference-checkbox {
-  cursor: pointer;
-  width: 18px;
-  height: 18px;
-  accent-color: #dbb067;
-  flex-shrink: 0;
-}
+
 .preference-item.disabled .preference-checkbox {
   cursor: not-allowed;
 }
+
 .preference-label {
   color: #4a5568;
   font-size: 0.9375rem;
@@ -545,40 +1179,49 @@ onMounted(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .preference-item.disabled .preference-label {
   cursor: not-allowed;
 }
+
 .no-results {
   text-align: center;
   padding: 2rem;
   color: #9ca3af;
 }
+
 .no-results svg {
   margin: 0 auto 0.5rem;
 }
+
 .no-results p {
   margin: 0;
   font-size: 0.875rem;
 }
+
 .selected-preferences {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding-top: 0.75rem;
+  padding: 0.75rem;
   border-top: 1px solid #e2e8f0;
+  background: #f9fafb;
   overflow: hidden;
 }
+
 .selected-header {
   font-size: 0.875rem;
   font-weight: 600;
   color: #6b7280;
 }
+
 .chips-container {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   overflow: hidden;
 }
+
 .preference-chip {
   display: inline-flex;
   align-items: center;
@@ -593,100 +1236,7 @@ onMounted(async () => {
   max-width: 100%;
   box-sizing: border-box;
 }
-.preference-chip span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.chip-remove {
-  background: transparent;
-  border: none;
-  color: #ffffff;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  transition: opacity 0.2s ease;
-  flex-shrink: 0;
-}
-.chip-remove:hover {
-  opacity: 0.8;
-}
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-.btn-primary {
-  background: #dbb067;
-  color: #ffffff;
-  padding: 0.875rem 1.75rem;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.btn-primary:hover:not(:disabled) {
-  background: #c9a05a;
-  transform: translateY(-1px);
-}
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-.btn-content {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.loading-state {
-  text-align: center;
-  padding: 3rem;
-}
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #dbb067;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 1rem;
-}
-.spinner-small {
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+
 @keyframes chipIn {
   from {
     opacity: 0;
@@ -697,13 +1247,69 @@ onMounted(async () => {
     transform: scale(1);
   }
 }
-@media (max-width: 640px) {
-  .preferences-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .chips-container {
-    max-width: 100%;
-  }
+
+.preference-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.chip-remove {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chip-remove:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 1rem;
+}
+
+.btn-primary {
+  background: #dbb067;
+  color: #ffffff;
+  border: none;
+  padding: 0.875rem 1.75rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #c9a05a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(219, 176, 103, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style>

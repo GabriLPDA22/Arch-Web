@@ -9,26 +9,31 @@ if (!BASE_URL) {
   )
 }
 
-// --- TIPOS DE DATOS (DTOs) ---
-// (Todos tus tipos de datos permanecen igual)
+// ==================== TIPOS DE DATOS (DTOs) ====================
+
 export type UserAuthDto = {
   userID: string
   email: string
   name: string
-  userType: 'admin' | 'user' | 'moderator'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator'
+  isVerified: boolean
+  dateOfBirth?: string
+  profilePicture?: string
 }
 
 export type AuthResponseDto = {
-  user: UserAuthDto
-  token: string
+  success: boolean
   message?: string
+  user: UserAuthDto | null
+  token: string | null
+  refreshToken?: string | null
 }
 
 export type UserListDto = {
   userID: string
   name: string
   email: string
-  userType: 'admin' | 'user' | 'moderator'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator'
   isVerified: boolean
   createdAt?: string
   preferences?: string[]
@@ -38,7 +43,7 @@ export type UserDetailDto = {
   userID: string
   name: string
   email: string
-  userType: 'admin' | 'user' | 'moderator'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator'
   isVerified: boolean
   dateOfBirth?: string
   profilePicture?: string
@@ -50,7 +55,7 @@ export type UserCreateDto = {
   name: string
   email: string
   password: string
-  userType: 'admin' | 'user' | 'moderator'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator'
   preferences?: string[]
 }
 
@@ -58,7 +63,7 @@ export type UserUpdateDto = {
   name?: string
   email?: string
   password?: string
-  userType?: 'admin' | 'user' | 'moderator'
+  userType?: 'admin' | 'user' | 'staff-user' | 'moderator'
   preferences?: string[]
   dateOfBirth?: string
   profilePicture?: string
@@ -166,7 +171,8 @@ export type UpdatePreferenceDto = {
   name: string
 }
 
-// ✅ SECCIÓN CRÍTICA MODIFICADA
+// ==================== FUNCIÓN REQUEST ====================
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const authStore = useAuthStore()
   const headers: Record<string, string> = {
@@ -184,12 +190,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
-    // Intenta parsear la respuesta de error como JSON.
-    // Si falla (por ejemplo, es una página de error HTML), data será null.
     const data = await res.json().catch(() => null)
 
-    // Crea un objeto de error personalizado que imita la estructura de Axios,
-    // ya que nuestra función handleApiError está diseñada para funcionar con ella.
     const error = {
       message: data?.title || data?.message || `Request failed with status ${res.status}`,
       response: {
@@ -198,7 +200,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       },
     }
 
-    // Si fue un error 401, activa el logout.
     if (res.status === 401) {
       console.error('Received 401 Unauthorized. Logging out.')
       authStore.logout()
@@ -219,7 +220,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
-// --- CLIENTES DE API ---
+// ==================== AUTH API ====================
 
 export const AuthApi = {
   login: (email: string, password: string) =>
@@ -229,6 +230,8 @@ export const AuthApi = {
     }),
   verifySession: () => request<UserDetailDto>('/api/Users/me'),
 }
+
+// ==================== USER API ====================
 
 export const UserApi = {
   list: (params?: {
@@ -261,11 +264,13 @@ export const UserApi = {
       body: JSON.stringify(data),
     }),
 
-  delete: (id: string) =>
+  remove: (id: string) =>
     request<void>(`/api/Users/${id}`, {
       method: 'DELETE',
     }),
 }
+
+// ==================== EVENTS API ====================
 
 export const EventApi = {
   list: (params?: { q?: string; page?: number; pageSize?: number; preferenceId?: string }) => {
@@ -276,6 +281,7 @@ export const EventApi = {
     if (params?.preferenceId) searchParams.append('categoryId', params.preferenceId)
     return request<PagedResult<EventListDto>>(`/api/Events/discover?${searchParams.toString()}`)
   },
+
   listForAdmin: (params?: {
     q?: string
     page?: number
@@ -292,22 +298,28 @@ export const EventApi = {
 
     return request<PagedResult<EventListDto>>(`/api/Events/admin-list?${searchParams.toString()}`)
   },
+
   get: (id: string) => request<EventDetailDto>(`/api/Events/${id}`),
+
   create: (data: EventCreateDto) =>
     request<EventDetailDto>(`/api/Events`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
   update: (id: string, data: EventUpdateDto) =>
     request<EventDetailDto>(`/api/Events/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+
   remove: (id: string) =>
     request<void>(`/api/Events/${id}`, {
       method: 'DELETE',
     }),
 }
+
+// ==================== PREFERENCES API ====================
 
 export const PreferencesApi = {
   getAll: () => request<PreferenceDto[]>(`/api/preferences`),
@@ -332,6 +344,8 @@ export const PreferencesApi = {
     }),
 }
 
+// ==================== FILES API ====================
+
 export const FilesApi = {
   uploadImage: (file: File) => {
     const formData = new FormData()
@@ -349,7 +363,6 @@ export const FilesApi = {
       headers,
     }).then(async (res) => {
       if (!res.ok) {
-        // ✅ APLICAMOS LA MISMA LÓGICA DE ERROR AQUÍ
         const data = await res.json().catch(() => null)
         const error = {
           message: data?.message || `Image upload failed with status ${res.status}`,
@@ -364,6 +377,8 @@ export const FilesApi = {
     })
   },
 }
+
+// ==================== IMAGE API ====================
 
 export const ImageApi = {
   upload: (data: EventImageCreateDto) =>
