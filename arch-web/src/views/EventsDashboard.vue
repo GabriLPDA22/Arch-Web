@@ -6,12 +6,27 @@
           <h1 class="page-title">Events Management</h1>
           <p class="page-subtitle">Manage and organize all your events</p>
         </div>
-        <button class="create-btn" @click="openCreateModal">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
-          </svg>
-          Create Event
-        </button>
+        <div class="header-buttons">
+          <label class="import-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z" />
+            </svg>
+            Import Excel
+            <input 
+              type="file" 
+              ref="excelFileInput"
+              accept=".xlsx,.xls"
+              @change="handleExcelImport"
+              style="display: none;"
+            />
+          </label>
+          <button class="create-btn" @click="openCreateModal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+            </svg>
+            Create Event
+          </button>
+        </div>
       </div>
     </div>
 
@@ -217,8 +232,7 @@
           <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
         </svg>
         <p>
-          Are you sure you want to delete <strong>{{ selectedEvent?.name }}</strong
-          >?
+          Are you sure you want to delete <strong>{{ selectedEvent?.name }}</strong>?
         </p>
         <p class="warning-text">This action cannot be undone.</p>
       </div>
@@ -232,11 +246,13 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
+import * as XLSX from 'xlsx'
 import {
   EventApi,
   FilesApi,
   type EventListDto,
   type EventDetailDto,
+  type EventCreateDto,
   PreferencesApi,
 } from '@/services/Api'
 import EventForm from '@/components/forms/EventForm.vue'
@@ -244,7 +260,6 @@ import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
-// ✅ CAMBIO: Importaciones centralizadas
 import { successMessages, handleApiError } from '@/utils/validators'
 
 const authStore = useAuthStore()
@@ -263,6 +278,7 @@ const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedEvent = ref<EventDetailDto | null>(null)
 const eventFormComponent = ref<any>(null)
+const excelFileInput = ref<HTMLInputElement | null>(null)
 const filters = ref<{ label: string; id: string }[]>([])
 
 const statusFilters = computed(() =>
@@ -303,7 +319,7 @@ const fetchEvents = async () => {
   } catch (err: any) {
     console.error('Failed to load events:', err)
     if (authStore.isLoggedIn) {
-      handleApiError(err) // ✅ CAMBIO
+      handleApiError(err)
     }
     events.value = []
     totalPages.value = 1
@@ -350,9 +366,9 @@ const loadFilters = async () => {
     localStorage.setItem('preferencesCacheTimestamp', now.toString())
 
     filters.value = [...staticFilters, ...dynamicFilters]
-  } catch (error: any) { // ✅ CAMBIO: Especificamos 'any'
+  } catch (error: any) {
     console.error('Failed to load filters:', error)
-    handleApiError(error) // ✅ CAMBIO
+    handleApiError(error)
     filters.value = staticFilters
   }
 }
@@ -379,9 +395,9 @@ const openEditModal = async (event: EventListDto) => {
   try {
     const fullEventDetails = await EventApi.get(event.eventID)
     selectedEvent.value = fullEventDetails
-  } catch (error: any) { // ✅ CAMBIO: Especificamos 'any'
+  } catch (error: any) {
     console.error('Failed to fetch event details for editing:', error)
-    handleApiError(error) // ✅ CAMBIO
+    handleApiError(error)
     closeModals()
   }
 }
@@ -427,16 +443,16 @@ const handleSaveEvent = async () => {
 
     if (isEditing.value && selectedEvent.value?.eventID) {
       await EventApi.update(selectedEvent.value.eventID, payload)
-      successMessages.updated('event') // ✅ CAMBIO
+      successMessages.updated('event')
     } else {
       await EventApi.create(payload)
-      successMessages.created('event') // ✅ CAMBIO
+      successMessages.created('event')
     }
     await fetchEvents()
     closeModals()
   } catch (err: any) {
     console.error('Failed to save event:', err)
-    handleApiError(err) // ✅ CAMBIO
+    handleApiError(err)
   } finally {
     submitting.value = false
   }
@@ -449,11 +465,125 @@ const handleDeleteConfirm = async () => {
     await EventApi.remove(selectedEvent.value.eventID)
     closeModals()
     await fetchEvents()
-    successMessages.deleted('event') // ✅ CAMBIO
+    successMessages.deleted('event')
   } catch (err: any) {
     console.error('Failed to delete event:', err)
-    handleApiError(err) // ✅ CAMBIO
+    handleApiError(err)
   }
+}
+
+// 🔥 LÓGICA DE IMPORTACIÓN DE EXCEL
+const handleExcelImport = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  
+  if (!file) return
+  
+  loading.value = true
+  
+  try {
+    const data = await file.arrayBuffer()
+    const workbook = XLSX.read(data, { cellDates: true, cellNF: true })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+      raw: false,
+      defval: null 
+    }) as any[]
+    
+    if (jsonData.length === 0) {
+      alert('El archivo Excel está vacío')
+      return
+    }
+    
+    const requiredColumns = ['name', 'startDate', 'address', 'postcode']
+    const firstRow = jsonData[0]
+    const missingColumns = requiredColumns.filter(col => !(col in firstRow))
+    
+    if (missingColumns.length > 0) {
+      alert(`Faltan columnas requeridas: ${missingColumns.join(', ')}`)
+      return
+    }
+    
+    let successCount = 0
+    let errorCount = 0
+    const errors: string[] = []
+    
+    for (let i = 0; i < jsonData.length; i++) {
+      const row = jsonData[i]
+      
+      try {
+        const payload: EventCreateDto = {
+          name: row.name?.toString().trim() || '',
+          startDate: parseExcelDate(row.startDate),
+          endDate: row.endDate ? parseExcelDate(row.endDate) : undefined,
+          address: row.address?.toString().trim() || '',
+          postcode: row.postcode?.toString().trim() || '',
+          description: row.description?.toString().trim() || undefined,
+          capacity: row.capacity ? parseInt(row.capacity) : undefined,
+          price: row.price ? parseFloat(row.price) : undefined,
+          organizer: row.organizer?.toString().trim() || undefined,
+          externalUrl: row.externalUrl?.toString().trim() || undefined,
+          preferenceId: row.preferenceId?.toString().trim() || undefined,
+          imageUrl: row.imageUrl?.toString().trim() || undefined,
+        }
+        
+        if (!payload.name || !payload.startDate || !payload.address || !payload.postcode) {
+          throw new Error(`Fila ${i + 2}: Faltan campos obligatorios`)
+        }
+        
+        await EventApi.create(payload)
+        successCount++
+        
+      } catch (error: any) {
+        errorCount++
+        errors.push(`Fila ${i + 2}: ${error.message || 'Error desconocido'}`)
+        console.error(`Error en fila ${i + 2}:`, error)
+      }
+    }
+    
+    const message = `
+      ✅ Importación completada
+      
+      Exitosos: ${successCount}
+      Errores: ${errorCount}
+      ${errors.length > 0 ? '\n\nErrores:\n' + errors.slice(0, 5).join('\n') : ''}
+      ${errors.length > 5 ? `\n... y ${errors.length - 5} más` : ''}
+    `
+    
+    alert(message)
+    await fetchEvents()
+    
+  } catch (error: any) {
+    console.error('Error al procesar el Excel:', error)
+    alert(`Error al procesar el archivo: ${error.message}`)
+  } finally {
+    loading.value = false
+    input.value = ''
+  }
+}
+
+const parseExcelDate = (value: any): string => {
+  if (!value) throw new Error('Fecha vacía')
+  
+  if (value instanceof Date) {
+    return value.toISOString()
+  }
+  
+  if (typeof value === 'string') {
+    const date = new Date(value)
+    if (!isNaN(date.getTime())) {
+      return date.toISOString()
+    }
+  }
+  
+  if (typeof value === 'number') {
+    const excelEpoch = new Date(1899, 11, 30)
+    const date = new Date(excelEpoch.getTime() + value * 86400000)
+    return date.toISOString()
+  }
+  
+  throw new Error('Formato de fecha inválido')
 }
 
 onMounted(() => {
@@ -467,7 +597,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Tus estilos permanecen igual */
 .dashboard {
   padding: 0;
   min-height: 100vh;
@@ -507,6 +636,36 @@ onMounted(() => {
   font-size: 1rem;
   color: #718096;
   margin: 0;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.import-btn {
+  background: #ffffff;
+  color: #1a202c;
+  border: 1px solid #e5e7eb;
+  padding: 1rem 1.75rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.import-btn:hover {
+  background: #f9fafb;
+  border-color: #dbb067;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .create-btn {
@@ -873,13 +1032,16 @@ onMounted(() => {
   background: rgba(59, 130, 246, 0.9);
   color: #ffffff;
 }
+
 .action-btn.edit:hover {
   background: rgba(37, 99, 235, 1);
 }
+
 .action-btn.delete {
   background: rgba(239, 68, 68, 0.9);
   color: #ffffff;
 }
+
 .action-btn.delete:hover {
   background: rgba(220, 38, 38, 1);
 }
@@ -962,28 +1124,35 @@ onMounted(() => {
   transition: all 0.2s ease;
   font-size: 0.95rem;
 }
+
 .btn-primary {
   background: #dbb067;
   color: #ffffff;
 }
+
 .btn-primary:hover {
   background: #c9a05a;
 }
+
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 .btn-secondary {
   background: #f3f4f6;
   color: #4b5563;
 }
+
 .btn-secondary:hover {
   background: #e5e7eb;
 }
+
 .btn-danger {
   background: #ef4444;
   color: #ffffff;
 }
+
 .btn-danger:hover {
   background: #dc2626;
 }
@@ -992,18 +1161,22 @@ onMounted(() => {
   text-align: center;
   padding: 1rem;
 }
+
 .delete-warning svg {
   color: #f59e0b;
   margin-bottom: 1rem;
 }
+
 .delete-warning p {
   color: #4b5563;
   margin: 0 0 0.5rem 0;
   font-size: 1rem;
 }
+
 .delete-warning strong {
   color: #1a202c;
 }
+
 .warning-text {
   color: #9ca3af;
   font-size: 0.875rem;
@@ -1012,11 +1185,13 @@ onMounted(() => {
 .event-card.is-finished {
   position: relative;
 }
+
 .event-card.is-finished .event-image,
 .event-card.is-finished .event-content {
   filter: grayscale(90%);
   opacity: 0.7;
 }
+
 .finished-overlay {
   position: absolute;
   top: 0;
@@ -1031,10 +1206,12 @@ onMounted(() => {
   border-radius: 16px;
   pointer-events: none;
 }
+
 .events-container.grid .event-card.is-finished .finished-overlay {
   align-items: flex-start;
   padding-top: 30%;
 }
+
 .finished-text {
   font-size: 1.6rem;
   font-weight: 700;
@@ -1056,44 +1233,61 @@ onMounted(() => {
     padding-left: 1rem;
     padding-right: 1rem;
   }
+
   .dashboard-header {
     padding-top: 1.5rem;
     padding-bottom: 1.5rem;
   }
+
   .header-content {
     flex-direction: column;
     align-items: flex-start;
   }
+
   .page-title {
     font-size: 1.75rem;
   }
+
+  .header-buttons {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .import-btn,
   .create-btn {
     width: 100%;
     justify-content: center;
   }
+
   .toolbar {
     padding-top: 1.5rem;
     padding-bottom: 1.5rem;
   }
+
   .toolbar-top {
     flex-direction: column;
     align-items: stretch;
     gap: 1rem;
   }
+
   .search-box {
     max-width: 100%;
   }
+
   .toolbar-right {
     width: 100%;
     justify-content: space-between;
   }
+
   .events-container.grid {
     grid-template-columns: 1fr;
   }
+
   .events-container.list .event-card {
     flex-direction: column;
     height: auto;
   }
+
   .events-container.list .event-image {
     width: 100%;
     height: 200px;
