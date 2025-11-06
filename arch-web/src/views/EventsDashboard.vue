@@ -9,15 +9,17 @@
         <div class="header-buttons">
           <label class="import-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z" />
+              <path
+                d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z"
+              />
             </svg>
             Import Excel
-            <input 
-              type="file" 
+            <input
+              type="file"
               ref="excelFileInput"
               accept=".xlsx,.xls"
               @change="handleExcelImport"
-              style="display: none;"
+              style="display: none"
             />
           </label>
           <button class="create-btn" @click="openCreateModal">
@@ -232,13 +234,76 @@
           <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
         </svg>
         <p>
-          Are you sure you want to delete <strong>{{ selectedEvent?.name }}</strong>?
+          Are you sure you want to delete <strong>{{ selectedEvent?.name }}</strong
+          >?
         </p>
         <p class="warning-text">This action cannot be undone.</p>
       </div>
       <template #footer>
         <button class="btn-secondary" @click="closeModals">Cancel</button>
         <button class="btn-danger" @click="handleDeleteConfirm">Delete Event</button>
+      </template>
+    </ModalComponent>
+
+    <!-- Modal de resultado de importación -->
+    <ModalComponent
+      :show="showImportResultModal"
+      title="Import Results"
+      @close="closeImportResultModal"
+    >
+      <div class="import-result">
+        <div class="result-summary">
+          <div class="result-icon" :class="importResult.errorCount === 0 ? 'success' : 'warning'">
+            <svg
+              v-if="importResult.errorCount === 0"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z" />
+            </svg>
+            <svg v-else width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+              />
+            </svg>
+          </div>
+
+          <h3 class="result-title">
+            {{
+              importResult.errorCount === 0 ? 'Import successful!' : 'Import completed with errors'
+            }}
+          </h3>
+
+          <p class="result-message">
+            {{ importResult.successCount }} event{{
+              importResult.successCount !== 1 ? 's' : ''
+            }}
+            imported successfully
+            <span v-if="importResult.errorCount > 0">, {{ importResult.errorCount }} failed</span>
+          </p>
+        </div>
+
+        <div v-if="importResult.errors.length > 0" class="errors-section">
+          <h4>Error details:</h4>
+          <div class="errors-list">
+            <div
+              v-for="(error, index) in importResult.errors.slice(0, 5)"
+              :key="index"
+              class="error-item"
+            >
+              {{ error }}
+            </div>
+            <div v-if="importResult.errors.length > 5" class="more-errors">
+              ... and {{ importResult.errors.length - 5 }} more errors
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <button class="btn-primary" @click="closeImportResultModal">Close</button>
       </template>
     </ModalComponent>
   </div>
@@ -258,6 +323,7 @@ import {
 import EventForm from '@/components/forms/EventForm.vue'
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
+import AlertMessage from '@/components/common/AlertMessage.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
 import { successMessages, handleApiError } from '@/utils/validators'
@@ -280,6 +346,12 @@ const selectedEvent = ref<EventDetailDto | null>(null)
 const eventFormComponent = ref<any>(null)
 const excelFileInput = ref<HTMLInputElement | null>(null)
 const filters = ref<{ label: string; id: string }[]>([])
+const showImportResultModal = ref(false)
+const importResult = ref({
+  successCount: 0,
+  errorCount: 0,
+  errors: [] as string[],
+})
 
 const statusFilters = computed(() =>
   filters.value.filter((f) => ['all', 'active', 'finished'].includes(f.id)),
@@ -414,6 +486,10 @@ const closeModals = () => {
   isEditing.value = false
 }
 
+const closeImportResultModal = () => {
+  showImportResultModal.value = false
+}
+
 const handleSaveEvent = async () => {
   if (!eventFormComponent.value) return
   submitting.value = true
@@ -472,46 +548,45 @@ const handleDeleteConfirm = async () => {
   }
 }
 
-// 🔥 LÓGICA DE IMPORTACIÓN DE EXCEL
 const handleExcelImport = async (event: Event) => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  
+
   if (!file) return
-  
+
   loading.value = true
-  
+
   try {
     const data = await file.arrayBuffer()
     const workbook = XLSX.read(data, { cellDates: true, cellNF: true })
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
       raw: false,
-      defval: null 
+      defval: null,
     }) as any[]
-    
+
     if (jsonData.length === 0) {
       alert('El archivo Excel está vacío')
       return
     }
-    
+
     const requiredColumns = ['name', 'startDate', 'address', 'postcode']
     const firstRow = jsonData[0]
-    const missingColumns = requiredColumns.filter(col => !(col in firstRow))
-    
+    const missingColumns = requiredColumns.filter((col) => !(col in firstRow))
+
     if (missingColumns.length > 0) {
       alert(`Faltan columnas requeridas: ${missingColumns.join(', ')}`)
       return
     }
-    
+
     let successCount = 0
     let errorCount = 0
     const errors: string[] = []
-    
+
     for (let i = 0; i < jsonData.length; i++) {
       const row = jsonData[i]
-      
+
       try {
         const payload: EventCreateDto = {
           name: row.name?.toString().trim() || '',
@@ -527,33 +602,28 @@ const handleExcelImport = async (event: Event) => {
           preferenceId: row.preferenceId?.toString().trim() || undefined,
           imageUrl: row.imageUrl?.toString().trim() || undefined,
         }
-        
+
         if (!payload.name || !payload.startDate || !payload.address || !payload.postcode) {
-          throw new Error(`Fila ${i + 2}: Faltan campos obligatorios`)
+          throw new Error('Faltan campos obligatorios')
         }
-        
+
         await EventApi.create(payload)
         successCount++
-        
       } catch (error: any) {
         errorCount++
         errors.push(`Fila ${i + 2}: ${error.message || 'Error desconocido'}`)
         console.error(`Error en fila ${i + 2}:`, error)
       }
     }
-    
-    const message = `
-      ✅ Importación completada
-      
-      Exitosos: ${successCount}
-      Errores: ${errorCount}
-      ${errors.length > 0 ? '\n\nErrores:\n' + errors.slice(0, 5).join('\n') : ''}
-      ${errors.length > 5 ? `\n... y ${errors.length - 5} más` : ''}
-    `
-    
-    alert(message)
+
+    importResult.value = {
+      successCount,
+      errorCount,
+      errors,
+    }
+    showImportResultModal.value = true
+
     await fetchEvents()
-    
   } catch (error: any) {
     console.error('Error al procesar el Excel:', error)
     alert(`Error al procesar el archivo: ${error.message}`)
@@ -565,24 +635,24 @@ const handleExcelImport = async (event: Event) => {
 
 const parseExcelDate = (value: any): string => {
   if (!value) throw new Error('Fecha vacía')
-  
+
   if (value instanceof Date) {
     return value.toISOString()
   }
-  
+
   if (typeof value === 'string') {
     const date = new Date(value)
     if (!isNaN(date.getTime())) {
       return date.toISOString()
     }
   }
-  
+
   if (typeof value === 'number') {
     const excelEpoch = new Date(1899, 11, 30)
     const date = new Date(excelEpoch.getTime() + value * 86400000)
     return date.toISOString()
   }
-  
+
   throw new Error('Formato de fecha inválido')
 }
 
@@ -1224,6 +1294,92 @@ onMounted(() => {
   user-select: none;
   box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para el modal de importación */
+.import-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.result-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+}
+
+.result-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-icon.success {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.result-icon.warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.result-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
+}
+
+.result-message {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.errors-section {
+  margin-top: 0.5rem;
+}
+
+.errors-section h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ef4444;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.errors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.error-item {
+  background: #fef2f2;
+  border-left: 3px solid #ef4444;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #991b1b;
+}
+
+.more-errors {
+  text-align: center;
+  padding: 0.5rem;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 768px) {

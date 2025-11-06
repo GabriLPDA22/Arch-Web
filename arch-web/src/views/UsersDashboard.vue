@@ -38,7 +38,6 @@
         </button>
       </div>
       
-      <!-- ✅ Filtros por tipo de usuario -->
       <div class="filters-section">
         <div class="filter-label">Filter by type:</div>
         <div class="filters-group">
@@ -51,7 +50,6 @@
             <span v-if="userTypeFilter === null && filteredUsersCount > 0" class="count-badge">{{ filteredUsersCount }}</span>
           </button>
           
-          <!-- ✅ Filtro Oxford con submenu mejorado -->
           <div class="filter-with-submenu" ref="oxfordFilterRef">
             <button
               class="filter-btn oxford-btn"
@@ -75,7 +73,6 @@
               </svg>
             </button>
             
-            <!-- ✅ Submenu Oxford mejorado -->
             <transition name="submenu">
               <div v-if="showOxfordSubmenu" class="filter-submenu" @click.stop>
                 <div class="submenu-header">
@@ -129,19 +126,84 @@
               </div>
             </transition>
           </div>
-
-          <button
-            class="filter-btn"
-            :class="{ active: userTypeFilter === 'staff-user' }"
-            @click="handleMainFilterClick('staff-user')"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
-            </svg>
-            Staff
-            <span v-if="userTypeFilter === 'staff-user' && filteredUsersCount > 0" class="count-badge">{{ filteredUsersCount }}</span>
-          </button>
           
+          <div class="filter-with-submenu" ref="staffFilterRef">
+            <button
+              class="filter-btn staff-btn"
+              :class="{ active: userTypeFilter === 'staff-user', 'has-submenu': showStaffSubmenu }"
+              @click="handleMainFilterClick('staff-user')"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
+              </svg>
+              <span>Staff</span>
+              <span v-if="userTypeFilter === 'staff-user' && filteredUsersCount > 0" class="count-badge staff">{{ filteredUsersCount }}</span>
+              <svg 
+                width="14" 
+                height="14" 
+                viewBox="0 0 24 24" 
+                fill="currentColor" 
+                class="submenu-arrow"
+                :class="{ rotated: showStaffSubmenu }"
+              >
+                <path d="M7,10L12,15L17,10H7Z" />
+              </svg>
+            </button>
+            
+            <transition name="submenu">
+              <div v-if="showStaffSubmenu" class="filter-submenu" @click.stop>
+                <div class="submenu-header">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                     <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
+                  </svg>
+                  <span>Filter Staff by:</span>
+                </div>
+                
+                <button
+                  class="submenu-btn"
+                  :class="{ active: staffSubtypeFilter === null }"
+                  @click="handleStaffSubfilter(null)"
+                >
+                  <div class="submenu-btn-content">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
+                    </svg>
+                    <span>All Staff</span>
+                  </div>
+                  <span v-if="staffSubtypeFilter === null" class="count-badge-small">{{ getStaffCount() }}</span>
+                </button>
+                
+                <button
+                  class="submenu-btn"
+                  :class="{ active: staffSubtypeFilter === 'staff-user' }"
+                  @click="handleStaffSubfilter('staff-user')"
+                >
+                  <div class="submenu-btn-content">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
+                    </svg>
+                    <span>Staff</span>
+                  </div>
+                  <span v-if="staffSubtypeFilter === 'staff-user'" class="count-badge-small">{{ getStaffCount('staff-user') }}</span>
+                </button>
+                
+                <button
+                  class="submenu-btn"
+                  :class="{ active: staffSubtypeFilter === 'scanner' }"
+                  @click="handleStaffSubfilter('scanner')"
+                >
+                  <div class="submenu-btn-content">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H20V6H4M5,8H19V10H5V8M5,11H19V13H5V11M5,14H19V16H5V14Z" />
+                    </svg>
+                    <span>Organizers</span>
+                  </div>
+                  <span v-if="staffSubtypeFilter === 'scanner'" class="count-badge-small">{{ getStaffCount('scanner') }}</span>
+                </button>
+              </div>
+            </transition>
+          </div>
+
           <button
             class="filter-btn"
             :class="{ active: userTypeFilter === 'moderator' }"
@@ -168,7 +230,6 @@
         </div>
       </div>
       
-      <!-- ✅ Indicador de filtro activo -->
       <transition name="fade">
         <div v-if="activeFilterDescription" class="active-filter-indicator">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -234,6 +295,9 @@
                 <svg v-if="user.userType === 'staff-user'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
                   <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
                 </svg>
+                <svg v-else-if="user.userType === 'scanner'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                  <path d="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H20V6H4M5,8H19V10H5V8M5,11H19V13H5V11M5,14H19V16H5V14Z" />
+                </svg>
                 <svg v-else-if="user.userType === 'user' && getOxfordSubtype(user) === 'student'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
                   <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
                 </svg>
@@ -276,7 +340,6 @@
       </table>
     </div>
 
-    <!-- Pagination manual -->
     <div v-if="!loading && totalPages > 1" class="pagination">
       <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" class="page-btn">
         Previous
@@ -287,7 +350,6 @@
       </button>
     </div>
 
-    <!-- Modal de formulario -->
     <div v-if="isFormModalOpen" class="modal-overlay" @click="closeModals">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
@@ -310,7 +372,6 @@
       </div>
     </div>
 
-    <!-- Modal de confirmación de borrado -->
     <div v-if="isDeleteModalOpen" class="modal-overlay" @click="closeModals">
       <div class="modal-content small" @click.stop>
         <div class="modal-header">
@@ -357,6 +418,9 @@ const searchQuery = ref('')
 const userTypeFilter = ref<string | null>(null)
 const oxfordSubtypeFilter = ref<string | null>(null)
 const showOxfordSubmenu = ref(false)
+// ✅ Nuevos refs para el subfiltro de Staff
+const staffSubtypeFilter = ref<string | null>(null)
+const showStaffSubmenu = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const totalPages = ref(0)
@@ -369,12 +433,14 @@ const selectedUserId = ref<string | null>(null)
 const userToDelete = ref<UserListDto | null>(null)
 const userFormComponent = ref<InstanceType<typeof UserForm> | null>(null)
 const oxfordFilterRef = ref<HTMLElement | null>(null)
+// ✅ Nuevo ref de elemento para el filtro Staff
+const staffFilterRef = ref<HTMLElement | null>(null)
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-// ✅ Computed para contar usuarios filtrados
+// Computed para contar usuarios filtrados
 const filteredUsersCount = computed(() => users.value.length)
 
-// ✅ Función para contar usuarios Oxford por subtipo
+// Función para contar usuarios Oxford por subtipo
 const getOxfordCount = (subtype?: 'student' | 'professor'): number => {
   const oxfordUsers = allUsers.value.filter(u => u.userType === 'user')
   
@@ -388,7 +454,18 @@ const getOxfordCount = (subtype?: 'student' | 'professor'): number => {
   }).length
 }
 
-// ✅ Computed para descripción del filtro activo
+// ✅ Función para contar usuarios Staff por subtipo
+const getStaffCount = (subtype?: 'staff-user' | 'scanner'): number => {
+  const staffUsers = allUsers.value.filter(u => u.userType === 'staff-user' || u.userType === 'scanner')
+  
+  if (!subtype) {
+    return staffUsers.length
+  }
+  
+  return staffUsers.filter(u => u.userType === subtype).length
+}
+
+// Computed para descripción del filtro activo
 const activeFilterDescription = computed(() => {
   if (userTypeFilter.value === 'user') {
     if (oxfordSubtypeFilter.value === 'student') {
@@ -398,7 +475,13 @@ const activeFilterDescription = computed(() => {
     }
     return `Showing Oxford users only (${getOxfordCount()} users)`
   } else if (userTypeFilter.value === 'staff-user') {
-    return 'Showing Staff users only'
+    // ✅ Lógica actualizada para Staff
+    if (staffSubtypeFilter.value === 'staff-user') {
+      return `Showing Staff (Staff-User) only (${getStaffCount('staff-user')} users)`
+    } else if (staffSubtypeFilter.value === 'scanner') {
+      return `Showing Staff (Organizers) only (${getStaffCount('scanner')} users)`
+    }
+    return `Showing all Staff users (${getStaffCount()} users)`
   } else if (userTypeFilter.value === 'moderator') {
     return 'Showing Moderators only'
   } else if (userTypeFilter.value === 'admin') {
@@ -407,17 +490,17 @@ const activeFilterDescription = computed(() => {
   return null
 })
 
-// ✅ Función para obtener el subtipo de Oxford del nombre del usuario
+// Función para obtener el subtipo de Oxford del nombre del usuario
 // Si NO tiene tag, se trata como "sin clasificar" pero se muestra igual
 const getOxfordSubtype = (user: UserListDto): 'student' | 'professor' | null => {
   if (user.userType !== 'user') return null
   if (user.name.includes('[Student]')) return 'student'
   if (user.name.includes('[Professor]')) return 'professor'
-  // ✅ Si no tiene tag, devuelve null pero igual se mostrará
+  // Si no tiene tag, devuelve null pero igual se mostrará
   return null
 }
 
-// ✅ Función para limpiar el nombre de los tags
+// Función para limpiar el nombre de los tags
 const getCleanName = (name: string): string => {
   return name.replace(/\s*\[(Student|Professor)\]\s*$/, '').trim()
 }
@@ -425,11 +508,13 @@ const getCleanName = (name: string): string => {
 const getUserTypeBadgeClass = (user: UserListDto): string => {
   if (user.userType === 'staff-user') {
     return 'staff'
+  } else if (user.userType === 'scanner') {
+    return 'scanner'
   } else if (user.userType === 'user') {
     const subtype = getOxfordSubtype(user)
     if (subtype === 'professor') return 'professor'
     if (subtype === 'student') return 'student'
-    // ✅ Si no tiene tag, mostrar como Oxford genérico
+    // Si no tiene tag, mostrar como Oxford genérico
     return 'student'
   }
   return 'other'
@@ -438,6 +523,8 @@ const getUserTypeBadgeClass = (user: UserListDto): string => {
 const getUserTypeLabel = (user: UserListDto): string => {
   if (user.userType === 'staff-user') {
     return 'Staff'
+  } else if (user.userType === 'scanner') {
+    return 'Organizador'
   } else if (user.userType === 'user') {
     const subtype = getOxfordSubtype(user)
     if (subtype === 'student') {
@@ -445,7 +532,7 @@ const getUserTypeLabel = (user: UserListDto): string => {
     } else if (subtype === 'professor') {
       return 'Professor'
     }
-    // ✅ Si no tiene tag, mostrar como "Oxford"
+    // Si no tiene tag, mostrar como "Oxford"
     return 'Oxford'
   }
   return user.userType
@@ -461,28 +548,39 @@ const clearFilters = () => {
   userTypeFilter.value = null
   oxfordSubtypeFilter.value = null
   showOxfordSubmenu.value = false
+  // ✅ Limpiar filtros de staff
+  staffSubtypeFilter.value = null
+  showStaffSubmenu.value = false
   currentPage.value = 1
   fetchUsers()
 }
 
-// ✅ Función mejorada para filtrar usuarios
+// Función mejorada para filtrar usuarios
 // Ahora muestra usuarios Oxford SIN tag cuando no hay subfiltro
 const applyFilters = (usersList: UserListDto[]) => {
   let filtered = [...usersList]
   
   // Filtrar por tipo de usuario
   if (userTypeFilter.value) {
-    filtered = filtered.filter(u => u.userType === userTypeFilter.value)
+    // Si es Staff, mostrar TANTO staff-user COMO scanner
+    if (userTypeFilter.value === 'staff-user') {
+      filtered = filtered.filter(u => u.userType === 'staff-user' || u.userType === 'scanner')
+    } else {
+      filtered = filtered.filter(u => u.userType === userTypeFilter.value)
+    }
     
-    // ✅ Si es Oxford y hay subfiltro específico, aplicarlo
+    // Si es Oxford y hay subfiltro específico, aplicarlo
     if (userTypeFilter.value === 'user' && oxfordSubtypeFilter.value) {
       filtered = filtered.filter(u => {
         const subtype = getOxfordSubtype(u)
         return subtype === oxfordSubtypeFilter.value
       })
     }
-    // ✅ Si es Oxford pero NO hay subfiltro, mostrar TODOS los Oxford
-    // (con tag o sin tag)
+    
+    // ✅ NUEVO: Si es Staff y hay subfiltro específico, aplicarlo
+    if (userTypeFilter.value === 'staff-user' && staffSubtypeFilter.value) {
+      filtered = filtered.filter(u => u.userType === staffSubtypeFilter.value)
+    }
   }
   
   return filtered
@@ -503,7 +601,7 @@ const fetchUsers = async () => {
     // Guardar todos los usuarios
     allUsers.value = response.items
     
-    // ✅ Aplicar filtros
+    // Aplicar filtros
     users.value = applyFilters(response.items)
     
     totalPages.value = response.totalPages
@@ -523,10 +621,14 @@ const handleSearchInput = () => {
   }, 300)
 }
 
-// ✅ Cerrar submenu al hacer click fuera
+// Cerrar submenu al hacer click fuera
 const handleClickOutside = (event: MouseEvent) => {
   if (oxfordFilterRef.value && !oxfordFilterRef.value.contains(event.target as Node)) {
     showOxfordSubmenu.value = false
+  }
+  // ✅ Cerrar submenu de Staff
+  if (staffFilterRef.value && !staffFilterRef.value.contains(event.target as Node)) {
+    showStaffSubmenu.value = false
   }
 }
 
@@ -543,9 +645,10 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
+// ✅ Manejador de clics de filtro principal actualizado
 const handleMainFilterClick = (filter: string | null) => {
   if (filter === 'user') {
-    // Toggle submenu
+    // Toggle submenu Oxford
     if (userTypeFilter.value === 'user') {
       showOxfordSubmenu.value = !showOxfordSubmenu.value
     } else {
@@ -553,10 +656,23 @@ const handleMainFilterClick = (filter: string | null) => {
       showOxfordSubmenu.value = true
       oxfordSubtypeFilter.value = null
     }
+    showStaffSubmenu.value = false // Ocultar otro submenu
+  } else if (filter === 'staff-user') {
+    // ✅ Toggle submenu Staff
+    if (userTypeFilter.value === 'staff-user') {
+      showStaffSubmenu.value = !showStaffSubmenu.value
+    } else {
+      userTypeFilter.value = 'staff-user'
+      showStaffSubmenu.value = true
+      staffSubtypeFilter.value = null
+    }
+    showOxfordSubmenu.value = false // Ocultar otro submenu
   } else {
     userTypeFilter.value = filter
     showOxfordSubmenu.value = false
+    showStaffSubmenu.value = false // ✅ Ocultar submenu
     oxfordSubtypeFilter.value = null
+    staffSubtypeFilter.value = null // ✅ Limpiar subfiltro
   }
   currentPage.value = 1
   fetchUsers()
@@ -568,7 +684,14 @@ const handleOxfordSubfilter = (subtype: string | null) => {
   fetchUsers()
 }
 
-watch([userTypeFilter, oxfordSubtypeFilter], () => {
+// ✅ Nuevo manejador para el subfiltro de Staff
+const handleStaffSubfilter = (subtype: string | null) => {
+  staffSubtypeFilter.value = subtype
+  currentPage.value = 1
+  fetchUsers()
+}
+
+watch([userTypeFilter, oxfordSubtypeFilter, staffSubtypeFilter], () => { // ✅ Añadido staffSubtypeFilter
   currentPage.value = 1
   users.value = applyFilters(allUsers.value)
 })
@@ -822,6 +945,12 @@ const handleDeleteConfirm = async () => {
 }
 
 .count-badge.oxford {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* ✅ Añadido para el badge de staff */
+.count-badge.staff {
   background: rgba(255, 255, 255, 0.25);
   color: #ffffff;
 }
@@ -1183,6 +1312,13 @@ const handleDeleteConfirm = async () => {
   border: 1px solid #7dd3fc;
 }
 
+/* ✅ Scanner/Organizador - Cyan/Turquesa */
+.type-badge.scanner {
+  background-color: #cffafe;
+  color: #155e75;
+  border: 1px solid #67e8f9;
+}
+
 /* ✅ Student - Azul índigo */
 .type-badge.student {
   background-color: #e0e7ff;
@@ -1368,6 +1504,13 @@ const handleDeleteConfirm = async () => {
   background-color: #fef3c7;
   color: #854d0e;
   border: 1px solid #fcd34d;
+}
+
+/* ✅ Scanner - Cyan/Turquesa */
+.role-badge.scanner {
+  background-color: #cffafe;
+  color: #155e75;
+  border: 1px solid #67e8f9;
 }
 
 .actions-cell {

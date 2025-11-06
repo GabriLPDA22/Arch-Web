@@ -15,7 +15,7 @@ export type UserAuthDto = {
   userID: string
   email: string
   name: string
-  userType: 'admin' | 'user' | 'staff-user' | 'moderator'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
   isVerified: boolean
   dateOfBirth?: string
   profilePicture?: string
@@ -33,7 +33,7 @@ export type UserListDto = {
   userID: string
   name: string
   email: string
-  userType: 'admin' | 'user' | 'staff-user' | 'moderator'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
   isVerified: boolean
   createdAt?: string
   preferences?: string[]
@@ -43,7 +43,7 @@ export type UserDetailDto = {
   userID: string
   name: string
   email: string
-  userType: 'admin' | 'user' | 'staff-user' | 'moderator'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
   isVerified: boolean
   dateOfBirth?: string
   profilePicture?: string
@@ -55,7 +55,7 @@ export type UserCreateDto = {
   name: string
   email: string
   password: string
-  userType: 'admin' | 'user' | 'staff-user' | 'moderator'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
   preferences?: string[]
 }
 
@@ -63,7 +63,7 @@ export type UserUpdateDto = {
   name?: string
   email?: string
   password?: string
-  userType?: 'admin' | 'user' | 'staff-user' | 'moderator'
+  userType?: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
   preferences?: string[]
   dateOfBirth?: string
   profilePicture?: string

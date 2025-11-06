@@ -194,6 +194,86 @@
         </div>
       </transition>
 
+      <!-- ✅ NUEVO: Selector de subtipo Staff -->
+      <transition name="slide-fade">
+        <div v-if="form.userType === 'staff-user'" class="form-group oxford-subtype-selector">
+          <label class="form-label">
+            Staff Role Type
+            <span class="required">*</span>
+            <span class="info-badge">Role assignment</span>
+          </label>
+          <div class="subtype-options">
+            <label
+              class="subtype-option"
+              :class="{ active: staffSubtype === 'staff' }"
+              @click="staffSubtype = 'staff'"
+            >
+              <input
+                type="radio"
+                name="staffSubtype"
+                value="staff"
+                v-model="staffSubtype"
+                class="sr-only"
+              />
+              <div class="subtype-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
+                  />
+                </svg>
+              </div>
+              <div class="subtype-text">
+                <span class="subtype-title">Staff</span>
+                <span class="subtype-desc">Staff member with standard permissions</span>
+              </div>
+              <div class="check-mark" v-if="staffSubtype === 'staff'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+                </svg>
+              </div>
+            </label>
+
+            <label
+              class="subtype-option"
+              :class="{ active: staffSubtype === 'scanner' }"
+              @click="staffSubtype = 'scanner'"
+            >
+              <input
+                type="radio"
+                name="staffSubtype"
+                value="scanner"
+                v-model="staffSubtype"
+                class="sr-only"
+              />
+              <div class="subtype-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H20V6H4M5,8H19V10H5V8M5,11H19V13H5V11M5,14H19V16H5V14Z"
+                  />
+                </svg>
+              </div>
+              <div class="subtype-text">
+                <span class="subtype-title">Organizador</span>
+                <span class="subtype-desc">Event organizer with scanner permissions</span>
+              </div>
+              <div class="check-mark" v-if="staffSubtype === 'scanner'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+                </svg>
+              </div>
+            </label>
+          </div>
+          <p class="field-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+              />
+            </svg>
+            Staff = Staff role | Organizador = Scanner role
+          </p>
+        </div>
+      </transition>
+
       <div class="form-group">
         <label class="form-label">Name <span class="required">*</span></label>
         <input v-model="form.name" class="form-input" type="text" required placeholder="John Doe" />
@@ -376,7 +456,12 @@
       <button
         type="submit"
         class="btn-primary"
-        :disabled="submitting || loading || (form.userType === 'user' && !oxfordSubtype)"
+        :disabled="
+          submitting ||
+          loading ||
+          (form.userType === 'user' && !oxfordSubtype) ||
+          (form.userType === 'staff-user' && !staffSubtype)
+        "
       >
         <span v-if="submitting" class="btn-content">
           <div class="spinner-small"></div>
@@ -404,7 +489,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { UserApi, PreferencesApi, type PreferenceDto, type UserDetailDto } from '@/services/Api'
 import { handleApiError } from '@/utils/validators'
 import { useAuthStore } from '@/stores/auth.store'
@@ -424,10 +509,11 @@ const form = reactive({
   name: '',
   email: '',
   password: '',
-  userType: 'user' as 'admin' | 'user' | 'staff-user' | 'moderator',
+  userType: 'user' as 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner',
 })
 
 const oxfordSubtype = ref<'student' | 'professor'>('student')
+const staffSubtype = ref<'staff' | 'scanner'>('staff')
 
 const selectedPreferenceIds = ref<string[]>([])
 const allPreferences = ref<PreferenceDto[]>([])
@@ -478,9 +564,15 @@ const getEmailPlaceholder = () => {
   }
 }
 
-const handleUserTypeChange = (newType: 'admin' | 'user' | 'staff-user' | 'moderator') => {
+const handleUserTypeChange = (newType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner') => {
   if (!canChangeRole.value) {
     form.userType = newType
+  }
+  // Reset subtipos cuando cambia el user type
+  if (newType === 'user') {
+    oxfordSubtype.value = 'student'
+  } else if (newType === 'staff-user') {
+    staffSubtype.value = 'staff'
   }
 }
 
@@ -553,6 +645,7 @@ watch(
       form.userType = 'user'
       selectedPreferenceIds.value = []
       oxfordSubtype.value = 'student'
+      staffSubtype.value = 'staff'
     }
   },
   { immediate: true },
@@ -562,6 +655,12 @@ const saveUser = async () => {
   // ✅ Validar que si es Oxford, tenga subtipo
   if (form.userType === 'user' && !oxfordSubtype.value) {
     console.error('Oxford users must have a subtype selected')
+    return
+  }
+
+  // ✅ Validar que si es Staff, tenga subtipo
+  if (form.userType === 'staff-user' && !staffSubtype.value) {
+    console.error('Staff users must have a subtype selected')
     return
   }
 
@@ -584,9 +683,16 @@ const saveUser = async () => {
       finalName = `${finalName} [${oxfordSubtype.value === 'student' ? 'Student' : 'Professor'}]`
     }
 
+    // ✅ Determinar el role según el subtipo de Staff
+    let finalUserType = form.userType
+    if (form.userType === 'staff-user' && staffSubtype.value) {
+      finalUserType = staffSubtype.value === 'staff' ? 'staff-user' : 'scanner'
+    }
+
     const payload: any = {
       ...form,
       name: finalName,
+      userType: finalUserType,
       preferences: preferenceNames,
     }
 
@@ -612,6 +718,8 @@ const saveUser = async () => {
 }
 
 onMounted(async () => {
+  document.body.style.overflow = 'hidden'
+
   loadingPreferences.value = true
   try {
     const prefs = await PreferencesApi.getAll()
@@ -622,6 +730,10 @@ onMounted(async () => {
   } finally {
     loadingPreferences.value = false
   }
+})
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = ''
 })
 </script>
 
