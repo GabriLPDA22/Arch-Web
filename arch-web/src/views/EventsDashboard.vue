@@ -32,6 +32,27 @@
       </div>
     </div>
 
+    <!-- ✅ Info Banner -->
+    <div class="info-banner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"
+        />
+      </svg>
+      <span
+        >Events marked with <strong class="orders-indicator">📋 HAS ORDERS</strong> have associated
+        ticket purchases and require order cancellation before deletion.</span
+      >
+    </div>
+
+    <!-- ✅ Alert Message -->
+    <AlertMessage
+      v-model="showAlert"
+      :type="alertType"
+      :message="alertMessage"
+      :dismissible="true"
+    />
+
     <div class="toolbar">
       <div class="toolbar-top">
         <div class="search-box">
@@ -194,7 +215,18 @@
             <span class="event-category">{{ event.preferenceName || 'General' }}</span>
             <span class="event-date">{{ formatDate(event.startDate) }}</span>
           </div>
-          <h3 class="event-title">{{ event.name }}</h3>
+          <div class="event-title-wrapper">
+            <h3 class="event-title">{{ event.name }}</h3>
+            <!-- ✅ Badge de Orders -->
+            <span v-if="event.hasOrders" class="orders-badge" title="This event has ticket orders">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M20,8H4V6H20M20,18H4V12H20M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"
+                />
+              </svg>
+              HAS ORDERS
+            </span>
+          </div>
           <div class="event-location">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -245,6 +277,70 @@
       </template>
     </ModalComponent>
 
+    <!-- ✅ Modal de confirmación estilo AWS para eventos con Orders -->
+    <ModalComponent
+      :show="isDeleteWithOrdersModalOpen"
+      title="⚠️ Delete Event with Orders"
+      @close="closeDeleteWithOrdersModal"
+      class="delete-orders-modal"
+    >
+      <div class="delete-orders-warning">
+        <div class="warning-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
+          </svg>
+        </div>
+
+        <div class="warning-content">
+          <h3 class="warning-title">Dangerous Action</h3>
+          <p class="warning-description">
+            You are about to delete <strong>{{ selectedEvent?.name }}</strong> which has
+            <strong class="text-danger">{{ selectedEventOrderCount }} ticket order(s)</strong>
+            associated.
+          </p>
+
+          <div class="warning-details">
+            <p><strong>This action will:</strong></p>
+            <ul>
+              <li>Permanently delete the event</li>
+              <li>Delete all associated ticket orders ({{ selectedEventOrderCount }} orders)</li>
+              <li>This action <strong>CANNOT be undone</strong></li>
+            </ul>
+          </div>
+
+          <div class="confirmation-input-wrapper">
+            <label for="delete-confirmation">
+              To confirm deletion, type <code class="confirmation-code">delete</code> below:
+            </label>
+            <input
+              id="delete-confirmation"
+              v-model="deleteConfirmationText"
+              type="text"
+              class="confirmation-input"
+              placeholder="Type 'delete' to confirm"
+              @keyup.enter="confirmDeleteWithOrders"
+            />
+          </div>
+
+          <p class="warning-footer">
+            <strong>⚠️ Warning:</strong> All users with tickets for this event will lose their
+            bookings.
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <button class="btn-secondary" @click="closeDeleteWithOrdersModal">Cancel</button>
+        <button
+          class="btn-danger"
+          @click="confirmDeleteWithOrders"
+          :disabled="deleteConfirmationText.toLowerCase() !== 'delete'"
+        >
+          Delete Event & Orders
+        </button>
+      </template>
+    </ModalComponent>
+
     <!-- Modal de resultado de importación -->
     <ModalComponent
       :show="showImportResultModal"
@@ -277,9 +373,7 @@
           </h3>
 
           <p class="result-message">
-            {{ importResult.successCount }} event{{
-              importResult.successCount !== 1 ? 's' : ''
-            }}
+            {{ importResult.successCount }} event{{ importResult.successCount !== 1 ? 's' : '' }}
             imported successfully
             <span v-if="importResult.errorCount > 0">, {{ importResult.errorCount }} failed</span>
           </p>
@@ -352,6 +446,16 @@ const importResult = ref({
   errorCount: 0,
   errors: [] as string[],
 })
+
+// ✅ Estados para confirmación de borrado con orders
+const isDeleteWithOrdersModalOpen = ref(false)
+const deleteConfirmationText = ref('')
+const selectedEventOrderCount = ref(0)
+
+// ✅ Estados para AlertMessage
+const showAlert = ref(false)
+const alertType = ref<'error' | 'success' | 'warning' | 'info'>('info')
+const alertMessage = ref('')
 
 const statusFilters = computed(() =>
   filters.value.filter((f) => ['all', 'active', 'finished'].includes(f.id)),
@@ -474,16 +578,74 @@ const openEditModal = async (event: EventListDto) => {
   }
 }
 
-const openDeleteModal = (event: EventListDto) => {
+const openDeleteModal = async (event: EventListDto) => {
   selectedEvent.value = event as EventDetailDto
+
+  // ✅ Si tiene orders, abrir modal especial de confirmación
+  if (event.hasOrders) {
+    selectedEventOrderCount.value = 1 // Placeholder - idealmente obtener count real del backend
+    deleteConfirmationText.value = ''
+    isDeleteWithOrdersModalOpen.value = true
+    return
+  }
+
+  // Si no tiene orders, abrir modal de confirmación normal
   isDeleteModalOpen.value = true
+}
+
+// ✅ Función para mostrar alertas
+const showAlertMessage = (type: 'error' | 'success' | 'warning' | 'info', message: string) => {
+  alertType.value = type
+  alertMessage.value = message
+  showAlert.value = true
+
+  setTimeout(() => {
+    showAlert.value = false
+  }, 5000)
 }
 
 const closeModals = () => {
   isFormModalOpen.value = false
   isDeleteModalOpen.value = false
+  isDeleteWithOrdersModalOpen.value = false
+  deleteConfirmationText.value = ''
   selectedEvent.value = null
   isEditing.value = false
+}
+
+// ✅ Cerrar modal AWS
+const closeDeleteWithOrdersModal = () => {
+  isDeleteWithOrdersModalOpen.value = false
+  deleteConfirmationText.value = ''
+  selectedEventOrderCount.value = 0
+}
+
+// ✅ Confirmar borrado con orders (estilo AWS)
+const confirmDeleteWithOrders = async () => {
+  if (deleteConfirmationText.value.toLowerCase() !== 'delete') {
+    showAlertMessage('error', 'Please type "delete" to confirm deletion')
+    return
+  }
+
+  if (!selectedEvent.value?.eventID) return
+
+  try {
+    await EventApi.remove(selectedEvent.value.eventID)
+
+    closeDeleteWithOrdersModal()
+    await fetchEvents()
+
+    showAlertMessage(
+      'success',
+      `Event "${selectedEvent.value.name}" and all associated orders have been deleted successfully.`,
+    )
+
+    successMessages.deleted('event')
+  } catch (err: any) {
+    console.error('Failed to delete event with orders:', err)
+    handleApiError(err)
+    showAlertMessage('error', 'Failed to delete event. Please try again.')
+  }
 }
 
 const closeImportResultModal = () => {
@@ -1448,5 +1610,229 @@ onMounted(() => {
     width: 100%;
     height: 200px;
   }
+}
+
+/* ✅ Info Banner */
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border: 1px solid #bbdefb;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  color: #1565c0;
+  animation: slideDown 0.3s ease-out;
+}
+
+.info-banner svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.info-banner .orders-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(255, 193, 7, 0.2);
+  border-radius: 4px;
+  color: #f57c00;
+  font-weight: 600;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ✅ Orders Badge */
+.orders-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.2) 0%, rgba(255, 152, 0, 0.15) 100%);
+  border: 1.5px solid rgba(255, 193, 7, 0.5);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #f57c00;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(255, 193, 7, 0.1);
+}
+
+.orders-badge svg {
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.event-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.event-title-wrapper .event-title {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* ✅ Modal AWS */
+.delete-orders-warning {
+  padding: 0.5rem 0;
+}
+
+.warning-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.warning-icon svg {
+  color: #f44336;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.warning-content {
+  text-align: left;
+}
+
+.warning-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #d32f2f;
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.warning-description {
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.text-danger {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+.warning-details {
+  background: #fff3e0;
+  border-left: 4px solid #ff9800;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 4px;
+}
+
+.warning-details p {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  color: #e65100;
+}
+
+.warning-details ul {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.5rem;
+}
+
+.warning-details li {
+  margin: 0.35rem 0;
+  color: #555;
+  line-height: 1.5;
+}
+
+.confirmation-input-wrapper {
+  margin: 1.5rem 0;
+}
+
+.confirmation-input-wrapper label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.938rem;
+}
+
+.confirmation-code {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.938rem;
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+.confirmation-input {
+  width: 95%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s ease;
+}
+
+.confirmation-input:focus {
+  outline: none;
+  border-color: #d32f2f;
+  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+}
+
+.confirmation-input::placeholder {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: #999;
+}
+
+.warning-footer {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  padding: 0.875rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: #c62828;
+  line-height: 1.5;
+}
+
+.warning-footer strong {
+  font-weight: 700;
+}
+
+.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #bdbdbd;
+  border-color: #bdbdbd;
 }
 </style>

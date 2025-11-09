@@ -92,6 +92,7 @@ export type EventListDto = {
   preferenceName?: string
   imageUrl?: string
   externalUrl?: string
+  hasOrders?: boolean // ✅ Indica si el evento tiene orders asignadas
 }
 
 export type EventDetailDto = {
