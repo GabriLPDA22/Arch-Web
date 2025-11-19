@@ -92,7 +92,7 @@ export type EventListDto = {
   preferenceName?: string
   imageUrl?: string
   externalUrl?: string
-  hasOrders?: boolean // ✅ Indica si el evento tiene orders asignadas
+  hasOrders?: boolean
 }
 
 export type EventDetailDto = {
@@ -283,12 +283,15 @@ export const EventApi = {
     return request<PagedResult<EventListDto>>(`/api/Events/discover?${searchParams.toString()}`)
   },
 
+  // ✅ ACTUALIZADO CON PARÁMETROS DE ORDENAMIENTO
   listForAdmin: (params?: {
     q?: string
     page?: number
     pageSize?: number
     preferenceId?: string
     status?: string
+    orderBy?: string
+    sortOrder?: string
   }) => {
     const searchParams = new URLSearchParams()
     if (params?.q) searchParams.append('q', params.q)
@@ -296,6 +299,8 @@ export const EventApi = {
     if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
     if (params?.preferenceId) searchParams.append('categoryId', params.preferenceId)
     if (params?.status) searchParams.append('status', params.status)
+    if (params?.orderBy) searchParams.append('orderBy', params.orderBy)
+    if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
 
     return request<PagedResult<EventListDto>>(`/api/Events/admin-list?${searchParams.toString()}`)
   },

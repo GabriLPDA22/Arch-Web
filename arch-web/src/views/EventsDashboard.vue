@@ -32,7 +32,6 @@
       </div>
     </div>
 
-    <!-- ✅ Info Banner -->
     <div class="info-banner">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
         <path
@@ -45,7 +44,6 @@
       >
     </div>
 
-    <!-- ✅ Alert Message -->
     <AlertMessage
       v-model="showAlert"
       :type="alertType"
@@ -217,7 +215,6 @@
           </div>
           <div class="event-title-wrapper">
             <h3 class="event-title">{{ event.name }}</h3>
-            <!-- ✅ Badge de Orders -->
             <span v-if="event.hasOrders" class="orders-badge" title="This event has ticket orders">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path
@@ -277,7 +274,6 @@
       </template>
     </ModalComponent>
 
-    <!-- ✅ Modal de confirmación estilo AWS para eventos con Orders -->
     <ModalComponent
       :show="isDeleteWithOrdersModalOpen"
       title="⚠️ Delete Event with Orders"
@@ -341,7 +337,6 @@
       </template>
     </ModalComponent>
 
-    <!-- Modal de resultado de importación -->
     <ModalComponent
       :show="showImportResultModal"
       title="Import Results"
@@ -447,12 +442,10 @@ const importResult = ref({
   errors: [] as string[],
 })
 
-// ✅ Estados para confirmación de borrado con orders
 const isDeleteWithOrdersModalOpen = ref(false)
 const deleteConfirmationText = ref('')
 const selectedEventOrderCount = ref(0)
 
-// ✅ Estados para AlertMessage
 const showAlert = ref(false)
 const alertType = ref<'error' | 'success' | 'warning' | 'info'>('info')
 const alertMessage = ref('')
@@ -479,6 +472,8 @@ const fetchEvents = async () => {
     q: searchQuery.value,
     page: currentPage.value,
     pageSize: pageSize,
+    orderBy: 'startDate',
+    sortOrder: 'asc',
   }
 
   const filter = activeFilterId.value
@@ -581,19 +576,16 @@ const openEditModal = async (event: EventListDto) => {
 const openDeleteModal = async (event: EventListDto) => {
   selectedEvent.value = event as EventDetailDto
 
-  // ✅ Si tiene orders, abrir modal especial de confirmación
   if (event.hasOrders) {
-    selectedEventOrderCount.value = 1 // Placeholder - idealmente obtener count real del backend
+    selectedEventOrderCount.value = 1
     deleteConfirmationText.value = ''
     isDeleteWithOrdersModalOpen.value = true
     return
   }
 
-  // Si no tiene orders, abrir modal de confirmación normal
   isDeleteModalOpen.value = true
 }
 
-// ✅ Función para mostrar alertas
 const showAlertMessage = (type: 'error' | 'success' | 'warning' | 'info', message: string) => {
   alertType.value = type
   alertMessage.value = message
@@ -613,14 +605,12 @@ const closeModals = () => {
   isEditing.value = false
 }
 
-// ✅ Cerrar modal AWS
 const closeDeleteWithOrdersModal = () => {
   isDeleteWithOrdersModalOpen.value = false
   deleteConfirmationText.value = ''
   selectedEventOrderCount.value = 0
 }
 
-// ✅ Confirmar borrado con orders (estilo AWS)
 const confirmDeleteWithOrders = async () => {
   if (deleteConfirmationText.value.toLowerCase() !== 'delete') {
     showAlertMessage('error', 'Please type "delete" to confirm deletion')
