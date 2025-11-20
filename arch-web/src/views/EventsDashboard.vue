@@ -206,7 +206,9 @@
               </svg>
             </button>
           </div>
-          <div class="event-price">£{{ event.price?.toFixed(2) || '0.00' }}</div>
+          <div class="event-price">
+            {{ event.price === 0 || !event.price ? 'FREE' : `£${event.price.toFixed(2)}` }}
+          </div>
         </div>
         <div class="event-content">
           <div class="event-meta">
