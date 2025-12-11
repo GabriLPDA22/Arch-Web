@@ -1,39 +1,51 @@
-<!-- Ruta: arch-web/src/views/LoginView.vue -->
 <template>
-  <div class="login-container">
+  <div class="register-container">
     <!-- Sección del Formulario -->
     <div class="form-section">
       <div class="form-wrapper">
         <div class="welcome-header">
-          <h1 class="welcome-title">Welcome Back to ARCH</h1>
+          <h1 class="welcome-title">Organization Registration</h1>
           <p class="welcome-subtitle">
-            Today is a new day. It's your day. You shape it.<br />
-            Sign in to start managing your events.
+            Register your organization to start managing events<br />
+            at Oxford University
           </p>
         </div>
 
-        <form class="login-form" @submit.prevent="handleLogin">
-          <n-form-item label="E-mail" :show-feedback="false">
+        <n-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleSubmit">
+          <n-form-item label="Organization Name" path="organizationName" :show-feedback="false">
             <n-input
-              v-model:value="email"
+              v-model:value="form.organizationName"
+              placeholder="Enter your organization name"
+              size="large"
+              :disabled="isLoading"
+              class="custom-input"
+            />
+          </n-form-item>
+
+          <n-form-item label="Email" path="email" :show-feedback="false">
+            <n-input
+              v-model:value="form.email"
               type="text"
-              placeholder="example@email.com"
+              placeholder="organization@ox.ac.uk"
               size="large"
               :disabled="isLoading"
               :input-props="{ type: 'email', autocomplete: 'email' }"
               class="custom-input"
             />
+            <template #feedback>
+              <span class="email-hint">Only Oxford University domains (@ox.ac.uk) are allowed</span>
+            </template>
           </n-form-item>
 
-          <n-form-item label="Password" :show-feedback="false">
+          <n-form-item label="Password" path="password" :show-feedback="false">
             <n-input
-              v-model:value="password"
+              v-model:value="form.password"
               type="password"
               placeholder="At least 8 characters"
               size="large"
               :disabled="isLoading"
               show-password-on="click"
-              :input-props="{ autocomplete: 'current-password' }"
+              :input-props="{ autocomplete: 'new-password' }"
               class="custom-input"
             />
           </n-form-item>
@@ -47,22 +59,13 @@
             block
             class="submit-btn"
           >
-            {{ isLoading ? 'Signing in...' : 'Sign in' }}
+            {{ isLoading ? 'Registering...' : 'Register Organization' }}
           </n-button>
+        </n-form>
 
-          <n-alert
-            v-if="errorMessage"
-            type="error"
-            :show-icon="true"
-            class="error-alert"
-          >
-            {{ errorMessage }}
-          </n-alert>
-        </form>
-
-        <div class="register-link">
-          <span>Organization looking to register?</span>
-          <a @click.prevent="goToRegister" href="/staff/register" class="link">Register here</a>
+        <div class="login-link">
+          <span>Already have an account?</span>
+          <router-link to="/login" class="link">Sign in</router-link>
         </div>
       </div>
     </div>
@@ -81,26 +84,137 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { NFormItem, NInput, NButton, NAlert } from 'naive-ui'
-import { useAuthStore } from '@/stores/auth.store'
+import { NForm, NFormItem, NInput, NButton, useMessage, type FormInst } from 'naive-ui'
+import { StaffApi } from '@/services/StaffService'
 
 const router = useRouter()
-const email = ref('')
-const password = ref('')
-const isLoading = ref(false)
-const authStore = useAuthStore()
-const errorMessage = computed(() => authStore.loginError)
+const message = useMessage()
+const formRef = ref<FormInst | null>(null)
 
-const handleLogin = async () => {
-  isLoading.value = true
-  await authStore.login(email.value, password.value)
-  isLoading.value = false
+const form = reactive({
+  organizationName: '',
+  email: '',
+  password: '',
+})
+
+const isLoading = ref(false)
+
+// Validación de email Oxford
+const validateOxfordEmail = (_rule: unknown, value: string) => {
+  if (!value) {
+    return new Error('Email is required')
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(value)) {
+    return new Error('Please enter a valid email address')
+  }
+
+  // Validar dominio Oxford
+  const oxfordDomains = [
+    '@ox.ac.uk',
+    '@balliol.ox.ac.uk',
+    '@brasenose.ox.ac.uk',
+    '@chch.ox.ac.uk',
+    '@christchurch.ox.ac.uk',
+    '@corpus.ox.ac.uk',
+    '@exeter.ox.ac.uk',
+    '@hertford.ox.ac.uk',
+    '@jesus.ox.ac.uk',
+    '@keble.ox.ac.uk',
+    '@lady-margaret-hall.ox.ac.uk',
+    '@lincoln.ox.ac.uk',
+    '@magdalen.ox.ac.uk',
+    '@merton.ox.ac.uk',
+    '@new.ox.ac.uk',
+    '@oriel.ox.ac.uk',
+    '@pembroke.ox.ac.uk',
+    '@queens.ox.ac.uk',
+    '@somerville.ox.ac.uk',
+    '@st-annes.ox.ac.uk',
+    '@st-catherines.ox.ac.uk',
+    '@st-edmund-hall.ox.ac.uk',
+    '@st-hildas.ox.ac.uk',
+    '@st-hughs.ox.ac.uk',
+    '@st-johns.ox.ac.uk',
+    '@st-peters.ox.ac.uk',
+    '@trinity.ox.ac.uk',
+    '@univ.ox.ac.uk',
+    '@wadham.ox.ac.uk',
+    '@worc.ox.ac.uk',
+    '@wadham.ox.ac.uk',
+  ]
+
+  const isValidDomain = oxfordDomains.some((domain) => value.toLowerCase().endsWith(domain.toLowerCase()))
+
+  if (!isValidDomain) {
+    return new Error('Only Oxford organizations allowed')
+  }
+
+  return true
 }
 
-const goToRegister = () => {
-  router.push('/staff/register')
+const rules = {
+  organizationName: [
+    { required: true, message: 'Organization name is required', trigger: 'blur' },
+    { min: 2, message: 'Organization name must be at least 2 characters', trigger: 'blur' },
+  ],
+  email: [
+    { required: true, message: 'Email is required', trigger: 'blur' },
+    { validator: validateOxfordEmail, trigger: 'blur' },
+  ],
+  password: [
+    { required: true, message: 'Password is required', trigger: 'blur' },
+    { min: 8, message: 'Password must be at least 8 characters', trigger: 'blur' },
+    {
+      validator: (_rule: unknown, value: string) => {
+        if (!value) return true
+        const hasLetter = /[a-zA-Z]/.test(value)
+        const hasNumber = /[0-9]/.test(value)
+        if (!hasLetter || !hasNumber) {
+          return new Error('Password must include at least one letter and one number')
+        }
+        return true
+      },
+      trigger: 'blur',
+    },
+  ],
+}
+
+const handleSubmit = async () => {
+  if (!formRef.value) return
+
+  await formRef.value.validate(async (errors) => {
+    if (!errors) {
+      isLoading.value = true
+
+      try {
+        await StaffApi.register({
+          organizationName: form.organizationName,
+          email: form.email,
+          password: form.password,
+        })
+
+        message.success('Request sent! Wait for Olivia\'s verification email.', {
+          duration: 5000,
+        })
+
+        // Mostrar modal de éxito
+        setTimeout(() => {
+          router.push('/login')
+        }, 2000)
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.'
+        message.error(errorMessage, {
+          duration: 5000,
+        })
+      } finally {
+        isLoading.value = false
+      }
+    }
+  })
 }
 </script>
 
@@ -111,7 +225,7 @@ const goToRegister = () => {
   padding: 0;
 }
 
-.login-container {
+.register-container {
   display: flex;
   min-height: 100vh;
   width: 100%;
@@ -157,13 +271,10 @@ const goToRegister = () => {
 }
 
 /* ===== FORM STYLES ===== */
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+:deep(.n-form-item) {
+  margin-bottom: 1.5rem;
 }
 
-/* Personalización de inputs de Naive UI */
 :deep(.n-form-item-label) {
   font-weight: 500;
   color: #475569;
@@ -186,6 +297,12 @@ const goToRegister = () => {
 
 :deep(.n-input__input-el::placeholder) {
   color: #94a3b8;
+}
+
+.email-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
 }
 
 /* Botón personalizado con colores del proyecto */
@@ -211,17 +328,7 @@ const goToRegister = () => {
   box-shadow: 0 2px 8px rgba(13, 41, 84, 0.2);
 }
 
-/* Alert personalizado */
-.error-alert {
-  border-radius: 10px;
-  margin-top: 0.5rem;
-}
-
-:deep(.n-alert-body) {
-  font-size: 0.875rem;
-}
-
-.register-link {
+.login-link {
   margin-top: 1.5rem;
   text-align: center;
   font-size: 0.875rem;
@@ -230,7 +337,7 @@ const goToRegister = () => {
   border-top: 1px solid #e2e8f0;
 }
 
-.register-link .link {
+.login-link .link {
   color: #0d2954;
   text-decoration: none;
   font-weight: 600;
@@ -238,7 +345,7 @@ const goToRegister = () => {
   transition: color 0.2s ease;
 }
 
-.register-link .link:hover {
+.login-link .link:hover {
   color: #1a3d6e;
   text-decoration: underline;
 }
@@ -250,7 +357,7 @@ const goToRegister = () => {
 
 /* ===== RESPONSIVE DESKTOP ===== */
 @media (min-width: 768px) {
-  .login-container {
+  .register-container {
     background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   }
 
@@ -374,3 +481,4 @@ const goToRegister = () => {
   }
 }
 </style>
+

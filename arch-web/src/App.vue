@@ -1,10 +1,19 @@
 <template>
-  <RouterView />
-  <ToastContainer />
+  <n-config-provider>
+    <n-message-provider>
+      <n-dialog-provider>
+        <n-notification-provider>
+          <RouterView />
+          <ToastContainer />
+        </n-notification-provider>
+      </n-dialog-provider>
+    </n-message-provider>
+  </n-config-provider>
 </template>
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import { NConfigProvider, NMessageProvider, NDialogProvider, NNotificationProvider } from 'naive-ui'
 import ToastContainer from './components/ui/ToastContainer.vue'
 import { useAuthStore } from './stores/auth.store'
 import { onMounted } from 'vue'

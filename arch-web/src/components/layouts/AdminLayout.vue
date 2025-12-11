@@ -24,17 +24,25 @@ import Sidebar from '@/components/layouts/SidebarComponet.vue'
   flex: 1;
   margin-left: 280px;
   min-height: 100vh;
+  padding: 2rem;
+  width: calc(100% - 280px);
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 @media (max-width: 1024px) {
   .main-content {
-    margin-left: 240px;
+    margin-left: 260px;
+    width: calc(100% - 260px);
   }
 }
 
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;
+    width: 100%;
+    padding: 1rem;
   }
 }
 </style>

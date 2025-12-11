@@ -3,11 +3,11 @@
     <div class="dashboard-header">
       <div class="header-content">
         <div class="header-text">
-          <h1 class="page-title">Events Management</h1>
-          <p class="page-subtitle">Manage and organize all your events</p>
+          <h1 class="page-title">My Events</h1>
+          <p class="page-subtitle">Manage your organization's events</p>
         </div>
         <div class="header-buttons">
-          <label class="import-btn">
+          <label class="import-btn" :class="{ disabled: !isVerified }">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path
                 d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z"
@@ -19,10 +19,11 @@
               ref="excelFileInput"
               accept=".xlsx,.xls"
               @change="handleExcelImport"
+              :disabled="!isVerified"
               style="display: none"
             />
           </label>
-          <button class="create-btn" @click="openCreateModal">
+          <button class="create-btn" @click="openCreateModal" :disabled="!isVerified">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
             </svg>
@@ -32,7 +33,19 @@
       </div>
     </div>
 
-    <div class="info-banner">
+    <!-- Warning si no está verificado -->
+    <div v-if="!isVerified" class="info-banner warning">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16"
+        />
+      </svg>
+      <span>
+        Your account is pending verification. You cannot create events until an admin approves your organization.
+      </span>
+    </div>
+
+    <div v-if="isVerified" class="info-banner">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
         <path
           d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"
@@ -51,101 +64,31 @@
       :dismissible="true"
     />
 
-    <div class="toolbar">
-      <div class="toolbar-top">
-        <div class="search-box">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="search-icon">
-            <path
-              d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"
-            />
+    <!-- View Toggle -->
+    <div v-if="!loading && events.length > 0" class="view-controls">
+      <div class="view-toggle">
+        <button
+          class="toggle-btn"
+          :class="{ active: viewMode === 'table' }"
+          @click="viewMode = 'table'"
+          title="Table View"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z" />
           </svg>
-          <input
-            type="text"
-            v-model="searchQuery"
-            placeholder="Search events..."
-            class="search-input"
-          />
-          <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div class="toolbar-right">
-          <button class="icon-btn" @click="fetchEvents" :disabled="loading" title="Refresh">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              :class="{ spinning: loading }"
-            >
-              <path
-                d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
-              />
-            </svg>
-          </button>
-
-          <div class="view-toggle">
-            <button
-              class="toggle-btn"
-              :class="{ active: viewMode === 'table' }"
-              @click="viewMode = 'table'"
-              title="Table View"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z" />
-              </svg>
-              <span>Table</span>
-            </button>
-            <button
-              class="toggle-btn"
-              :class="{ active: viewMode === 'grid' }"
-              @click="viewMode = 'grid'"
-              title="Grid View"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3,11H11V3H3M3,21H11V13H3M13,11H21V3H13M13,21H21V13H13Z" />
-              </svg>
-              <span>Grid</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="filters-wrapper">
-        <div class="filter-section">
-          <h3 class="filter-group-title">Status</h3>
-          <div class="filters-group">
-            <button
-              v-for="filter in statusFilters"
-              :key="filter.id"
-              class="filter-btn"
-              :class="{ active: activeFilterId === filter.id }"
-              @click="activeFilterId = filter.id"
-            >
-              {{ filter.label }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="categoryFilters.length > 0" class="filter-section">
-          <h3 class="filter-group-title">Categories</h3>
-          <div class="filters-group">
-            <button
-              v-for="filter in categoryFilters"
-              :key="filter.id"
-              class="filter-btn"
-              :class="{ active: activeFilterId === filter.id }"
-              @click="activeFilterId = filter.id"
-            >
-              {{ filter.label }}
-            </button>
-          </div>
-        </div>
+          <span>Table</span>
+        </button>
+        <button
+          class="toggle-btn"
+          :class="{ active: viewMode === 'grid' }"
+          @click="viewMode = 'grid'"
+          title="Grid View"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3,11H11V3H3M3,21H11V13H3M13,11H21V3H13M13,21H21V13H13Z" />
+          </svg>
+          <span>Grid</span>
+        </button>
       </div>
     </div>
 
@@ -168,10 +111,10 @@
         />
       </svg>
       <h3>No events found</h3>
-      <p>
-        {{ searchQuery ? 'Try a different search term' : 'Start by creating your first event' }}
-      </p>
-      <button class="create-btn-empty" @click="openCreateModal">Create Event</button>
+      <p>Start by creating your first event</p>
+      <button class="create-btn-empty" @click="openCreateModal" :disabled="!isVerified">
+        Create Event
+      </button>
     </div>
 
     <div v-else class="events-container" :class="viewMode">
@@ -238,13 +181,6 @@
       </div>
     </div>
 
-    <PaginationComponent
-      v-if="!loading && events.length > 0"
-      :current-page="currentPage"
-      :total-pages="totalPages"
-      @page-changed="goToPage"
-    />
-
     <ModalComponent
       :show="isFormModalOpen"
       :title="isEditing ? 'Edit Event' : 'Create New Event'"
@@ -272,7 +208,9 @@
       </div>
       <template #footer>
         <button class="btn-secondary" @click="closeModals">Cancel</button>
-        <button class="btn-danger" @click="handleDeleteConfirm">Delete Event</button>
+        <button class="btn-danger" :disabled="submitting" @click="handleDeleteConfirm">
+          {{ submitting ? 'Deleting...' : 'Delete Event' }}
+        </button>
       </template>
     </ModalComponent>
 
@@ -332,67 +270,36 @@
         <button
           class="btn-danger"
           @click="confirmDeleteWithOrders"
-          :disabled="deleteConfirmationText.toLowerCase() !== 'delete'"
+          :disabled="deleteConfirmationText.toLowerCase() !== 'delete' || submitting"
         >
-          Delete Event & Orders
+          {{ submitting ? 'Deleting...' : 'Delete Event & Orders' }}
         </button>
       </template>
     </ModalComponent>
 
-    <ModalComponent
-      :show="showImportResultModal"
-      title="Import Results"
-      @close="closeImportResultModal"
-    >
-      <div class="import-result">
-        <div class="result-summary">
-          <div class="result-icon" :class="importResult.errorCount === 0 ? 'success' : 'warning'">
-            <svg
-              v-if="importResult.errorCount === 0"
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z" />
+    <ModalComponent :show="showImportResultModal" title="Import Results" @close="closeImportResultModal">
+      <div class="import-results">
+        <div class="results-summary">
+          <div class="result-item success">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
             </svg>
-            <svg v-else width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
-              />
-            </svg>
+            <span>Successfully imported: <strong>{{ importResult.successCount }}</strong> events</span>
           </div>
-
-          <h3 class="result-title">
-            {{
-              importResult.errorCount === 0 ? 'Import successful!' : 'Import completed with errors'
-            }}
-          </h3>
-
-          <p class="result-message">
-            {{ importResult.successCount }} event{{ importResult.successCount !== 1 ? 's' : '' }}
-            imported successfully
-            <span v-if="importResult.errorCount > 0">, {{ importResult.errorCount }} failed</span>
-          </p>
+          <div v-if="importResult.errorCount > 0" class="result-item error">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z" />
+            </svg>
+            <span>Failed to import: <strong>{{ importResult.errorCount }}</strong> events</span>
+          </div>
         </div>
-
-        <div v-if="importResult.errors.length > 0" class="errors-section">
-          <h4>Error details:</h4>
-          <div class="errors-list">
-            <div
-              v-for="(error, index) in importResult.errors.slice(0, 5)"
-              :key="index"
-              class="error-item"
-            >
-              {{ error }}
-            </div>
-            <div v-if="importResult.errors.length > 5" class="more-errors">
-              ... and {{ importResult.errors.length - 5 }} more errors
-            </div>
-          </div>
+        <div v-if="importResult.errors.length > 0" class="errors-list">
+          <h4>Errors:</h4>
+          <ul>
+            <li v-for="(error, index) in importResult.errors" :key="index">{{ error }}</li>
+          </ul>
         </div>
       </div>
-
       <template #footer>
         <button class="btn-primary" @click="closeImportResultModal">Close</button>
       </template>
@@ -401,169 +308,88 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import * as XLSX from 'xlsx'
-import {
-  EventApi,
-  FilesApi,
-  type EventListDto,
-  type EventDetailDto,
-  type EventCreateDto,
-  PreferencesApi,
-} from '@/services/Api'
+import { useAuthStore } from '@/stores/auth.store'
+import { EventApi, type EventListDto, type EventCreateDto, type EventDetailDto } from '@/services/Api'
 import EventForm from '@/components/forms/EventForm.vue'
-import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
 import AlertMessage from '@/components/common/AlertMessage.vue'
-import { useAuthStore } from '@/stores/auth.store'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
 import { successMessages, handleApiError } from '@/utils/validators'
 
 const authStore = useAuthStore()
+const isVerified = computed(() => authStore.user?.isVerified ?? false)
 
+const loading = ref(false)
 const events = ref<EventListDto[]>([])
-const loading = ref(true)
-const submitting = ref(false)
-const searchQuery = ref('')
 const viewMode = ref<'table' | 'grid'>('grid')
-const activeFilterId = ref<string | null>('all')
-const currentPage = ref(1)
-const totalPages = ref(1)
-const pageSize = 12
 const isFormModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
+const isDeleteWithOrdersModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedEvent = ref<EventDetailDto | null>(null)
+const submitting = ref(false)
 const eventFormComponent = ref<InstanceType<typeof EventForm> | null>(null)
 const excelFileInput = ref<HTMLInputElement | null>(null)
-const filters = ref<{ label: string; id: string }[]>([])
 const showImportResultModal = ref(false)
+const deleteConfirmationText = ref('')
+const selectedEventOrderCount = ref(0)
 const importResult = ref({
   successCount: 0,
   errorCount: 0,
   errors: [] as string[],
 })
-
-const isDeleteWithOrdersModalOpen = ref(false)
-const deleteConfirmationText = ref('')
-const selectedEventOrderCount = ref(0)
-
 const showAlert = ref(false)
 const alertType = ref<'error' | 'success' | 'warning' | 'info'>('info')
 const alertMessage = ref('')
 
-const statusFilters = computed(() =>
-  filters.value.filter((f) => ['all', 'active', 'finished'].includes(f.id)),
-)
-const categoryFilters = computed(() =>
-  filters.value.filter((f) => !['all', 'active', 'finished'].includes(f.id)),
-)
-
-const isEventFinished = (event: EventListDto): boolean => {
-  const eventEndDateString = event.endDate || event.startDate
-  if (!eventEndDateString) return false
-  const eventEndDate = new Date(eventEndDateString)
-  const now = new Date()
-  eventEndDate.setHours(23, 59, 59, 999)
-  return now > eventEndDate
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
-const fetchEvents = async () => {
+const isEventFinished = (event: EventListDto) => {
+  if (!event.endDate) return false
+  return new Date(event.endDate) < new Date()
+}
+
+const loadEvents = async () => {
+  if (!isVerified.value) return
+
   loading.value = true
-  const params: {
-    q: string
-    page: number
-    pageSize: number
-    orderBy: string
-    sortOrder: string
-    status?: string
-    preferenceId?: string
-  } = {
-    q: searchQuery.value,
-    page: currentPage.value,
-    pageSize: pageSize,
-    orderBy: 'startDate',
-    sortOrder: 'asc',
-  }
-
-  const filter = activeFilterId.value
-  if (filter === 'active' || filter === 'finished') {
-    params.status = filter
-  } else if (filter && filter !== 'all') {
-    params.preferenceId = filter
-  }
-
   try {
-    const pagedResult = await EventApi.listForAdmin(params)
-    events.value = pagedResult.items || []
-    totalPages.value = pagedResult.totalPages || 1
-  } catch (err: unknown) {
-    console.error('Failed to load events:', err)
-    if (authStore.isLoggedIn) {
-      handleApiError(err)
+    const response = await EventApi.getMyEvents()
+    
+    // Manejar diferentes formatos de respuesta
+    if (Array.isArray(response)) {
+      events.value = response
+    } else if (response && typeof response === 'object' && 'items' in response) {
+      events.value = (response as { items: EventListDto[] }).items
+    } else if (response && typeof response === 'object' && 'data' in response) {
+      events.value = (response as { data: EventListDto[] }).data
+    } else {
+      console.warn('Unexpected response format from my-events endpoint:', response)
+      events.value = []
     }
+  } catch (error: unknown) {
+    console.error('Failed to load events:', error)
     events.value = []
-    totalPages.value = 1
   } finally {
     loading.value = false
   }
 }
 
-watch([searchQuery, activeFilterId], () => {
-  currentPage.value = 1
-  fetchEvents()
-})
-
-const goToPage = (page: number) => {
-  currentPage.value = page
-  fetchEvents()
-}
-
-const loadFilters = async () => {
-  const staticFilters = [
-    { label: 'All Events', id: 'all' },
-    { label: 'Active Events', id: 'active' },
-    { label: 'Finished Events', id: 'finished' },
-  ]
-
-  const cachedPreferences = localStorage.getItem('preferencesCache')
-  const cacheTimestamp = localStorage.getItem('preferencesCacheTimestamp')
-  const now = new Date().getTime()
-
-  if (cachedPreferences && cacheTimestamp && now - parseInt(cacheTimestamp, 10) < 3600000) {
-    const dynamicFilters = JSON.parse(cachedPreferences)
-    filters.value = [...staticFilters, ...dynamicFilters]
+const openCreateModal = () => {
+  if (!isVerified.value) {
     return
   }
-
-  try {
-    const preferences = await PreferencesApi.getAll()
-    const dynamicFilters = preferences.map((p) => ({
-      label: p.name,
-      id: p.preferenceId,
-    }))
-
-    localStorage.setItem('preferencesCache', JSON.stringify(dynamicFilters))
-    localStorage.setItem('preferencesCacheTimestamp', now.toString())
-
-    filters.value = [...staticFilters, ...dynamicFilters]
-  } catch (error: unknown) {
-    console.error('Failed to load filters:', error)
-    handleApiError(error)
-    filters.value = staticFilters
-  }
-}
-
-const formatDate = (iso?: string) => {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-const openCreateModal = () => {
   isEditing.value = false
   selectedEvent.value = null
   isFormModalOpen.value = true
@@ -571,11 +397,10 @@ const openCreateModal = () => {
 
 const openEditModal = async (event: EventListDto) => {
   isEditing.value = true
-  selectedEvent.value = null
-  isFormModalOpen.value = true
   try {
     const fullEventDetails = await EventApi.get(event.eventID)
     selectedEvent.value = fullEventDetails
+    isFormModalOpen.value = true
   } catch (error: unknown) {
     console.error('Failed to fetch event details for editing:', error)
     handleApiError(error)
@@ -584,16 +409,22 @@ const openEditModal = async (event: EventListDto) => {
 }
 
 const openDeleteModal = async (event: EventListDto) => {
-  selectedEvent.value = event as EventDetailDto
+  try {
+    const fullEventDetails = await EventApi.get(event.eventID)
+    selectedEvent.value = fullEventDetails
 
-  if (event.hasOrders) {
-    selectedEventOrderCount.value = 1
-    deleteConfirmationText.value = ''
-    isDeleteWithOrdersModalOpen.value = true
-    return
+    if (event.hasOrders) {
+      selectedEventOrderCount.value = 1
+      deleteConfirmationText.value = ''
+      isDeleteWithOrdersModalOpen.value = true
+      return
+    }
+
+    isDeleteModalOpen.value = true
+  } catch (error: unknown) {
+    console.error('Failed to fetch event details:', error)
+    handleApiError(error)
   }
-
-  isDeleteModalOpen.value = true
 }
 
 const showAlertMessage = (type: 'error' | 'success' | 'warning' | 'info', message: string) => {
@@ -621,6 +452,85 @@ const closeDeleteWithOrdersModal = () => {
   selectedEventOrderCount.value = 0
 }
 
+const handleSaveEvent = async () => {
+  if (!eventFormComponent.value) return
+
+  submitting.value = true
+  try {
+    const form = eventFormComponent.value.form
+
+    // Validar que las fechas sean válidas
+    if (!form.startLocal) {
+      showAlertMessage('error', 'Start date is required')
+      submitting.value = false
+      return
+    }
+
+    const startDate = new Date(form.startLocal)
+    if (isNaN(startDate.getTime())) {
+      showAlertMessage('error', 'Invalid start date')
+      submitting.value = false
+      return
+    }
+
+    let endDate: Date | undefined
+    if (form.endLocal) {
+      endDate = new Date(form.endLocal)
+      if (isNaN(endDate.getTime())) {
+        showAlertMessage('error', 'Invalid end date')
+        submitting.value = false
+        return
+      }
+    }
+
+    const eventData = {
+      name: form.name.trim(),
+      startDate: startDate.toISOString(),
+      endDate: endDate ? endDate.toISOString() : undefined,
+      address: form.address.trim(),
+      postcode: form.postcode.trim(),
+      description: form.description?.trim() || undefined,
+      capacity: form.capacity || undefined,
+      price: form.price || 0,
+      preferenceId: form.preferenceId || undefined,
+      externalUrl: form.externalUrl?.trim() || undefined,
+    }
+
+    if (isEditing.value && selectedEvent.value) {
+      await EventApi.update(selectedEvent.value.eventID, eventData)
+      successMessages.updated('event')
+    } else {
+      await EventApi.create(eventData)
+      successMessages.created('event')
+    }
+
+    closeModals()
+    await loadEvents()
+  } catch (error: unknown) {
+    console.error('Failed to save event:', error)
+    handleApiError(error)
+  } finally {
+    submitting.value = false
+  }
+}
+
+const handleDeleteConfirm = async () => {
+  if (!selectedEvent.value) return
+
+  submitting.value = true
+  try {
+    await EventApi.remove(selectedEvent.value.eventID)
+    closeModals()
+    await loadEvents()
+    successMessages.deleted('event')
+  } catch (error: unknown) {
+    console.error('Failed to delete event:', error)
+    handleApiError(error)
+  } finally {
+    submitting.value = false
+  }
+}
+
 const confirmDeleteWithOrders = async () => {
   if (deleteConfirmationText.value.toLowerCase() !== 'delete') {
     showAlertMessage('error', 'Please type "delete" to confirm deletion')
@@ -629,11 +539,12 @@ const confirmDeleteWithOrders = async () => {
 
   if (!selectedEvent.value?.eventID) return
 
+  submitting.value = true
   try {
     await EventApi.remove(selectedEvent.value.eventID)
 
     closeDeleteWithOrdersModal()
-    await fetchEvents()
+    await loadEvents()
 
     showAlertMessage(
       'success',
@@ -641,76 +552,43 @@ const confirmDeleteWithOrders = async () => {
     )
 
     successMessages.deleted('event')
-  } catch (err: unknown) {
-    console.error('Failed to delete event with orders:', err)
-    handleApiError(err)
+  } catch (error: unknown) {
+    console.error('Failed to delete event with orders:', error)
+    handleApiError(error)
     showAlertMessage('error', 'Failed to delete event. Please try again.')
-  }
-}
-
-const closeImportResultModal = () => {
-  showImportResultModal.value = false
-}
-
-const handleSaveEvent = async () => {
-  if (!eventFormComponent.value) return
-  submitting.value = true
-  let imageUrl: string | undefined = isEditing.value ? selectedEvent.value?.imageUrl : undefined
-
-  try {
-    const imageFile = eventFormComponent.value.imageFile
-    if (imageFile) {
-      const uploadResult = await FilesApi.uploadImage(imageFile)
-      imageUrl = uploadResult.imageUrl
-    }
-
-    const form = eventFormComponent.value.form
-    const payload = {
-      name: form.name.trim(),
-      description: form.description?.trim(),
-      startDate: new Date(form.startLocal).toISOString(),
-      endDate: form.endLocal ? new Date(form.endLocal).toISOString() : undefined,
-      address: form.address.trim(),
-      postcode: form.postcode.trim(),
-      capacity: form.capacity ?? undefined,
-      price: form.price || 0,
-      preferenceId: form.preferenceId ?? undefined,
-      externalUrl: form.externalUrl || undefined,
-      imageUrl: imageUrl,
-    }
-
-    if (isEditing.value && selectedEvent.value?.eventID) {
-      await EventApi.update(selectedEvent.value.eventID, payload)
-      successMessages.updated('event')
-    } else {
-      await EventApi.create(payload)
-      successMessages.created('event')
-    }
-    await fetchEvents()
-    closeModals()
-  } catch (err: unknown) {
-    console.error('Failed to save event:', err)
-    handleApiError(err)
   } finally {
     submitting.value = false
   }
 }
 
-const handleDeleteConfirm = async () => {
-  if (!selectedEvent.value?.eventID) return
+const parseExcelDate = (value: unknown): string => {
+  if (!value) throw new Error('Fecha vacía')
 
-  try {
-    await EventApi.remove(selectedEvent.value.eventID)
-    closeModals()
-    await fetchEvents()
-    successMessages.deleted('event')
-  } catch (err: unknown) {
-    console.error('Failed to delete event:', err)
-    handleApiError(err)
+  if (value instanceof Date) {
+    return value.toISOString()
   }
+
+  if (typeof value === 'string') {
+    const date = new Date(value)
+    if (!isNaN(date.getTime())) {
+      return date.toISOString()
+    }
+  }
+
+  if (typeof value === 'number') {
+    const excelEpoch = new Date(1899, 11, 30)
+    const date = new Date(excelEpoch.getTime() + value * 86400000)
+    return date.toISOString()
+  }
+
+  throw new Error('Formato de fecha inválido')
 }
 
 const handleExcelImport = async (event: Event) => {
+  if (!isVerified.value) {
+    return
+  }
+
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
 
@@ -759,7 +637,6 @@ const handleExcelImport = async (event: Event) => {
           description: row.description?.toString().trim() || undefined,
           capacity: row.capacity ? parseInt(row.capacity.toString()) : undefined,
           price: row.price ? parseFloat(row.price.toString()) : undefined,
-          organizer: row.organizer?.toString().trim() || undefined,
           externalUrl: row.externalUrl?.toString().trim() || undefined,
           preferenceId: row.preferenceId?.toString().trim() || undefined,
           imageUrl: row.imageUrl?.toString().trim() || undefined,
@@ -786,46 +663,26 @@ const handleExcelImport = async (event: Event) => {
     }
     showImportResultModal.value = true
 
-    await fetchEvents()
+    await loadEvents()
   } catch (error: unknown) {
     console.error('Error al procesar el Excel:', error)
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
     alert(`Error al procesar el archivo: ${errorMessage}`)
   } finally {
     loading.value = false
-    input.value = ''
+    if (input) {
+      input.value = ''
+    }
   }
 }
 
-const parseExcelDate = (value: unknown): string => {
-  if (!value) throw new Error('Fecha vacía')
-
-  if (value instanceof Date) {
-    return value.toISOString()
-  }
-
-  if (typeof value === 'string') {
-    const date = new Date(value)
-    if (!isNaN(date.getTime())) {
-      return date.toISOString()
-    }
-  }
-
-  if (typeof value === 'number') {
-    const excelEpoch = new Date(1899, 11, 30)
-    const date = new Date(excelEpoch.getTime() + value * 86400000)
-    return date.toISOString()
-  }
-
-  throw new Error('Formato de fecha inválido')
+const closeImportResultModal = () => {
+  showImportResultModal.value = false
 }
 
 onMounted(() => {
-  if (authStore.isLoggedIn) {
-    fetchEvents()
-    loadFilters()
-  } else {
-    loading.value = false
+  if (isVerified.value) {
+    loadEvents()
   }
 })
 </script>
@@ -838,11 +695,12 @@ onMounted(() => {
 
 .dashboard-header {
   background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
   padding: 2rem 2.5rem;
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .header-content {
@@ -872,36 +730,6 @@ onMounted(() => {
   margin: 0;
 }
 
-.header-buttons {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.import-btn {
-  background: #ffffff;
-  color: #1a202c;
-  border: 1px solid #e5e7eb;
-  padding: 1rem 1.75rem;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  flex-shrink: 0;
-}
-
-.import-btn:hover {
-  background: #f9fafb;
-  border-color: #dbb067;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
 .create-btn {
   background: #dbb067;
   color: #ffffff;
@@ -919,221 +747,38 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.create-btn:hover {
+.create-btn:hover:not(:disabled) {
   background: #c9a05a;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(219, 176, 103, 0.4);
 }
 
-.create-btn:active {
-  transform: translateY(0);
-}
-
-.toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 2rem 2.5rem;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-.toolbar-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.toolbar-right {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.search-box {
-  position: relative;
-  flex: 1;
-  min-width: 280px;
-  max-width: 450px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.875rem 1rem 0.875rem 3rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  background: #ffffff;
-  transition: all 0.2s ease;
-  outline: none;
-}
-
-.search-input:focus {
-  border-color: #dbb067;
-  box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.1);
-}
-
-.clear-btn {
-  position: absolute;
-  right: -3.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #f3f4f6;
-  border: none;
-  border-radius: 8px;
-  padding: 0.5rem;
-  cursor: pointer;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.clear-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.filters-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.filter-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.filter-group-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #4b5563;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding-left: 0.25rem;
-  margin: 0;
-}
-
-.filters-group {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.filter-btn {
-  padding: 0.75rem 1.25rem;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  border-radius: 10px;
-  color: #6b7280;
-  font-weight: 500;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.filter-btn:hover {
-  border-color: #dbb067;
-  color: #0d2954;
-}
-
-.filter-btn.active {
-  background: #0d2954;
-  border-color: #0d2954;
-  color: #ffffff;
-}
-
-.icon-btn {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 0.75rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  transition: all 0.2s ease;
-}
-
-.icon-btn:hover {
-  border-color: #dbb067;
-  color: #0d2954;
-}
-
-.icon-btn:disabled {
+.create-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.view-toggle {
-  display: flex;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 0.25rem;
-}
-
-.toggle-btn {
-  background: transparent;
-  border: none;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #6b7280;
+.info-banner {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  justify-content: center;
-  transition: all 0.2s ease;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  background: #fef3c7;
+  border-bottom: 1px solid #fde68a;
+  color: #92400e;
   font-size: 0.875rem;
-  font-weight: 500;
+  max-width: 1600px;
+  margin: 10px auto 0 auto;
 }
 
-.toggle-btn span {
-  display: none;
+.info-banner.warning {
+  background: #fef3c7;
+  border-bottom: 1px solid #fde68a;
+  color: #92400e;
 }
 
-@media (min-width: 640px) {
-  .toggle-btn span {
-    display: inline;
-  }
-}
-
-.toggle-btn:hover {
-  color: #0d2954;
-}
-
-.toggle-btn.active {
-  background: #0d2954;
-  color: #ffffff;
+.info-banner svg {
+  flex-shrink: 0;
 }
 
 .loading-state,
@@ -1155,6 +800,15 @@ onMounted(() => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-state svg {
@@ -1184,8 +838,13 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.create-btn-empty:hover {
+.create-btn-empty:hover:not(:disabled) {
   background: #1a3d6e;
+}
+
+.create-btn-empty:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .events-container {
@@ -1207,7 +866,7 @@ onMounted(() => {
 .event-card {
   position: relative;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -1222,6 +881,40 @@ onMounted(() => {
 .events-container.table .event-card {
   display: flex;
   height: 180px;
+}
+
+.event-card.is-finished {
+  opacity: 0.7;
+}
+
+.event-card.is-finished .event-image,
+.event-card.is-finished .event-content {
+  filter: grayscale(0.3);
+}
+
+.finished-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.finished-text {
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .event-image {
@@ -1321,32 +1014,37 @@ onMounted(() => {
 }
 
 .event-category {
-  display: inline-block;
+  background: #f3f4f6;
+  color: #6b7280;
   padding: 0.375rem 0.75rem;
-  background: #eff6ff;
-  color: #1e40af;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .event-date {
+  color: #9ca3af;
   font-size: 0.875rem;
-  color: #6b7280;
+  font-weight: 500;
+}
+
+.event-title-wrapper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .event-title {
   font-size: 1.125rem;
   font-weight: 700;
   color: #1a202c;
-  margin: 0 0 0.75rem 0;
+  margin: 0;
   line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
+  flex: 1;
 }
 
 .event-location {
@@ -1359,276 +1057,198 @@ onMounted(() => {
 
 .event-location svg {
   flex-shrink: 0;
+  color: #9ca3af;
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-danger {
+.delete-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.delete-warning svg {
+  color: #ef4444;
+  margin-bottom: 0.5rem;
+}
+
+.delete-warning p {
+  margin: 0;
+  color: #374151;
+  font-size: 1rem;
+}
+
+.delete-warning strong {
+  color: #1a202c;
+  font-weight: 700;
+}
+
+.warning-text {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #4b5563;
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.95rem;
-}
-
-.btn-primary {
-  background: #dbb067;
-  color: #ffffff;
-}
-
-.btn-primary:hover {
-  background: #c9a05a;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #f3f4f6;
-  color: #4b5563;
 }
 
 .btn-secondary:hover {
   background: #e5e7eb;
 }
 
+.btn-primary {
+  background: #0d2954;
+  color: #ffffff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1a3d6e;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-danger {
   background: #ef4444;
   color: #ffffff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
   background: #dc2626;
 }
 
-.delete-warning {
-  text-align: center;
-  padding: 1rem;
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.delete-warning svg {
-  color: #f59e0b;
-  margin-bottom: 1rem;
+.header-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
-.delete-warning p {
-  color: #4b5563;
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-}
-
-.delete-warning strong {
+.import-btn {
+  background: #ffffff;
   color: #1a202c;
-}
-
-.warning-text {
-  color: #9ca3af;
-  font-size: 0.875rem;
-}
-
-.event-card.is-finished {
-  position: relative;
-}
-
-.event-card.is-finished .event-image,
-.event-card.is-finished .event-content {
-  filter: grayscale(90%);
-  opacity: 0.7;
-}
-
-.finished-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid #e2e8f0;
+  padding: 1rem 1.75rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 10;
-  border-radius: 16px;
-  pointer-events: none;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
 }
 
-.events-container.grid .event-card.is-finished .finished-overlay {
-  align-items: flex-start;
-  padding-top: 30%;
+.import-btn:hover:not(.disabled) {
+  background: #f9fafb;
+  border-color: #dbb067;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-.finished-text {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #ef4444;
-  padding: 0.75rem 1.5rem;
-  border: 3px solid #ef4444;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  transform: rotate(-10deg);
-  user-select: none;
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+.import-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* Estilos para el modal de importación */
-.import-result {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.import-results {
   padding: 1rem 0;
 }
 
-.result-summary {
+.results-summary {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.result-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+.result-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
 }
 
-.result-icon.success {
-  background: #d1fae5;
-  color: #047857;
+.result-item.success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
-.result-icon.warning {
-  background: #fef3c7;
-  color: #d97706;
+.result-item.success svg {
+  color: #22c55e;
+  flex-shrink: 0;
 }
 
-.result-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1a202c;
-  margin: 0;
+.result-item.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
 }
 
-.result-message {
-  font-size: 1rem;
-  color: #6b7280;
-  margin: 0;
-}
-
-.errors-section {
-  margin-top: 0.5rem;
-}
-
-.errors-section h4 {
-  font-size: 0.875rem;
-  font-weight: 600;
+.result-item.error svg {
   color: #ef4444;
-  margin: 0 0 0.75rem 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  flex-shrink: 0;
 }
 
 .errors-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.errors-list h4 {
+  margin: 0 0 0.75rem 0;
+  color: #374151;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.errors-list ul {
+  margin: 0;
+  padding-left: 1.5rem;
   max-height: 200px;
   overflow-y: auto;
 }
 
-.error-item {
-  background: #fef2f2;
-  border-left: 3px solid #ef4444;
-  padding: 0.75rem;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: #991b1b;
-}
-
-.more-errors {
-  text-align: center;
-  padding: 0.5rem;
+.errors-list li {
+  margin: 0.5rem 0;
   color: #6b7280;
-  font-weight: 600;
   font-size: 0.875rem;
+  line-height: 1.5;
 }
 
-@media (max-width: 768px) {
-  .dashboard-header,
-  .toolbar,
-  .events-container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .dashboard-header {
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-  }
-
-  .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .page-title {
-    font-size: 1.75rem;
-  }
-
-  .header-buttons {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .import-btn,
-  .create-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .toolbar {
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-  }
-
-  .toolbar-top {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .search-box {
-    max-width: 100%;
-  }
-
-  .toolbar-right {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .events-container.grid {
-    grid-template-columns: 1fr;
-  }
-
-  .events-container.table .event-card {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .events-container.table .event-image {
-    width: 100%;
-    height: 200px;
-  }
-}
-
-/* ✅ Info Banner */
 .info-banner {
   display: flex;
   align-items: center;
@@ -1637,8 +1257,8 @@ onMounted(() => {
   background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
   border: 1px solid #bbdefb;
   border-radius: 12px;
-  margin-top: 10px;
-  margin-bottom: 1.5rem;
+  margin: 10px auto 1.5rem auto;
+  max-width: 1600px;
   font-size: 0.875rem;
   color: #1565c0;
   animation: slideDown 0.3s ease-out;
@@ -1671,7 +1291,6 @@ onMounted(() => {
   }
 }
 
-/* ✅ Orders Badge */
 .orders-badge {
   display: inline-flex;
   align-items: center;
@@ -1694,20 +1313,6 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.event-title-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.event-title-wrapper .event-title {
-  margin: 0;
-  flex-shrink: 0;
-}
-
-/* ✅ Modal AWS */
 .delete-orders-warning {
   padding: 0.5rem 0;
 }
@@ -1824,10 +1429,7 @@ onMounted(() => {
 }
 
 .confirmation-input::placeholder {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   color: #999;
 }
 
@@ -1846,10 +1448,54 @@ onMounted(() => {
   font-weight: 700;
 }
 
-.btn-danger:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background: #bdbdbd;
-  border-color: #bdbdbd;
+.view-controls {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 2.5rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.view-toggle {
+  display: flex;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.25rem;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.toggle-btn span {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .toggle-btn span {
+    display: inline;
+  }
+}
+
+.toggle-btn:hover {
+  color: #0d2954;
+}
+
+.toggle-btn.active {
+  background: #0d2954;
+  color: #ffffff;
 }
 </style>

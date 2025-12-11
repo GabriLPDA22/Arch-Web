@@ -245,6 +245,7 @@
       </transition>
     </div>
 
+
     <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
       <p>Loading users...</p>
@@ -261,7 +262,39 @@
       <p v-else>Get started by creating your first user</p>
     </div>
 
-    <div v-else class="users-table-container">
+    <!-- View Toggle -->
+    <div v-if="!loading && users.length > 0" class="view-controls">
+      <div class="view-toggle">
+        <button
+          class="toggle-btn"
+          :class="{ active: viewMode === 'table' }"
+          @click="viewMode = 'table'"
+          title="Table View"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z" />
+          </svg>
+          <span>Table</span>
+        </button>
+        <button
+          class="toggle-btn"
+          :class="{ active: viewMode === 'grid' }"
+          @click="viewMode = 'grid'"
+          title="Grid View"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3,11H11V3H3M3,21H11V13H3M13,11H21V3H13M13,21H21V13H13Z" />
+          </svg>
+          <span>Grid</span>
+        </button>
+      </div>
+      <div class="results-info">
+        Showing {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredUsersCount) }} of {{ filteredUsersCount }} users
+      </div>
+    </div>
+
+    <!-- Table View -->
+    <div v-if="!loading && users.length > 0 && viewMode === 'table'" class="users-table-container">
       <table class="users-table">
         <thead>
           <tr>
@@ -340,14 +373,111 @@
       </table>
     </div>
 
-    <div v-if="!loading && totalPages > 1" class="pagination">
-      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" class="page-btn">
-        Previous
-      </button>
-      <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
-      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" class="page-btn">
-        Next
-      </button>
+    <!-- Grid View -->
+    <div v-if="!loading && users.length > 0 && viewMode === 'grid'" class="users-grid-container">
+      <div class="users-grid">
+        <div v-for="user in users" :key="user.userID" class="user-card">
+          <div class="card-header">
+            <div class="user-avatar-card">
+              <div class="avatar-initial">{{ getCleanName(user.name).charAt(0).toUpperCase() }}</div>
+            </div>
+            <div class="user-title">
+              <h3 class="user-name-card">{{ getCleanName(user.name) }}</h3>
+              <p class="user-email-card">{{ user.email }}</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="user-type-section">
+              <span :class="['type-badge', getUserTypeBadgeClass(user)]">
+                <svg v-if="user.userType === 'staff-user'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                  <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
+                </svg>
+                <svg v-else-if="user.userType === 'scanner'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                  <path d="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H20V6H4M5,8H19V10H5V8M5,11H19V13H5V11M5,14H19V16H5V14Z" />
+                </svg>
+                <svg v-else-if="user.userType === 'user' && getOxfordSubtype(user) === 'student'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                  <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
+                </svg>
+                <svg v-else-if="user.userType === 'user' && getOxfordSubtype(user) === 'professor'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                  <path d="M16,11C17.66,11 18.99,9.66 18.99,8C18.99,6.34 17.66,5 16,5C14.34,5 13,6.34 13,8C13,9.66 14.34,11 16,11M8,11C9.66,11 10.99,9.66 10.99,8C10.99,6.34 9.66,5 8,5C6.34,5 5,6.34 5,8C5,9.66 6.34,11 8,11M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M16,13C15.71,13 15.38,13.02 15.03,13.05C16.19,13.89 17,15.02 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13Z" />
+                </svg>
+                <svg v-else-if="user.userType === 'moderator'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                  <path d="M12,2L2,7V13C2,17.55 4.84,21.74 9,23C9,23 10,23 12,23C14,23 15,23 15,23C19.16,21.74 22,17.55 22,13V7L12,2M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z" />
+                </svg>
+                <svg v-else-if="user.userType === 'admin'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                  <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z" />
+                </svg>
+                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                  <path d="M16,17V19H2V17S2,13 9,13 16,17 16,17M12.5,7.5A3.5,3.5 0 0,1 9,11A3.5,3.5 0 0,1 5.5,7.5A3.5,3.5 0 0,1 9,4A3.5,3.5 0 0,1 12.5,7.5M15.94,13C18.23,13.72 20,15.36 20,17V19H18V17C18,15.36 17.5,14.14 15.94,13M15,4A3.39,3.39 0 0,1 18.5,7.5A3.5,3.5 0 0,1 15,11V9A1.5,1.5 0 0,0 16.5,7.5A1.5,1.5 0 0,0 15,6V4Z" />
+                </svg>
+                {{ getUserTypeLabel(user) }}
+              </span>
+            </div>
+            <div class="user-role-section">
+              <span :class="['role-badge', user.userType]">{{ user.userType }}</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn-card edit" @click="openEditModal(user)" title="Edit">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+              </svg>
+              Edit
+            </button>
+            <button class="action-btn-card delete" @click="openDeleteModal(user)" title="Delete">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+              </svg>
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="!loading && totalPages > 1" class="pagination-container">
+      <div class="pagination">
+        <button 
+          @click="goToPage(currentPage - 1)" 
+          :disabled="currentPage === 1" 
+          class="page-btn prev"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" />
+          </svg>
+          <span>Previous</span>
+        </button>
+        
+        <div class="page-numbers">
+          <button
+            v-for="page in getPageNumbers()"
+            :key="page"
+            @click="typeof page === 'number' ? goToPage(page) : null"
+            :class="['page-number', { active: page === currentPage, ellipsis: page === '...' }]"
+            :disabled="page === '...'"
+          >
+            {{ page }}
+          </button>
+        </div>
+        
+        <button 
+          @click="goToPage(currentPage + 1)" 
+          :disabled="currentPage === totalPages" 
+          class="page-btn next"
+        >
+          <span>Next</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" />
+          </svg>
+        </button>
+      </div>
+      
+      <div class="pagination-info">
+        <span>Page {{ currentPage }} of {{ totalPages }}</span>
+        <span class="separator">•</span>
+        <span>{{ filteredUsersCount }} total users</span>
+      </div>
     </div>
 
     <div v-if="isFormModalOpen" class="modal-overlay" @click="closeModals">
@@ -426,6 +556,7 @@ const pageSize = ref(10)
 const totalPages = ref(0)
 const sortBy = ref('name')
 const sortOrder = ref<'asc' | 'desc'>('asc')
+const viewMode = ref<'table' | 'grid'>('table')
 const isFormModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
@@ -605,7 +736,7 @@ const fetchUsers = async () => {
     users.value = applyFilters(response.items)
     
     totalPages.value = response.totalPages
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to load users:', error)
     handleApiError(error)
   } finally {
@@ -713,6 +844,35 @@ const goToPage = (page: number) => {
   }
 }
 
+const getPageNumbers = (): (number | string)[] => {
+  const pages: (number | string)[] = []
+  const total = totalPages.value
+  const current = currentPage.value
+  
+  if (total <= 7) {
+    // Si hay 7 o menos páginas, mostrar todas
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    // Siempre mostrar primera página
+    pages.push(1)
+    
+    if (current <= 3) {
+      // Cerca del inicio
+      pages.push(2, 3, 4, '...', total)
+    } else if (current >= total - 2) {
+      // Cerca del final
+      pages.push('...', total - 3, total - 2, total - 1, total)
+    } else {
+      // En el medio
+      pages.push('...', current - 1, current, current + 1, '...', total)
+    }
+  }
+  
+  return pages
+}
+
 const openCreateModal = () => {
   isEditing.value = false
   selectedUserId.value = null
@@ -774,7 +934,7 @@ const handleDeleteConfirm = async () => {
     closeModals()
     await fetchUsers()
     console.log('User deleted successfully')
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete user:', error)
     handleApiError(error)
   }
@@ -791,11 +951,12 @@ const handleDeleteConfirm = async () => {
 
 .dashboard-header {
   background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
   padding: 2rem 2.5rem;
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .header-content {
@@ -851,7 +1012,7 @@ const handleDeleteConfirm = async () => {
 .search-container {
   padding: 1.5rem 2.5rem;
   background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -892,7 +1053,7 @@ const handleDeleteConfirm = async () => {
 
 .filter-btn {
   padding: 0.625rem 1rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   background: #ffffff;
   border-radius: 10px;
   color: #6b7280;
@@ -973,9 +1134,9 @@ const handleDeleteConfirm = async () => {
   top: calc(100% + 0.5rem);
   left: 0;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   z-index: 100;
   min-width: 220px;
   padding: 0.75rem;
@@ -1009,7 +1170,7 @@ const handleDeleteConfirm = async () => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid #e2e8f0;
   margin-bottom: 0.25rem;
 }
 
@@ -1222,64 +1383,83 @@ const handleDeleteConfirm = async () => {
 }
 
 .users-table-container {
-  padding: 2rem 2.5rem;
+  padding: 2rem;
+  margin: 0 auto;
+  background: transparent;
+}
+
+.users-grid-container {
+  padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
 }
 
 .users-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
 }
 
 .users-table th,
 .users-table td {
   padding: 1.25rem 1.5rem;
   text-align: left;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .users-table th {
-  background: #f9fafb;
-  color: #6b7280;
-  font-size: 0.875rem;
-  font-weight: 600;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .users-table th.sortable {
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
 .users-table th.sortable:hover {
-  background-color: #f0f2f5;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #0d2954;
 }
 
 .sort-icon {
   display: inline-block;
   margin-left: 0.5rem;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #0d2954;
+  font-weight: 700;
 }
 
 .users-table td {
-  color: #4b5563;
+  color: #1e293b;
   font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.users-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .user-row {
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .user-row:hover {
-  background-color: #fafbfc;
+  background-color: #f8fafc;
 }
 
 .name-cell {
@@ -1551,37 +1731,285 @@ const handleDeleteConfirm = async () => {
   transform: scale(1.05);
 }
 
-.pagination {
+/* View Controls */
+.view-controls {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 2rem;
+  padding: 1.5rem 2rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  margin: 0 auto;
 }
 
-.page-btn {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  padding: 0.5rem 1rem;
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  background: #f1f5f9;
+  padding: 0.25rem;
+  border-radius: 10px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: transparent;
+  border: none;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.875rem;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: #475569;
+}
+
+.toggle-btn.active {
+  background: #ffffff;
+  color: #0d2954;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.results-info {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Grid View Styles */
+.users-grid-container {
+  padding: 2rem;
+}
+
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.user-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.user-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.user-avatar-card {
+  flex-shrink: 0;
+}
+
+.avatar-initial {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d2954 0%, #1a3d6e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 12px rgba(13, 41, 84, 0.2);
+}
+
+.user-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name-card {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.25rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email-card {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-type-section,
+.user-role-section {
+  display: flex;
+  align-items: center;
+}
+
+.card-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 12px 12px;
+}
+
+.action-btn-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.action-btn-card.edit {
+  color: #3b82f6;
+}
+
+.action-btn-card.edit:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  transform: translateY(-1px);
+}
+
+.action-btn-card.delete {
+  color: #ef4444;
+}
+
+.action-btn-card.delete:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+  transform: translateY(-1px);
+}
+
+/* Pagination Styles */
+.pagination-container {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #475569;
   transition: all 0.2s ease;
 }
 
 .page-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #dbb067;
+  background: #f8fafc;
+  border-color: #0d2954;
+  color: #0d2954;
 }
 
 .page-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-.page-info {
-  color: #6b7280;
+.page-numbers {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.page-number {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
   font-weight: 500;
+  font-size: 0.875rem;
+  color: #475569;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-number:hover:not(:disabled):not(.ellipsis) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.page-number.active {
+  background: linear-gradient(135deg, #0d2954 0%, #1a3d6e 100%);
+  color: #ffffff;
+  border-color: #0d2954;
+  box-shadow: 0 2px 8px rgba(13, 41, 84, 0.2);
+}
+
+.page-number.ellipsis {
+  border: none;
+  background: transparent;
+  cursor: default;
+  color: #94a3b8;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.pagination-info .separator {
+  color: #cbd5e1;
 }
 
 .modal-overlay {

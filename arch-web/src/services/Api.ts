@@ -67,6 +67,7 @@ export type UserUpdateDto = {
   preferences?: string[]
   dateOfBirth?: string
   profilePicture?: string
+  isVerified?: boolean // Para verificación de staff
 }
 
 export type PagedResult<T> = {
@@ -223,11 +224,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ==================== AUTH API ====================
 
+export type RegisterDto = {
+  name: string
+  email: string
+  password: string
+  userType?: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+}
+
 export const AuthApi = {
   login: (email: string, password: string) =>
     request<AuthResponseDto>(`/api/Auth/login`, {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+  register: (data: RegisterDto) =>
+    request<AuthResponseDto>(`/api/Auth/register`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
   verifySession: () => request<UserDetailDto>('/api/Users/me'),
 }
@@ -250,6 +263,9 @@ export const UserApi = {
     if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
     return request<PagedResult<UserListDto>>(`/api/Users?${searchParams.toString()}`)
   },
+
+  // ✅ Nuevo endpoint para staff pendientes
+  getPendingStaff: () => request<UserListDto[]>(`/api/Users/pending-staff`),
 
   get: (id: string) => request<UserDetailDto>(`/api/Users/${id}`),
 
@@ -304,6 +320,9 @@ export const EventApi = {
 
     return request<PagedResult<EventListDto>>(`/api/Events/admin-list?${searchParams.toString()}`)
   },
+
+  // ✅ Nuevo endpoint para eventos del staff autenticado
+  getMyEvents: () => request<EventListDto[]>(`/api/Events/my-events`),
 
   get: (id: string) => request<EventDetailDto>(`/api/Events/${id}`),
 

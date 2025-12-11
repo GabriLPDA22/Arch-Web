@@ -275,8 +275,26 @@
       </transition>
 
       <div class="form-group">
-        <label class="form-label">Name <span class="required">*</span></label>
-        <input v-model="form.name" class="form-input" type="text" required placeholder="John Doe" />
+        <label class="form-label">
+          <template v-if="form.userType === 'staff-user'">Organization Name</template>
+          <template v-else>Name</template>
+          <span class="required">*</span>
+        </label>
+        <input 
+          v-model="form.name" 
+          class="form-input" 
+          type="text" 
+          required 
+          :placeholder="form.userType === 'staff-user' ? 'Organization Name' : 'John Doe'" 
+        />
+        <p v-if="form.userType === 'staff-user'" class="field-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+            />
+          </svg>
+          Enter the name of your organization
+        </p>
       </div>
 
       <div class="form-group">
@@ -295,6 +313,14 @@
             />
           </svg>
           Must be an Oxford University email (@ox.ac.uk or @oxford.ac.uk)
+        </p>
+        <p v-if="form.userType === 'staff-user'" class="field-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+            />
+          </svg>
+          Only Oxford University domains (@ox.ac.uk) are allowed for organizations
         </p>
       </div>
 
@@ -651,6 +677,48 @@ watch(
   { immediate: true },
 )
 
+const validateOxfordEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    return false
+  }
+
+  const oxfordDomains = [
+    '@ox.ac.uk',
+    '@balliol.ox.ac.uk',
+    '@brasenose.ox.ac.uk',
+    '@chch.ox.ac.uk',
+    '@christchurch.ox.ac.uk',
+    '@corpus.ox.ac.uk',
+    '@exeter.ox.ac.uk',
+    '@hertford.ox.ac.uk',
+    '@jesus.ox.ac.uk',
+    '@keble.ox.ac.uk',
+    '@lady-margaret-hall.ox.ac.uk',
+    '@lincoln.ox.ac.uk',
+    '@magdalen.ox.ac.uk',
+    '@merton.ox.ac.uk',
+    '@new.ox.ac.uk',
+    '@oriel.ox.ac.uk',
+    '@pembroke.ox.ac.uk',
+    '@queens.ox.ac.uk',
+    '@somerville.ox.ac.uk',
+    '@st-annes.ox.ac.uk',
+    '@st-catherines.ox.ac.uk',
+    '@st-edmund-hall.ox.ac.uk',
+    '@st-hildas.ox.ac.uk',
+    '@st-hughs.ox.ac.uk',
+    '@st-johns.ox.ac.uk',
+    '@st-peters.ox.ac.uk',
+    '@trinity.ox.ac.uk',
+    '@univ.ox.ac.uk',
+    '@wadham.ox.ac.uk',
+    '@worc.ox.ac.uk',
+  ]
+
+  return oxfordDomains.some((domain) => email.toLowerCase().endsWith(domain.toLowerCase()))
+}
+
 const saveUser = async () => {
   // ✅ Validar que si es Oxford, tenga subtipo
   if (form.userType === 'user' && !oxfordSubtype.value) {
@@ -661,6 +729,12 @@ const saveUser = async () => {
   // ✅ Validar que si es Staff, tenga subtipo
   if (form.userType === 'staff-user' && !staffSubtype.value) {
     console.error('Staff users must have a subtype selected')
+    return
+  }
+
+  // ✅ Validar email Oxford para user y staff-user
+  if ((form.userType === 'user' || form.userType === 'staff-user') && !validateOxfordEmail(form.email)) {
+    handleApiError(new Error('Only Oxford University domains (@ox.ac.uk) are allowed'))
     return
   }
 

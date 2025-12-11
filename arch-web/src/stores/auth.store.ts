@@ -27,6 +27,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   'Incorrect password': 'Invalid credentials. Please check your email and password.',
   NOT_ADMIN: "Unauthorized. You don't have the required permissions.",
   Unauthorized: "Unauthorized. You don't have the required permissions.",
+  'Your account is pending verification': 'Your account is pending verification. Please wait for admin approval.',
   'Account locked': 'Your account has been temporarily locked. Please contact support.',
   'Network Error': 'Unable to connect to the server. Please check your internet connection.',
   Timeout: 'The request took too long. Please try again.',
@@ -83,18 +84,32 @@ export const useAuthStore = defineStore('auth', {
         const response = await AuthApi.login(email, password)
         const { user, token } = response
 
-        if (user && token && (user.userType === 'admin' || user.userType === 'moderator')) {
+        if (!user || !token) {
+          throw new Error('Invalid login response')
+        }
+
+        // Permitir login a admin, moderator, o staff-user verificado
+        const isAdminOrModerator = user.userType === 'admin' || user.userType === 'moderator'
+        const isVerifiedStaff = user.userType === 'staff-user' && user.isVerified === true
+
+        if (isAdminOrModerator || isVerifiedStaff) {
           this.user = user
           this.token = token
 
           localStorage.setItem('user', JSON.stringify(user))
           localStorage.setItem('token', token)
 
-          await router.push(this.returnUrl || '/admin')
-        } else if (user && token) {
-          throw new Error('Unauthorized')
+          // Redirigir según el tipo de usuario
+          if (user.userType === 'staff-user') {
+            await router.push('/admin/staff/events')
+          } else {
+            await router.push(this.returnUrl || '/admin')
+          }
+        } else if (user.userType === 'staff-user' && !user.isVerified) {
+          // Staff no verificado
+          throw new Error('Your account is pending verification. Please wait for admin approval.')
         } else {
-          throw new Error('Invalid login response')
+          throw new Error('Unauthorized')
         }
       } catch (error: any) {
         console.error('❌ Login error:', error)
