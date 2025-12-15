@@ -1,4 +1,8 @@
-// src/services/Api.ts
+// ==============================================
+// RUTA: src/services/Api.ts
+// ACCIÓN: REEMPLAZAR archivo completo
+// ==============================================
+
 import { useAuthStore } from '@/stores/auth.store'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -67,7 +71,7 @@ export type UserUpdateDto = {
   preferences?: string[]
   dateOfBirth?: string
   profilePicture?: string
-  isVerified?: boolean // Para verificación de staff
+  isVerified?: boolean
 }
 
 export type PagedResult<T> = {
@@ -264,7 +268,6 @@ export const UserApi = {
     return request<PagedResult<UserListDto>>(`/api/Users?${searchParams.toString()}`)
   },
 
-  // ✅ Nuevo endpoint para staff pendientes
   getPendingStaff: () => request<UserListDto[]>(`/api/Users/pending-staff`),
 
   get: (id: string) => request<UserDetailDto>(`/api/Users/${id}`),
@@ -299,7 +302,6 @@ export const EventApi = {
     return request<PagedResult<EventListDto>>(`/api/Events/discover?${searchParams.toString()}`)
   },
 
-  // ✅ ACTUALIZADO CON PARÁMETROS DE ORDENAMIENTO
   listForAdmin: (params?: {
     q?: string
     page?: number
@@ -321,7 +323,6 @@ export const EventApi = {
     return request<PagedResult<EventListDto>>(`/api/Events/admin-list?${searchParams.toString()}`)
   },
 
-  // ✅ Nuevo endpoint para eventos del staff autenticado
   getMyEvents: () => request<EventListDto[]>(`/api/Events/my-events`),
 
   get: (id: string) => request<EventDetailDto>(`/api/Events/${id}`),
@@ -411,4 +412,102 @@ export const ImageApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+}
+
+// ==================== REPORTS API ====================
+
+// Forma real que devuelve actualmente el backend en /api/admin/reports
+type RawReportListItemDto = {
+  id: string
+  reporterName: string
+  reporterEmail: string
+  reportedUserId: string
+  reportedUserName: string
+  reportedUserEmail: string
+  reportedUserProfilePicture?: string
+  reason: string
+  // Texto libre que escribe el usuario cuando selecciona "other" (si el backend lo envía)
+  description?: string
+  status: string
+  createdAt: string
+  reportedUserTotalReports: number
+}
+
+export type UserSummaryDto = {
+  userId: string
+  name: string
+  profilePictureUrl?: string
+}
+
+export type ReportDetailDto = {
+  reportId: string
+  reporter: UserSummaryDto
+  reportedUser: UserSummaryDto
+  reason: string
+  description?: string
+  createdAt: string
+  status: string
+  reviewedAt?: string
+  reviewedBy?: UserSummaryDto
+  adminNotes?: string
+  actionTaken?: string
+}
+
+export type ResolveReportDto = {
+  actionTaken: string
+  adminNotes?: string
+  suspensionDays?: number
+}
+
+export type ReportStatsDto = {
+  totalReports: number
+  pendingReports: number
+  resolvedToday: number
+  bansThisWeek: number
+  topReportedUsers: { userId: string; name: string; reportCount: number }[]
+}
+
+export const ReportsApi = {
+  list: (params?: { status?: string; page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.append('status', params.status)
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+
+    return request<PagedResult<RawReportListItemDto>>(
+      `/api/admin/reports?${searchParams.toString()}`,
+    ).then((raw) => ({
+      ...raw,
+      items: raw.items.map<ReportDetailDto>((item) => ({
+        reportId: item.id,
+        reporter: {
+          userId: item.reporterEmail, // no tenemos id, usamos email como identificador estable
+          name: item.reporterName,
+        },
+        reportedUser: {
+          userId: item.reportedUserId,
+          name: item.reportedUserName,
+          profilePictureUrl: item.reportedUserProfilePicture,
+        },
+        reason: item.reason,
+        description: item.description,
+        createdAt: item.createdAt,
+        status: item.status,
+        reviewedAt: undefined,
+        reviewedBy: undefined,
+        adminNotes: undefined,
+        actionTaken: undefined,
+      })),
+    }))
+  },
+
+  get: (id: string) => request<ReportDetailDto>(`/api/admin/reports/${id}`),
+
+  resolve: (id: string, data: ResolveReportDto) =>
+    request<void>(`/api/admin/reports/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getStats: () => request<ReportStatsDto>(`/api/admin/reports/stats`),
 }

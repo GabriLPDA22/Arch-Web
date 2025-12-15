@@ -1,4 +1,8 @@
-// src/router/index.ts
+// ==============================================
+// RUTA: src/router/index.ts
+// ACCIÓN: REEMPLAZAR archivo completo
+// ==============================================
+
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 
@@ -9,6 +13,7 @@ import UsersDashboard from '@/views/UsersDashboard.vue'
 import StaffRegisterView from '@/views/StaffRegisterView.vue'
 import StaffEventsView from '@/views/staff/StaffEventsView.vue'
 import StaffVerificationView from '@/views/admin/StaffVerificationView.vue'
+import ReportsDashboard from '@/views/admin/ReportsDashboard.vue' // ✅ NUEVO
 import UnauthorizedView from '../views/UnauthorizedView.vue'
 
 const router = createRouter({
@@ -32,7 +37,6 @@ const router = createRouter({
     {
       path: '/admin',
       component: AdminLayout,
-      // ✅ CAMBIO: Ahora solo requiere poder gestionar el panel (admin o mod)
       meta: { requiresPanelAccess: true },
       children: [
         {
@@ -48,13 +52,19 @@ const router = createRouter({
           path: 'users',
           name: 'admin-users',
           component: UsersDashboard,
-          // ✅ CAMBIO: Esta ruta específica requiere ser admin
           meta: { requiresAdmin: true },
         },
         {
           path: 'staff/verification',
           name: 'staff-verification',
           component: StaffVerificationView,
+          meta: { requiresAdmin: true },
+        },
+        // ✅ NUEVA RUTA - Reports Dashboard
+        {
+          path: 'reports',
+          name: 'admin-reports',
+          component: ReportsDashboard,
           meta: { requiresAdmin: true },
         },
         {
@@ -83,17 +93,16 @@ router.beforeEach(async (to) => {
     return '/login'
   }
 
-  // ✅ NUEVA LÓGICA DE AUTORIZACIÓN POR ROLES
+  // Lógica de autorización por roles
   if (authStore.isLoggedIn) {
     const user = authStore.user
     const isAdmin = user?.userType === 'admin'
     const isModerator = user?.userType === 'moderator'
     const isStaff = user?.userType === 'staff-user'
-    const isVerifiedStaff = isStaff && (user?.isVerified === true)
+    const isVerifiedStaff = isStaff && user?.isVerified === true
     const canManagePanel = isAdmin || isModerator
 
     // Verificar acceso general al panel de administración
-    // Permitir acceso a admin, moderator y staff verificado
     if (to.matched.some((record) => record.meta.requiresPanelAccess)) {
       if (!canManagePanel && !isVerifiedStaff) {
         return '/unauthorized'

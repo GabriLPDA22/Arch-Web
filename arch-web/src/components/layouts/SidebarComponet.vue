@@ -1,3 +1,8 @@
+<!-- ============================================== -->
+<!-- RUTA: src/components/layouts/SidebarComponet.vue -->
+<!-- ACCIÓN: REEMPLAZAR archivo completo               -->
+<!-- ============================================== -->
+
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
@@ -23,7 +28,12 @@
           <span class="nav-text">Events</span>
         </RouterLink>
 
-        <RouterLink v-if="authStore.isAdmin" to="/admin/users" class="nav-item" active-class="active">
+        <RouterLink
+          v-if="authStore.isAdmin"
+          to="/admin/users"
+          class="nav-item"
+          active-class="active"
+        >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
             <path
               d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"
@@ -32,7 +42,12 @@
           <span class="nav-text">Users</span>
         </RouterLink>
 
-        <RouterLink v-if="authStore.isAdmin" to="/admin/staff/verification" class="nav-item" active-class="active">
+        <RouterLink
+          v-if="authStore.isAdmin"
+          to="/admin/staff/verification"
+          class="nav-item"
+          active-class="active"
+        >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
             <path
               d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
@@ -40,19 +55,28 @@
           </svg>
           <span class="nav-text">Staff Requests</span>
         </RouterLink>
+
+        <!-- ✅ NUEVO: Reports Link -->
+        <RouterLink
+          v-if="authStore.isAdmin"
+          to="/admin/reports"
+          class="nav-item"
+          active-class="active"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
+            <path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z" />
+          </svg>
+          <span class="nav-text">Reports</span>
+        </RouterLink>
       </div>
 
       <!-- Staff -->
-      <div 
-        v-if="authStore.user?.userType === 'staff-user' && authStore.user?.isVerified" 
+      <div
+        v-if="authStore.user?.userType === 'staff-user' && authStore.user?.isVerified"
         class="nav-section"
       >
         <div class="section-label">Staff</div>
-        <RouterLink 
-          to="/admin/staff/events" 
-          class="nav-item" 
-          active-class="active"
-        >
+        <RouterLink to="/admin/staff/events" class="nav-item" active-class="active">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
             <path
               d="M12,2C8.13,2 5,5.13 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9C19,5.13 15.87,2 12,2M12,11.5C10.62,11.5 9.5,10.38 9.5,9C9.5,7.62 10.62,6.5 12,6.5C13.38,6.5 14.5,7.62 14.5,9C14.5,10.38 13.38,11.5 12,11.5Z"
@@ -88,13 +112,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 
-const router = useRouter()
 const authStore = useAuthStore()
 
-// ✅ CAMBIO: Usamos el getter del store para consistencia
 const userName = computed(() => authStore.userName)
 const userInitial = computed(() => userName.value.charAt(0).toUpperCase())
 
