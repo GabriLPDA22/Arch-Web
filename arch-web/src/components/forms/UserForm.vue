@@ -189,7 +189,7 @@
                 d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
               />
             </svg>
-            This will be saved in the name field for filtering (e.g., "John Doe [Student]")
+            Select the member type for this Oxford user
           </p>
         </div>
       </transition>
@@ -748,14 +748,10 @@ const saveUser = async () => {
       })
       .filter((name): name is string => name !== null)
 
-    // ✅ Añadir el subtipo al nombre si es Oxford
+    // ✅ Solo usar el nombre limpio (sin tags)
     let finalName = form.name.trim()
-    if (form.userType === 'user' && oxfordSubtype.value) {
-      // Limpiar cualquier tag existente primero
-      finalName = cleanName(finalName)
-      // Añadir el nuevo tag
-      finalName = `${finalName} [${oxfordSubtype.value === 'student' ? 'Student' : 'Professor'}]`
-    }
+    // Limpiar cualquier tag existente si hay
+    finalName = cleanName(finalName)
 
     // ✅ Determinar el role según el subtipo de Staff
     let finalUserType = form.userType
