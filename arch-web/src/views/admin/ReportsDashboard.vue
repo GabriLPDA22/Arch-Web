@@ -748,7 +748,7 @@ const openDetailModal = async (report: ReportListDto) => {
   } catch (error) {
     console.error('Failed to load report details:', error)
     // Fallback to list item if detail fetch fails
-    selectedReport.value = report as any
+    selectedReport.value = report as unknown as ReportDetailDto
     showDetailModal.value = true
   }
 }
@@ -761,7 +761,7 @@ const openResolveModal = async (report: ReportListDto | ReportDetailDto) => {
       selectedReport.value = detail
     } catch (error) {
       console.error('Failed to load report details:', error)
-      selectedReport.value = report as any
+      selectedReport.value = report as unknown as ReportDetailDto
     }
   } else {
     selectedReport.value = report
