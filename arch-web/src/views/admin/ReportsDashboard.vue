@@ -1504,6 +1504,8 @@ onMounted(() => {
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
@@ -1514,6 +1516,7 @@ onMounted(() => {
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -1543,6 +1546,10 @@ onMounted(() => {
 .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  max-height: calc(90vh - 140px);
 }
 
 .modal-footer {
@@ -1552,6 +1559,7 @@ onMounted(() => {
   padding: 1rem 1.5rem;
   border-top: 1px solid #e2e8f0;
   background: #f9fafb;
+  flex-shrink: 0;
 }
 
 /* ==================== DETAIL SECTIONS ==================== */
