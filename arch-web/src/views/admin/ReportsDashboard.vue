@@ -25,7 +25,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ stats.pendingReports }}</span>
+          <span class="stat-value">{{ stats.totalPending }}</span>
           <span class="stat-label">Pending</span>
         </div>
       </div>
@@ -39,7 +39,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ stats.totalReports }}</span>
+          <span class="stat-value">{{ stats.totalUserReports + stats.totalMessageReports }}</span>
           <span class="stat-label">Total Reports</span>
         </div>
       </div>
@@ -53,8 +53,8 @@
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ stats.resolvedToday }}</span>
-          <span class="stat-label">Resolved Today</span>
+          <span class="stat-value">{{ stats.totalThisWeek }}</span>
+          <span class="stat-label">This Week</span>
         </div>
       </div>
 
@@ -67,8 +67,8 @@
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ stats.bansThisWeek }}</span>
-          <span class="stat-label">Bans This Week</span>
+          <span class="stat-value">{{ stats.totalThisMonth }}</span>
+          <span class="stat-label">This Month</span>
         </div>
       </div>
     </div>
@@ -129,7 +129,7 @@
               class="sortable-header"
               @click="changeSort('reportedUser')"
             >
-              Reported User
+              Reported
               <span class="sort-indicator" v-if="sortBy === 'reportedUser'">
                 {{ sortDirection === 'asc' ? '▲' : '▼' }}
               </span>
@@ -165,29 +165,42 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="report in sortedReports" :key="report.reportId" class="table-row">
+          <tr v-for="report in sortedReports" :key="report.id" class="table-row">
             <td>
               <div class="user-cell">
                 <div class="user-avatar">
                   {{
-                    report.reporter?.name
-                      ? report.reporter.name.charAt(0)
+                    report.reporterName
+                      ? report.reporterName.charAt(0)
                       : '?'
                   }}
                 </div>
-                <span>{{ report.reporter?.name ?? 'Unknown user' }}</span>
+                <span>{{ report.reporterName ?? 'Unknown user' }}</span>
               </div>
             </td>
             <td>
               <div class="user-cell">
                 <div class="user-avatar reported">
-                  {{
-                    report.reportedUser?.name
-                      ? report.reportedUser.name.charAt(0)
-                      : '?'
-                  }}
+                  <img
+                    v-if="report.reportedUserProfilePicture"
+                    :src="report.reportedUserProfilePicture"
+                    alt="Reported user"
+                    class="user-avatar-img"
+                  />
+                  <span v-else>
+                    {{
+                      report.reportedUserName
+                        ? report.reportedUserName.charAt(0)
+                        : '?'
+                    }}
+                  </span>
                 </div>
-                <span>{{ report.reportedUser?.name ?? 'Unknown user' }}</span>
+                <div class="user-info">
+                  <span>{{ report.reportedUserName ?? 'Unknown user' }}</span>
+                  <span class="report-type-badge" :class="report.reportType">
+                    {{ report.reportType === 'message' ? 'Message' : 'Profile' }}
+                  </span>
+                </div>
               </div>
             </td>
             <td>
@@ -276,30 +289,165 @@
         <div class="modal-body" v-if="selectedReport">
           <div class="detail-section">
             <h4>Reporter</h4>
-            <p>{{ selectedReport.reporter?.name ?? 'Unknown user' }}</p>
+            <p>{{ selectedReport.reporterName ?? 'Unknown user' }}</p>
           </div>
+
           <div class="detail-section">
-            <h4>Reported User</h4>
-            <p>{{ selectedReport.reportedUser?.name ?? 'Unknown user' }}</p>
+            <h4>Report Type</h4>
+            <span class="report-type-badge" :class="selectedReport.reportType">
+              {{ selectedReport.reportType === 'message' ? 'Message Report' : 'User Profile Report' }}
+            </span>
           </div>
+
+          <!-- Reported User Info (siempre visible) -->
+          <div class="detail-section" v-if="selectedReport.reportedUserName">
+            <h4>Reported User</h4>
+            <div class="user-cell">
+              <div class="user-avatar reported">
+                <img
+                  v-if="selectedReport.reportedUserProfilePicture"
+                  :src="selectedReport.reportedUserProfilePicture"
+                  alt="Reported user"
+                  class="user-avatar-img"
+                />
+                <span v-else>
+                  {{ selectedReport.reportedUserName.charAt(0) }}
+                </span>
+              </div>
+              <div>
+                <p class="user-name">{{ selectedReport.reportedUserName }}</p>
+                <p v-if="selectedReport.reportedUserEmail" class="user-email">
+                  {{ selectedReport.reportedUserEmail }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Profile Details (solo para reportes de usuario) -->
+          <div
+            class="detail-section"
+            v-if="selectedReport.reportType === 'user' && selectedReport.reportedUserProfile"
+          >
+            <h4>User Profile Details</h4>
+            <div class="profile-details">
+              <div class="profile-info-item" v-if="selectedReport.reportedUserProfile.age">
+                <strong>Age:</strong> {{ selectedReport.reportedUserProfile.age }}
+              </div>
+              <div class="profile-info-item" v-if="selectedReport.reportedUserProfile.bio">
+                <strong>Bio:</strong>
+                <p class="bio-text">{{ selectedReport.reportedUserProfile.bio }}</p>
+              </div>
+              <div
+                class="profile-photos"
+                v-if="selectedReport.reportedUserPhotos && selectedReport.reportedUserPhotos.length > 0"
+              >
+                <strong>Photos:</strong>
+                <div class="photos-grid">
+                  <img
+                    v-for="(photo, index) in selectedReport.reportedUserPhotos"
+                    :key="index"
+                    :src="photo"
+                    alt="Profile photo"
+                    class="profile-photo"
+                    @click="openPhotoModal(photo)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reported Message (solo para reportes de mensaje) -->
+          <div
+            class="detail-section"
+            v-if="selectedReport.reportType === 'message' && selectedReport.reportedMessage"
+          >
+            <h4>Reported Message</h4>
+            <div class="reported-message-card">
+              <div class="reported-message-header">
+                <div class="user-avatar">
+                  <img
+                    v-if="selectedReport.reportedMessage.senderProfilePicture"
+                    :src="selectedReport.reportedMessage.senderProfilePicture"
+                    alt="Sender"
+                    class="user-avatar-img"
+                  />
+                  <span v-else>
+                    {{ selectedReport.reportedMessage.senderName.charAt(0) }}
+                  </span>
+                </div>
+                <div>
+                  <p class="reported-message-sender">
+                    {{ selectedReport.reportedMessage.senderName }}
+                  </p>
+                  <p class="reported-message-meta">
+                    {{ formatDate(selectedReport.reportedMessage.sentAt) }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="reported-message-body">
+                <p v-if="selectedReport.reportedMessage.messageType === 'text'" class="message-content">
+                  {{ selectedReport.reportedMessage.content }}
+                </p>
+                <p v-else class="message-type">
+                  {{ selectedReport.reportedMessage.messageType.toUpperCase() }} Message
+                </p>
+
+                <div
+                  v-if="selectedReport.reportedMessage.mediaUrls && selectedReport.reportedMessage.mediaUrls.length > 0"
+                  class="reported-message-media"
+                >
+                  <a
+                    v-for="(url, index) in selectedReport.reportedMessage.mediaUrls"
+                    :key="index"
+                    :href="url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="media-link"
+                  >
+                    View Media {{ index + 1 }}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="detail-section">
             <h4>Reason</h4>
             <span :class="['reason-badge', selectedReport.reason]">
               {{ formatReason(selectedReport.reason) }}
             </span>
           </div>
+
           <div class="detail-section" v-if="selectedReport.description">
             <h4>Description</h4>
             <p>{{ selectedReport.description }}</p>
           </div>
+
+          <div class="detail-section" v-if="selectedReport.evidenceUrls && selectedReport.evidenceUrls.length > 0">
+            <h4>Evidence</h4>
+            <div class="evidence-grid">
+              <img
+                v-for="(url, index) in selectedReport.evidenceUrls"
+                :key="index"
+                :src="url"
+                alt="Evidence"
+                class="evidence-photo"
+                @click="openPhotoModal(url)"
+              />
+            </div>
+          </div>
+
           <div class="detail-section">
             <h4>Submitted</h4>
             <p>{{ formatDate(selectedReport.createdAt) }}</p>
           </div>
+
           <div class="detail-section" v-if="selectedReport.adminNotes">
             <h4>Admin Notes</h4>
             <p>{{ selectedReport.adminNotes }}</p>
           </div>
+
           <div class="detail-section" v-if="selectedReport.actionTaken">
             <h4>Action Taken</h4>
             <span :class="['action-badge', selectedReport.actionTaken]">
@@ -325,7 +473,7 @@
         <div class="modal-body" v-if="selectedReport">
           <p class="resolve-info">
             Take action on report against
-            <strong>{{ selectedReport.reportedUser?.name ?? 'Unknown user' }}</strong>
+            <strong>{{ selectedReport.reportedUserName ?? 'Unknown user' }}</strong>
           </p>
 
           <div class="form-group">
@@ -417,22 +565,35 @@
         </div>
       </div>
     </div>
+
+    <!-- Photo Modal -->
+    <div v-if="showPhotoModal" class="modal-overlay" @click="showPhotoModal = false">
+      <div class="photo-modal-content" @click.stop>
+        <button @click="showPhotoModal = false" class="modal-close">×</button>
+        <img :src="selectedPhotoUrl" alt="Evidence" class="photo-modal-img" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, computed, watch } from 'vue'
-import { ReportsApi, type ReportDetailDto, type ReportStatsDto } from '@/services/Api'
+import { ReportsApi, type ReportListDto, type ReportDetailDto, type ReportStatsDto } from '@/services/Api'
 
 // State
 const loading = ref(true)
 const resolving = ref(false)
-const reports = ref<ReportDetailDto[]>([])
+const reports = ref<ReportListDto[]>([])
 const stats = ref<ReportStatsDto>({
-  totalReports: 0,
-  pendingReports: 0,
-  resolvedToday: 0,
-  bansThisWeek: 0,
+  totalPending: 0,
+  totalReviewing: 0,
+  totalThisWeek: 0,
+  totalThisMonth: 0,
+  totalUserReports: 0,
+  totalMessageReports: 0,
+  byReason: {},
+  byStatus: {},
+  byType: {},
   topReportedUsers: [],
 })
 const currentPage = ref(1)
@@ -443,6 +604,8 @@ const statusFilter = ref<string | null>(null)
 const showDetailModal = ref(false)
 const showResolveModal = ref(false)
 const selectedReport = ref<ReportDetailDto | null>(null)
+const showPhotoModal = ref(false)
+const selectedPhotoUrl = ref<string>('')
 const sortBy = ref<'reporter' | 'reportedUser' | 'reason' | 'date' | 'status'>('date')
 const sortDirection = ref<'asc' | 'desc'>('desc')
 
@@ -469,13 +632,13 @@ const sortedReports = computed(() => {
 
     switch (sortBy.value) {
       case 'reporter': {
-        const an = a.reporter?.name || ''
-        const bn = b.reporter?.name || ''
+        const an = a.reporterName || ''
+        const bn = b.reporterName || ''
         return an.localeCompare(bn) * dir
       }
       case 'reportedUser': {
-        const an = a.reportedUser?.name || ''
-        const bn = b.reportedUser?.name || ''
+        const an = a.reportedUserName || ''
+        const bn = b.reportedUserName || ''
         return an.localeCompare(bn) * dir
       }
       case 'reason': {
@@ -576,13 +739,34 @@ const formatDate = (dateStr: string): string => {
   })
 }
 
-const openDetailModal = (report: ReportDetailDto) => {
-  selectedReport.value = report
-  showDetailModal.value = true
+const openDetailModal = async (report: ReportListDto) => {
+  try {
+    // Fetch full details from API
+    const detail = await ReportsApi.get(report.reportType, report.id)
+    selectedReport.value = detail
+    showDetailModal.value = true
+  } catch (error) {
+    console.error('Failed to load report details:', error)
+    // Fallback to list item if detail fetch fails
+    selectedReport.value = report as any
+    showDetailModal.value = true
+  }
 }
 
-const openResolveModal = (report: ReportDetailDto) => {
-  selectedReport.value = report
+const openResolveModal = async (report: ReportListDto | ReportDetailDto) => {
+  // If it's a list item, fetch full details
+  if (!('reportedUserProfile' in report)) {
+    try {
+      const detail = await ReportsApi.get(report.reportType, report.id)
+      selectedReport.value = detail
+    } catch (error) {
+      console.error('Failed to load report details:', error)
+      selectedReport.value = report as any
+    }
+  } else {
+    selectedReport.value = report
+  }
+  
   resolveData.actionTaken = 'none'
   resolveData.adminNotes = ''
   resolveData.suspensionDays = 7
@@ -619,7 +803,7 @@ const handleResolve = async () => {
 
   resolving.value = true
   try {
-    await ReportsApi.resolve(selectedReport.value.reportId, {
+    await ReportsApi.resolve(selectedReport.value.reportType, selectedReport.value.id, {
       actionTaken: resolveData.actionTaken,
       adminNotes: resolveData.adminNotes || undefined,
       suspensionDays:
@@ -634,6 +818,11 @@ const handleResolve = async () => {
   } finally {
     resolving.value = false
   }
+}
+
+const openPhotoModal = (url: string) => {
+  selectedPhotoUrl.value = url
+  showPhotoModal.value = true
 }
 
 onMounted(() => {
@@ -976,6 +1165,40 @@ onMounted(() => {
 
 .user-avatar.reported {
   background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.report-type-badge {
+  display: inline-flex;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.report-type-badge.user {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.report-type-badge.message {
+  background: #fce7f3;
+  color: #9d174d;
 }
 
 /* ==================== BADGES ==================== */
@@ -1348,6 +1571,172 @@ onMounted(() => {
 .detail-section p {
   margin: 0;
   color: #1f2937;
+}
+
+.user-name {
+  margin: 0;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.user-email {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.profile-details {
+  margin-top: 0.5rem;
+}
+
+.profile-info-item {
+  margin-bottom: 0.75rem;
+  color: #1f2937;
+}
+
+.profile-info-item strong {
+  color: #374151;
+  margin-right: 0.5rem;
+}
+
+.bio-text {
+  margin-top: 0.25rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.profile-photos {
+  margin-top: 1rem;
+}
+
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.profile-photo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.profile-photo:hover {
+  border-color: #dbb067;
+  transform: scale(1.05);
+}
+
+.evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.evidence-photo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.evidence-photo:hover {
+  border-color: #dbb067;
+  transform: scale(1.05);
+}
+
+.reported-message-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  margin-top: 0.5rem;
+}
+
+.reported-message-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.reported-message-sender {
+  margin: 0;
+  font-weight: 600;
+  color: #111827;
+}
+
+.reported-message-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.reported-message-body {
+  margin-top: 0.5rem;
+}
+
+.message-content {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+.message-type {
+  margin: 0;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.reported-message-media {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.media-link {
+  font-size: 0.8rem;
+  color: #2563eb;
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.media-link:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.photo-modal-content {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-modal-img {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .resolve-info {

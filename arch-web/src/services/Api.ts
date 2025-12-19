@@ -416,41 +416,61 @@ export const ImageApi = {
 
 // ==================== REPORTS API ====================
 
-// Forma real que devuelve actualmente el backend en /api/admin/reports
-type RawReportListItemDto = {
+export type ReportedMessageInfoDto = {
+  messageId: string
+  senderId: string
+  senderName: string
+  senderProfilePicture?: string
+  content: string
+  messageType: string
+  mediaUrls?: string[]
+  sentAt: string
+  matchId: string
+}
+
+export type ReportedUserProfileSummaryDto = {
+  userId: string
+  name: string
+  age: number
+  bio?: string
+  photos: string[]
+}
+
+export type ReportListDto = {
   id: string
+  reportType: 'user' | 'message'
   reporterName: string
   reporterEmail: string
-  reportedUserId: string
-  reportedUserName: string
-  reportedUserEmail: string
+  // Para reportes de usuario
+  reportedUserId?: string
+  reportedUserName?: string
+  reportedUserEmail?: string
   reportedUserProfilePicture?: string
+  // Para reportes de mensaje
+  reportedMessageId?: string
+  reportedMessage?: ReportedMessageInfoDto
   reason: string
-  // Texto libre que escribe el usuario cuando selecciona "other" (si el backend lo envía)
   description?: string
   status: string
   createdAt: string
+  reviewedAt?: string
+  reviewedByName?: string
   reportedUserTotalReports: number
+  evidenceUrls: string[]
+}
+
+export type ReportDetailDto = ReportListDto & {
+  previousReports: ReportListDto[]
+  reportedUserProfile?: ReportedUserProfileSummaryDto
+  reportedUserPhotos: string[]
+  adminNotes?: string
+  actionTaken?: string
 }
 
 export type UserSummaryDto = {
   userId: string
   name: string
   profilePictureUrl?: string
-}
-
-export type ReportDetailDto = {
-  reportId: string
-  reporter: UserSummaryDto
-  reportedUser: UserSummaryDto
-  reason: string
-  description?: string
-  createdAt: string
-  status: string
-  reviewedAt?: string
-  reviewedBy?: UserSummaryDto
-  adminNotes?: string
-  actionTaken?: string
 }
 
 export type ResolveReportDto = {
@@ -460,51 +480,36 @@ export type ResolveReportDto = {
 }
 
 export type ReportStatsDto = {
-  totalReports: number
-  pendingReports: number
-  resolvedToday: number
-  bansThisWeek: number
-  topReportedUsers: { userId: string; name: string; reportCount: number }[]
+  totalPending: number
+  totalReviewing: number
+  totalThisWeek: number
+  totalThisMonth: number
+  totalUserReports: number
+  totalMessageReports: number
+  byReason: Record<string, number>
+  byStatus: Record<string, number>
+  byType: Record<string, number>
+  topReportedUsers: { userId: string; name: string; profilePicture?: string; reportCount: number }[]
 }
 
 export const ReportsApi = {
-  list: (params?: { status?: string; page?: number; pageSize?: number }) => {
+  list: (params?: { status?: string; reportType?: string; page?: number; pageSize?: number }) => {
     const searchParams = new URLSearchParams()
     if (params?.status) searchParams.append('status', params.status)
+    if (params?.reportType) searchParams.append('reportType', params.reportType)
     if (params?.page) searchParams.append('page', params.page.toString())
     if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
 
-    return request<PagedResult<RawReportListItemDto>>(
+    return request<PagedResult<ReportListDto>>(
       `/api/admin/reports?${searchParams.toString()}`,
-    ).then((raw) => ({
-      ...raw,
-      items: raw.items.map<ReportDetailDto>((item) => ({
-        reportId: item.id,
-        reporter: {
-          userId: item.reporterEmail, // no tenemos id, usamos email como identificador estable
-          name: item.reporterName,
-        },
-        reportedUser: {
-          userId: item.reportedUserId,
-          name: item.reportedUserName,
-          profilePictureUrl: item.reportedUserProfilePicture,
-        },
-        reason: item.reason,
-        description: item.description,
-        createdAt: item.createdAt,
-        status: item.status,
-        reviewedAt: undefined,
-        reviewedBy: undefined,
-        adminNotes: undefined,
-        actionTaken: undefined,
-      })),
-    }))
+    )
   },
 
-  get: (id: string) => request<ReportDetailDto>(`/api/admin/reports/${id}`),
+  get: (reportType: string, id: string) =>
+    request<ReportDetailDto>(`/api/admin/reports/${reportType}/${id}`),
 
-  resolve: (id: string, data: ResolveReportDto) =>
-    request<void>(`/api/admin/reports/${id}/resolve`, {
+  resolve: (reportType: string, id: string, data: ResolveReportDto) =>
+    request<void>(`/api/admin/reports/${reportType}/${id}/resolve`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
