@@ -128,7 +128,11 @@
             <DateTimePicker
               v-model="form.endLocal"
               placeholder="Select end date & time"
-              :min-date="form.startLocal ? new Date(form.startLocal) : undefined"
+              :min-date="form.startLocal ? (() => {
+                const startDate = new Date(form.startLocal)
+                // Establecer minDate al mismo día pero a las 00:00 para permitir el mismo día con hora diferente
+                return new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0)
+              })() : undefined"
             />
           </div>
         </div>
@@ -334,8 +338,13 @@ const validationErrors = computed(() => {
   if (!form.startLocal) errors.push('Start date and time is required')
   if (!form.address.trim()) errors.push('Address is required')
   if (!form.postcode.trim()) errors.push('Postcode is required')
-  if (form.endLocal && form.startLocal && new Date(form.endLocal) <= new Date(form.startLocal)) {
-    errors.push('End time must be after start time')
+  if (form.endLocal && form.startLocal) {
+    const endDate = new Date(form.endLocal)
+    const startDate = new Date(form.startLocal)
+    // Permitir el mismo día pero validar que la hora de fin sea posterior a la de inicio
+    if (endDate <= startDate) {
+      errors.push('End time must be after start time')
+    }
   }
   if (form.price !== null && form.price < 0) errors.push('Price cannot be negative')
   if (form.capacity !== null && form.capacity < 0) errors.push('Capacity cannot be negative')

@@ -234,7 +234,13 @@ const calendarDays = computed<CalendarDay[]>(() => {
   // DÃ­as del mes actual
   for (let day = 1; day <= lastDayNum; day++) {
     const date = new Date(currentYear.value, currentMonth.value, day)
-    const isDisabled = props.minDate ? date < props.minDate : false
+    // Permitir el mismo día que minDate, solo deshabilitar días anteriores
+    let isDisabled = false
+    if (props.minDate) {
+      const minDateOnly = new Date(props.minDate.getFullYear(), props.minDate.getMonth(), props.minDate.getDate())
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      isDisabled = dateOnly < minDateOnly
+    }
     
     days.push({
       day,
