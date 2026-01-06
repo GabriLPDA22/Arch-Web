@@ -49,42 +49,9 @@ export const StaffApi = {
       // Mock implementation
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      const oxfordDomains = [
-        '@ox.ac.uk',
-        '@balliol.ox.ac.uk',
-        '@brasenose.ox.ac.uk',
-        '@chch.ox.ac.uk',
-        '@christchurch.ox.ac.uk',
-        '@corpus.ox.ac.uk',
-        '@exeter.ox.ac.uk',
-        '@hertford.ox.ac.uk',
-        '@jesus.ox.ac.uk',
-        '@keble.ox.ac.uk',
-        '@lady-margaret-hall.ox.ac.uk',
-        '@lincoln.ox.ac.uk',
-        '@magdalen.ox.ac.uk',
-        '@merton.ox.ac.uk',
-        '@new.ox.ac.uk',
-        '@oriel.ox.ac.uk',
-        '@pembroke.ox.ac.uk',
-        '@queens.ox.ac.uk',
-        '@somerville.ox.ac.uk',
-        '@st-annes.ox.ac.uk',
-        '@st-catherines.ox.ac.uk',
-        '@st-edmund-hall.ox.ac.uk',
-        '@st-hildas.ox.ac.uk',
-        '@st-hughs.ox.ac.uk',
-        '@st-johns.ox.ac.uk',
-        '@st-peters.ox.ac.uk',
-        '@trinity.ox.ac.uk',
-        '@univ.ox.ac.uk',
-        '@wadham.ox.ac.uk',
-        '@worc.ox.ac.uk',
-      ]
-
-      const isValidDomain = oxfordDomains.some((domain) =>
-        data.email.toLowerCase().endsWith(domain.toLowerCase()),
-      )
+      // Accept any subdomain of ox.ac.uk (e.g., @ox.ac.uk, @lmh.ox.ac.uk, @colleges.ox.ac.uk)
+      const oxfordDomainRegex = /@([\w.-]+\.)?ox\.ac\.uk$/i
+      const isValidDomain = oxfordDomainRegex.test(data.email)
 
       if (!isValidDomain) {
         throw new Error('Only Oxford organizations allowed')

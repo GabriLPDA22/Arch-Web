@@ -15,9 +15,9 @@ export function validateOxfordEmail(email: string): boolean {
     return false
   }
 
-  // Check Oxford domain
-  const oxfordDomain = /@ox\.ac\.uk$/i
-  if (!oxfordDomain.test(email)) {
+  // Check Oxford domain - accepts any subdomain of ox.ac.uk (e.g., @ox.ac.uk, @lmh.ox.ac.uk)
+  const oxfordDomainRegex = /@([\w.-]+\.)?ox\.ac\.uk$/i
+  if (!oxfordDomainRegex.test(email)) {
     error(
       'Oxford Email Only',
       'This system only accepts institutional Oxford University emails (@ox.ac.uk)',
