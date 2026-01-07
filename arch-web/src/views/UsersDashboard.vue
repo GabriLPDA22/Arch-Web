@@ -592,6 +592,11 @@ const getOxfordCount = (subtype?: 'current_student' | 'alumni'): number => {
     return oxfordUsers.length
   }
   
+  if (subtype === 'current_student') {
+    // Students: contar userRole === 'current_student' O userRole === null (usuarios legacy)
+    return oxfordUsers.filter(u => u.userRole === 'current_student' || u.userRole === null || u.userRole === undefined).length
+  }
+  
   return oxfordUsers.filter(u => u.userRole === subtype).length
 }
 
@@ -641,10 +646,8 @@ const getUserTypeBadgeClass = (user: UserListDto): string => {
   } else if (user.userType === 'scanner') {
     return 'scanner'
   } else if (user.userType === 'user') {
-    const userRole = user.userRole
-    if (userRole === 'alumni') return 'alumni'
-    if (userRole === 'current_student') return 'current_student'
-    // Si no tiene userRole definido, mostrar como current_student por defecto
+    // Alumni tiene su propia clase, todo lo demás (current_student o null) es student
+    if (user.userRole === 'alumni') return 'alumni'
     return 'current_student'
   }
   return 'other'
@@ -656,14 +659,11 @@ const getUserTypeLabel = (user: UserListDto): string => {
   } else if (user.userType === 'scanner') {
     return 'Organizador'
   } else if (user.userType === 'user') {
-    const userRole = user.userRole
-    if (userRole === 'current_student') {
-      return 'Student'
-    } else if (userRole === 'alumni') {
+    // Alumni muestra "Alumni", todo lo demás (current_student o null) muestra "Student"
+    if (user.userRole === 'alumni') {
       return 'Alumni'
     }
-    // Si no tiene userRole definido, mostrar como "Oxford"
-    return 'Oxford'
+    return 'Student'
   }
   return user.userType
 }
@@ -700,7 +700,13 @@ const applyFilters = (usersList: UserListDto[]) => {
     
     // Si es Oxford y hay subfiltro específico por userRole, aplicarlo
     if (userTypeFilter.value === 'user' && oxfordSubtypeFilter.value) {
-      filtered = filtered.filter(u => u.userRole === oxfordSubtypeFilter.value)
+      if (oxfordSubtypeFilter.value === 'current_student') {
+        // Students: incluir userRole === 'current_student' O userRole === null (usuarios legacy)
+        filtered = filtered.filter(u => u.userRole === 'current_student' || u.userRole === null || u.userRole === undefined)
+      } else {
+        // Alumni: solo userRole === 'alumni'
+        filtered = filtered.filter(u => u.userRole === oxfordSubtypeFilter.value)
+      }
     }
     
     // Si es Staff y hay subfiltro específico, aplicarlo
