@@ -665,11 +665,27 @@ const handleSaveEvent = async () => {
     }
 
     const form = eventFormComponent.value.form
+    
+    // Validar fechas antes de convertir a ISO
+    const startDate = new Date(form.startLocal)
+    if (!form.startLocal || isNaN(startDate.getTime())) {
+      throw new Error('La fecha de inicio es inválida')
+    }
+    
+    let endDateISO: string | undefined
+    if (form.endLocal) {
+      const endDate = new Date(form.endLocal)
+      if (isNaN(endDate.getTime())) {
+        throw new Error('La fecha de fin es inválida')
+      }
+      endDateISO = endDate.toISOString()
+    }
+    
     const payload = {
       name: form.name.trim(),
       description: form.description?.trim(),
-      startDate: new Date(form.startLocal).toISOString(),
-      endDate: form.endLocal ? new Date(form.endLocal).toISOString() : undefined,
+      startDate: startDate.toISOString(),
+      endDate: endDateISO,
       address: form.address.trim(),
       postcode: form.postcode.trim(),
       capacity: form.capacity ?? undefined,

@@ -98,8 +98,8 @@
                 
                 <button
                   class="submenu-btn"
-                  :class="{ active: oxfordSubtypeFilter === 'student' }"
-                  @click="handleOxfordSubfilter('student')"
+                  :class="{ active: oxfordSubtypeFilter === 'current_student' }"
+                  @click="handleOxfordSubfilter('current_student')"
                 >
                   <div class="submenu-btn-content">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -107,21 +107,21 @@
                     </svg>
                     <span>Students</span>
                   </div>
-                  <span v-if="oxfordSubtypeFilter === 'student'" class="count-badge-small">{{ getOxfordCount('student') }}</span>
+                  <span v-if="oxfordSubtypeFilter === 'current_student'" class="count-badge-small">{{ getOxfordCount('current_student') }}</span>
                 </button>
                 
                 <button
                   class="submenu-btn"
-                  :class="{ active: oxfordSubtypeFilter === 'professor' }"
-                  @click="handleOxfordSubfilter('professor')"
+                  :class="{ active: oxfordSubtypeFilter === 'alumni' }"
+                  @click="handleOxfordSubfilter('alumni')"
                 >
                   <div class="submenu-btn-content">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M16,11C17.66,11 18.99,9.66 18.99,8C18.99,6.34 17.66,5 16,5C14.34,5 13,6.34 13,8C13,9.66 14.34,11 16,11M8,11C9.66,11 10.99,9.66 10.99,8C10.99,6.34 9.66,5 8,5C6.34,5 5,6.34 5,8C5,9.66 6.34,11 8,11M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M16,13C15.71,13 15.38,13.02 15.03,13.05C16.19,13.89 17,15.02 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13Z" />
+                      <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
                     </svg>
-                    <span>Professors</span>
+                    <span>Alumni</span>
                   </div>
-                  <span v-if="oxfordSubtypeFilter === 'professor'" class="count-badge-small">{{ getOxfordCount('professor') }}</span>
+                  <span v-if="oxfordSubtypeFilter === 'alumni'" class="count-badge-small">{{ getOxfordCount('alumni') }}</span>
                 </button>
               </div>
             </transition>
@@ -251,7 +251,7 @@
       <p>Loading users...</p>
     </div>
 
-    <div v-else-if="users.length === 0" class="empty-state">
+    <div v-else-if="paginatedUsers.length === 0" class="empty-state">
       <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
         <path
           d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"
@@ -263,7 +263,7 @@
     </div>
 
     <!-- View Toggle -->
-    <div v-if="!loading && users.length > 0" class="view-controls">
+    <div v-if="!loading && paginatedUsers.length > 0" class="view-controls">
       <div class="view-toggle">
         <button
           class="toggle-btn"
@@ -294,7 +294,7 @@
     </div>
 
     <!-- Table View -->
-    <div v-if="!loading && users.length > 0 && viewMode === 'table'" class="users-table-container">
+    <div v-if="!loading && paginatedUsers.length > 0 && viewMode === 'table'" class="users-table-container">
       <table class="users-table">
         <thead>
           <tr>
@@ -316,7 +316,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in users" :key="user.userID" class="user-row">
+          <tr v-for="user in paginatedUsers" :key="user.userID" class="user-row">
             <td>
               <div class="name-cell">
                 {{ getCleanName(user.name) }}
@@ -331,10 +331,10 @@
                 <svg v-else-if="user.userType === 'scanner'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
                   <path d="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H20V6H4M5,8H19V10H5V8M5,11H19V13H5V11M5,14H19V16H5V14Z" />
                 </svg>
-                <svg v-else-if="user.userType === 'user' && getOxfordSubtype(user) === 'student'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                <svg v-else-if="user.userType === 'user' && user.userRole === 'current_student'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
                   <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
                 </svg>
-                <svg v-else-if="user.userType === 'user' && getOxfordSubtype(user) === 'professor'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                <svg v-else-if="user.userType === 'user' && user.userRole === 'alumni'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
                   <path d="M16,11C17.66,11 18.99,9.66 18.99,8C18.99,6.34 17.66,5 16,5C14.34,5 13,6.34 13,8C13,9.66 14.34,11 16,11M8,11C9.66,11 10.99,9.66 10.99,8C10.99,6.34 9.66,5 8,5C6.34,5 5,6.34 5,8C5,9.66 6.34,11 8,11M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M16,13C15.71,13 15.38,13.02 15.03,13.05C16.19,13.89 17,15.02 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13Z" />
                 </svg>
                 <svg v-else-if="user.userType === 'moderator'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
@@ -374,9 +374,9 @@
     </div>
 
     <!-- Grid View -->
-    <div v-if="!loading && users.length > 0 && viewMode === 'grid'" class="users-grid-container">
+    <div v-if="!loading && paginatedUsers.length > 0 && viewMode === 'grid'" class="users-grid-container">
       <div class="users-grid">
-        <div v-for="user in users" :key="user.userID" class="user-card">
+        <div v-for="user in paginatedUsers" :key="user.userID" class="user-card">
           <div class="card-header">
             <div class="user-avatar-card">
               <div class="avatar-initial">{{ getCleanName(user.name).charAt(0).toUpperCase() }}</div>
@@ -395,10 +395,10 @@
                 <svg v-else-if="user.userType === 'scanner'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
                   <path d="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H20V6H4M5,8H19V10H5V8M5,11H19V13H5V11M5,14H19V16H5V14Z" />
                 </svg>
-                <svg v-else-if="user.userType === 'user' && getOxfordSubtype(user) === 'student'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                <svg v-else-if="user.userType === 'user' && user.userRole === 'current_student'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
                   <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
                 </svg>
-                <svg v-else-if="user.userType === 'user' && getOxfordSubtype(user) === 'professor'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
+                <svg v-else-if="user.userType === 'user' && user.userRole === 'alumni'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
                   <path d="M16,11C17.66,11 18.99,9.66 18.99,8C18.99,6.34 17.66,5 16,5C14.34,5 13,6.34 13,8C13,9.66 14.34,11 16,11M8,11C9.66,11 10.99,9.66 10.99,8C10.99,6.34 9.66,5 8,5C6.34,5 5,6.34 5,8C5,9.66 6.34,11 8,11M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M16,13C15.71,13 15.38,13.02 15.03,13.05C16.19,13.89 17,15.02 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13Z" />
                 </svg>
                 <svg v-else-if="user.userType === 'moderator'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="type-icon">
@@ -436,7 +436,7 @@
     </div>
 
     <!-- Pagination -->
-    <div v-if="!loading && totalPages > 1" class="pagination-container">
+    <div v-if="!loading && calculatedTotalPages > 1" class="pagination-container">
       <div class="pagination">
         <button 
           @click="goToPage(currentPage - 1)" 
@@ -463,7 +463,7 @@
         
         <button 
           @click="goToPage(currentPage + 1)" 
-          :disabled="currentPage === totalPages" 
+          :disabled="currentPage === calculatedTotalPages" 
           class="page-btn next"
         >
           <span>Next</span>
@@ -474,7 +474,7 @@
       </div>
       
       <div class="pagination-info">
-        <span>Page {{ currentPage }} of {{ totalPages }}</span>
+        <span>Page {{ currentPage }} of {{ calculatedTotalPages }}</span>
         <span class="separator">•</span>
         <span>{{ filteredUsersCount }} total users</span>
       </div>
@@ -541,19 +541,19 @@ import { handleApiError } from '@/utils/validators'
 
 const authStore = useAuthStore()
 
-const users = ref<UserListDto[]>([])
+// users ahora es computed (paginatedUsers)
 const allUsers = ref<UserListDto[]>([])
 const loading = ref(true)
 const searchQuery = ref('')
 const userTypeFilter = ref<string | null>(null)
-const oxfordSubtypeFilter = ref<string | null>(null)
+const oxfordSubtypeFilter = ref<'current_student' | 'alumni' | null>(null)
 const showOxfordSubmenu = ref(false)
 // ✅ Nuevos refs para el subfiltro de Staff
 const staffSubtypeFilter = ref<string | null>(null)
 const showStaffSubmenu = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
-const totalPages = ref(0)
+// totalPages ahora es calculado (calculatedTotalPages)
 const sortBy = ref('name')
 const sortOrder = ref<'asc' | 'desc'>('asc')
 const viewMode = ref<'table' | 'grid'>('table')
@@ -568,21 +568,31 @@ const oxfordFilterRef = ref<HTMLElement | null>(null)
 const staffFilterRef = ref<HTMLElement | null>(null)
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Computed para contar usuarios filtrados
-const filteredUsersCount = computed(() => users.value.length)
+// Computed para usuarios filtrados (sin paginación)
+const allFilteredUsers = computed(() => applyFilters(allUsers.value))
 
-// Función para contar usuarios Oxford por subtipo
-const getOxfordCount = (subtype?: 'student' | 'professor'): number => {
+// Computed para contar usuarios filtrados
+const filteredUsersCount = computed(() => allFilteredUsers.value.length)
+
+// Computed para calcular total de páginas basado en usuarios filtrados
+const calculatedTotalPages = computed(() => Math.max(1, Math.ceil(filteredUsersCount.value / pageSize.value)))
+
+// Computed para usuarios de la página actual
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return allFilteredUsers.value.slice(start, end)
+})
+
+// Función para contar usuarios Oxford por userRole
+const getOxfordCount = (subtype?: 'current_student' | 'alumni'): number => {
   const oxfordUsers = allUsers.value.filter(u => u.userType === 'user')
   
   if (!subtype) {
     return oxfordUsers.length
   }
   
-  return oxfordUsers.filter(u => {
-    const userSubtype = getOxfordSubtype(u)
-    return userSubtype === subtype
-  }).length
+  return oxfordUsers.filter(u => u.userRole === subtype).length
 }
 
 // ✅ Función para contar usuarios Staff por subtipo
@@ -599,14 +609,13 @@ const getStaffCount = (subtype?: 'staff-user' | 'scanner'): number => {
 // Computed para descripción del filtro activo
 const activeFilterDescription = computed(() => {
   if (userTypeFilter.value === 'user') {
-    if (oxfordSubtypeFilter.value === 'student') {
-      return `Showing Oxford Students only (${getOxfordCount('student')} users)`
-    } else if (oxfordSubtypeFilter.value === 'professor') {
-      return `Showing Oxford Professors only (${getOxfordCount('professor')} users)`
+    if (oxfordSubtypeFilter.value === 'current_student') {
+      return `Showing Students only (${getOxfordCount('current_student')} users)`
+    } else if (oxfordSubtypeFilter.value === 'alumni') {
+      return `Showing Alumni only (${getOxfordCount('alumni')} users)`
     }
     return `Showing Oxford users only (${getOxfordCount()} users)`
   } else if (userTypeFilter.value === 'staff-user') {
-    // ✅ Lógica actualizada para Staff
     if (staffSubtypeFilter.value === 'staff-user') {
       return `Showing Staff (Staff-User) only (${getStaffCount('staff-user')} users)`
     } else if (staffSubtypeFilter.value === 'scanner') {
@@ -621,16 +630,6 @@ const activeFilterDescription = computed(() => {
   return null
 })
 
-// Función para obtener el subtipo de Oxford del nombre del usuario
-// Si NO tiene tag, se trata como "sin clasificar" pero se muestra igual
-const getOxfordSubtype = (user: UserListDto): 'student' | 'professor' | null => {
-  if (user.userType !== 'user') return null
-  if (user.name.includes('[Student]')) return 'student'
-  if (user.name.includes('[Professor]')) return 'professor'
-  // Si no tiene tag, devuelve null pero igual se mostrará
-  return null
-}
-
 // Función para limpiar el nombre de los tags
 const getCleanName = (name: string): string => {
   return name.replace(/\s*\[(Student|Professor)\]\s*$/, '').trim()
@@ -642,11 +641,11 @@ const getUserTypeBadgeClass = (user: UserListDto): string => {
   } else if (user.userType === 'scanner') {
     return 'scanner'
   } else if (user.userType === 'user') {
-    const subtype = getOxfordSubtype(user)
-    if (subtype === 'professor') return 'professor'
-    if (subtype === 'student') return 'student'
-    // Si no tiene tag, mostrar como Oxford genérico
-    return 'student'
+    const userRole = user.userRole
+    if (userRole === 'alumni') return 'alumni'
+    if (userRole === 'current_student') return 'current_student'
+    // Si no tiene userRole definido, mostrar como current_student por defecto
+    return 'current_student'
   }
   return 'other'
 }
@@ -657,13 +656,13 @@ const getUserTypeLabel = (user: UserListDto): string => {
   } else if (user.userType === 'scanner') {
     return 'Organizador'
   } else if (user.userType === 'user') {
-    const subtype = getOxfordSubtype(user)
-    if (subtype === 'student') {
+    const userRole = user.userRole
+    if (userRole === 'current_student') {
       return 'Student'
-    } else if (subtype === 'professor') {
-      return 'Professor'
+    } else if (userRole === 'alumni') {
+      return 'Alumni'
     }
-    // Si no tiene tag, mostrar como "Oxford"
+    // Si no tiene userRole definido, mostrar como "Oxford"
     return 'Oxford'
   }
   return user.userType
@@ -687,7 +686,6 @@ const clearFilters = () => {
 }
 
 // Función mejorada para filtrar usuarios
-// Ahora muestra usuarios Oxford SIN tag cuando no hay subfiltro
 const applyFilters = (usersList: UserListDto[]) => {
   let filtered = [...usersList]
   
@@ -700,15 +698,12 @@ const applyFilters = (usersList: UserListDto[]) => {
       filtered = filtered.filter(u => u.userType === userTypeFilter.value)
     }
     
-    // Si es Oxford y hay subfiltro específico, aplicarlo
+    // Si es Oxford y hay subfiltro específico por userRole, aplicarlo
     if (userTypeFilter.value === 'user' && oxfordSubtypeFilter.value) {
-      filtered = filtered.filter(u => {
-        const subtype = getOxfordSubtype(u)
-        return subtype === oxfordSubtypeFilter.value
-      })
+      filtered = filtered.filter(u => u.userRole === oxfordSubtypeFilter.value)
     }
     
-    // ✅ NUEVO: Si es Staff y hay subfiltro específico, aplicarlo
+    // Si es Staff y hay subfiltro específico, aplicarlo
     if (userTypeFilter.value === 'staff-user' && staffSubtypeFilter.value) {
       filtered = filtered.filter(u => u.userType === staffSubtypeFilter.value)
     }
@@ -722,8 +717,8 @@ const fetchUsers = async () => {
   try {
     const params = {
       q: searchQuery.value || undefined,
-      page: currentPage.value,
-      pageSize: pageSize.value,
+      page: 1,
+      pageSize: 1000, // Cargar todos los usuarios para filtrado local
       sortBy: sortBy.value,
       sortOrder: sortOrder.value,
     }
@@ -732,10 +727,10 @@ const fetchUsers = async () => {
     // Guardar todos los usuarios
     allUsers.value = response.items
     
-    // Aplicar filtros
-    users.value = applyFilters(response.items)
-    
-    totalPages.value = response.totalPages
+    // Resetear a página 1 si la página actual excede las páginas disponibles
+    if (currentPage.value > calculatedTotalPages.value) {
+      currentPage.value = 1
+    }
   } catch (error: unknown) {
     console.error('Failed to load users:', error)
     handleApiError(error)
@@ -809,7 +804,7 @@ const handleMainFilterClick = (filter: string | null) => {
   fetchUsers()
 }
 
-const handleOxfordSubfilter = (subtype: string | null) => {
+const handleOxfordSubfilter = (subtype: 'current_student' | 'alumni' | null) => {
   oxfordSubtypeFilter.value = subtype
   currentPage.value = 1
   fetchUsers()
@@ -822,9 +817,9 @@ const handleStaffSubfilter = (subtype: string | null) => {
   fetchUsers()
 }
 
-watch([userTypeFilter, oxfordSubtypeFilter, staffSubtypeFilter], () => { // ✅ Añadido staffSubtypeFilter
+watch([userTypeFilter, oxfordSubtypeFilter, staffSubtypeFilter], () => {
+  // Resetear a página 1 cuando cambian los filtros
   currentPage.value = 1
-  users.value = applyFilters(allUsers.value)
 })
 
 const handleSort = (column: string) => {
@@ -838,15 +833,14 @@ const handleSort = (column: string) => {
 }
 
 const goToPage = (page: number) => {
-  if (page >= 1 && page <= totalPages.value) {
+  if (page >= 1 && page <= calculatedTotalPages.value) {
     currentPage.value = page
-    fetchUsers()
   }
 }
 
 const getPageNumbers = (): (number | string)[] => {
   const pages: (number | string)[] = []
-  const total = totalPages.value
+  const total = calculatedTotalPages.value
   const current = currentPage.value
   
   if (total <= 7) {
@@ -1499,15 +1493,15 @@ const handleDeleteConfirm = async () => {
   border: 1px solid #67e8f9;
 }
 
-/* ✅ Student - Azul índigo */
-.type-badge.student {
+/* ✅ Current Student - Azul índigo */
+.type-badge.current_student {
   background-color: #e0e7ff;
   color: #4f46e5;
   border: 1px solid #a5b4fc;
 }
 
-/* ✅ Professor - Púrpura */
-.type-badge.professor {
+/* ✅ Alumni - Púrpura */
+.type-badge.alumni {
   background-color: #f3e8ff;
   color: #9333ea;
   border: 1px solid #d8b4fe;
@@ -1609,25 +1603,25 @@ const handleDeleteConfirm = async () => {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ✅ Student - Azul índigo vibrante */
-.type-badge-modern.student {
+/* ✅ Current Student - Azul índigo vibrante */
+.type-badge-modern.current_student {
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   color: #ffffff;
   border: 2px solid #a5b4fc;
 }
 
-.type-badge-modern.student .badge-icon-wrapper {
+.type-badge-modern.current_student .badge-icon-wrapper {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ✅ Professor - Púrpura real */
-.type-badge-modern.professor {
+/* ✅ Alumni - Púrpura real */
+.type-badge-modern.alumni {
   background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
   color: #ffffff;
   border: 2px solid #d8b4fe;
 }
 
-.type-badge-modern.professor .badge-icon-wrapper {
+.type-badge-modern.alumni .badge-icon-wrapper {
   background: rgba(255, 255, 255, 0.2);
 }
 

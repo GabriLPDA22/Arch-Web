@@ -15,11 +15,14 @@ if (!BASE_URL) {
 
 // ==================== TIPOS DE DATOS (DTOs) ====================
 
+export type UserRole = 'current_student' | 'alumni' | null
+
 export type UserAuthDto = {
   userID: string
   email: string
   name: string
   userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userRole: UserRole
   isVerified: boolean
   dateOfBirth?: string
   profilePicture?: string
@@ -38,6 +41,7 @@ export type UserListDto = {
   name: string
   email: string
   userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userRole: UserRole
   isVerified: boolean
   createdAt?: string
   preferences?: string[]
@@ -48,6 +52,7 @@ export type UserDetailDto = {
   name: string
   email: string
   userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userRole: UserRole
   isVerified: boolean
   dateOfBirth?: string
   profilePicture?: string
@@ -60,6 +65,7 @@ export type UserCreateDto = {
   email: string
   password: string
   userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userRole?: UserRole
   preferences?: string[]
 }
 
@@ -68,6 +74,7 @@ export type UserUpdateDto = {
   email?: string
   password?: string
   userType?: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userRole?: UserRole
   preferences?: string[]
   dateOfBirth?: string
   profilePicture?: string

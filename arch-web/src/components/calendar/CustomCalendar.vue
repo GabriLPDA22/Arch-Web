@@ -343,17 +343,23 @@ const decrementMinute = () => {
 }
 
 const validateHour = () => {
+  if (isNaN(selectedHour.value) || selectedHour.value === null) selectedHour.value = 12
   if (selectedHour.value < 0) selectedHour.value = 0
   if (selectedHour.value > 23) selectedHour.value = 23
 }
 
 const validateMinute = () => {
+  if (isNaN(selectedMinute.value) || selectedMinute.value === null) selectedMinute.value = 0
   if (selectedMinute.value < 0) selectedMinute.value = 0
   if (selectedMinute.value > 59) selectedMinute.value = 59
 }
 
 const confirmSelection = () => {
   if (selectedDay.value !== null && selectedMonth.value !== null && selectedYear.value !== null) {
+    // Asegurar que hora y minuto son válidos
+    validateHour()
+    validateMinute()
+    
     const date = new Date(
       selectedYear.value,
       selectedMonth.value,
@@ -361,6 +367,12 @@ const confirmSelection = () => {
       selectedHour.value,
       selectedMinute.value
     )
+    
+    // Verificar que la fecha es válida antes de continuar
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date created:', { selectedYear: selectedYear.value, selectedMonth: selectedMonth.value, selectedDay: selectedDay.value, selectedHour: selectedHour.value, selectedMinute: selectedMinute.value })
+      return
+    }
     
     const offset = date.getTimezoneOffset() * 60000
     const localDate = new Date(date.getTime() - offset)

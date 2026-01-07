@@ -240,6 +240,11 @@ const showStatus = (message: string, isErrorType = false) => {
 const fromIsoToLocal = (iso?: string): string => {
   if (!iso) return ''
   const dt = new Date(iso)
+  // Verificar que la fecha es válida
+  if (isNaN(dt.getTime())) {
+    console.error('fromIsoToLocal: Invalid date string:', iso)
+    return ''
+  }
   const offset = dt.getTimezoneOffset() * 60000
   const local = new Date(dt.getTime() - offset)
   return local.toISOString().slice(0, 16)

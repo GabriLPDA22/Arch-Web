@@ -124,14 +124,13 @@ export const useAuthStore = defineStore('auth', {
       try {
         const freshUserData: UserDetailDto = await AuthApi.verifySession()
 
-        // ✨ CORRECCIÓN AQUÍ ✨
-        // Añadimos la propiedad 'isVerified' que faltaba
         const userToStore: UserAuthDto = {
           userID: freshUserData.userID,
           email: freshUserData.email,
           name: freshUserData.name,
           userType: freshUserData.userType,
-          isVerified: freshUserData.isVerified, // <- Línea añadida
+          userRole: freshUserData.userRole,
+          isVerified: freshUserData.isVerified,
         }
 
         this.user = userToStore

@@ -114,24 +114,24 @@
         </div>
       </div>
 
-      <!-- ✅ Selector de subtipo Oxford -->
+      <!-- ✅ Selector de userRole Oxford -->
       <transition name="slide-fade">
         <div v-if="form.userType === 'user'" class="form-group oxford-subtype-selector">
           <label class="form-label">
-            Oxford Member Type
+            Oxford Member Status
             <span class="required">*</span>
-            <span class="info-badge">Visual indicator</span>
+            <span class="info-badge">User role</span>
           </label>
           <div class="subtype-options">
             <label
               class="subtype-option"
-              :class="{ active: oxfordSubtype === 'student' }"
-              @click="oxfordSubtype = 'student'"
+              :class="{ active: oxfordSubtype === 'current_student' }"
+              @click="oxfordSubtype = 'current_student'"
             >
               <input
                 type="radio"
                 name="oxfordSubtype"
-                value="student"
+                value="current_student"
                 v-model="oxfordSubtype"
                 class="sr-only"
               />
@@ -144,9 +144,9 @@
               </div>
               <div class="subtype-text">
                 <span class="subtype-title">Student</span>
-                <span class="subtype-desc">Current student at Oxford</span>
+                <span class="subtype-desc">Currently enrolled at Oxford</span>
               </div>
-              <div class="check-mark" v-if="oxfordSubtype === 'student'">
+              <div class="check-mark" v-if="oxfordSubtype === 'current_student'">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
                 </svg>
@@ -155,28 +155,28 @@
 
             <label
               class="subtype-option"
-              :class="{ active: oxfordSubtype === 'professor' }"
-              @click="oxfordSubtype = 'professor'"
+              :class="{ active: oxfordSubtype === 'alumni' }"
+              @click="oxfordSubtype = 'alumni'"
             >
               <input
                 type="radio"
                 name="oxfordSubtype"
-                value="professor"
+                value="alumni"
                 v-model="oxfordSubtype"
                 class="sr-only"
               />
               <div class="subtype-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path
-                    d="M16,11C17.66,11 18.99,9.66 18.99,8C18.99,6.34 17.66,5 16,5C14.34,5 13,6.34 13,8C13,9.66 14.34,11 16,11M8,11C9.66,11 10.99,9.66 10.99,8C10.99,6.34 9.66,5 8,5C6.34,5 5,6.34 5,8C5,9.66 6.34,11 8,11M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M16,13C15.71,13 15.38,13.02 15.03,13.05C16.19,13.89 17,15.02 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13Z"
+                    d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z"
                   />
                 </svg>
               </div>
               <div class="subtype-text">
-                <span class="subtype-title">Professor</span>
-                <span class="subtype-desc">Faculty member</span>
+                <span class="subtype-title">Alumni</span>
+                <span class="subtype-desc">Oxford graduate</span>
               </div>
-              <div class="check-mark" v-if="oxfordSubtype === 'professor'">
+              <div class="check-mark" v-if="oxfordSubtype === 'alumni'">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
                 </svg>
@@ -189,7 +189,7 @@
                 d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
               />
             </svg>
-            Select the member type for this Oxford user
+            Select the status for this Oxford user
           </p>
         </div>
       </transition>
@@ -516,7 +516,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
-import { UserApi, PreferencesApi, type PreferenceDto, type UserDetailDto } from '@/services/Api'
+import { UserApi, PreferencesApi, type PreferenceDto, type UserDetailDto, type UserRole } from '@/services/Api'
 import { handleApiError } from '@/utils/validators'
 import { useAuthStore } from '@/stores/auth.store'
 
@@ -538,7 +538,7 @@ const form = reactive({
   userType: 'user' as 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner',
 })
 
-const oxfordSubtype = ref<'student' | 'professor'>('student')
+const oxfordSubtype = ref<UserRole>('current_student')
 const staffSubtype = ref<'staff' | 'scanner'>('staff')
 
 const selectedPreferenceIds = ref<string[]>([])
@@ -596,20 +596,13 @@ const handleUserTypeChange = (newType: 'admin' | 'user' | 'staff-user' | 'modera
   }
   // Reset subtipos cuando cambia el user type
   if (newType === 'user') {
-    oxfordSubtype.value = 'student'
+    oxfordSubtype.value = 'current_student'
   } else if (newType === 'staff-user') {
     staffSubtype.value = 'staff'
   }
 }
 
-// ✅ Extraer el subtipo del nombre si existe
-const extractOxfordSubtypeFromName = (name: string): 'student' | 'professor' | null => {
-  if (name.includes('[Student]')) return 'student'
-  if (name.includes('[Professor]')) return 'professor'
-  return null
-}
-
-// ✅ Limpiar el nombre de tags
+// ✅ Limpiar el nombre de tags legacy (si existen)
 const cleanName = (name: string): string => {
   return name.replace(/\s*\[(Student|Professor)\]\s*$/, '').trim()
 }
@@ -619,23 +612,16 @@ const fetchUserData = async (id: string) => {
   try {
     const data = (await UserApi.get(id)) as UserDetailDto
 
-    // Extraer subtipo del nombre si es Oxford
-    if (data.userType === 'user') {
-      const subtype = extractOxfordSubtypeFromName(data.name)
-      if (subtype) {
-        oxfordSubtype.value = subtype
-        form.name = cleanName(data.name)
-      } else {
-        form.name = data.name
-        oxfordSubtype.value = 'student'
-      }
-    } else {
-      form.name = data.name
-    }
-
+    // Limpiar nombre de tags legacy si existen
+    form.name = cleanName(data.name)
     form.email = data.email
     form.password = ''
     form.userType = data.userType
+
+    // Cargar userRole del backend para usuarios Oxford
+    if (data.userType === 'user') {
+      oxfordSubtype.value = data.userRole || 'current_student'
+    }
 
     if (data.preferences && data.preferences.length > 0) {
       const preferenceIds = data.preferences
@@ -670,7 +656,7 @@ watch(
       form.password = ''
       form.userType = 'user'
       selectedPreferenceIds.value = []
-      oxfordSubtype.value = 'student'
+      oxfordSubtype.value = 'current_student'
       staffSubtype.value = 'staff'
     }
   },
@@ -691,7 +677,7 @@ const validateOxfordEmail = (email: string): boolean => {
 const saveUser = async () => {
   // ✅ Validar que si es Oxford, tenga subtipo
   if (form.userType === 'user' && !oxfordSubtype.value) {
-    console.error('Oxford users must have a subtype selected')
+    console.error('Oxford users must have a userRole selected')
     return
   }
 
@@ -717,9 +703,8 @@ const saveUser = async () => {
       })
       .filter((name): name is string => name !== null)
 
-    // ✅ Solo usar el nombre limpio (sin tags)
+    // ✅ Solo usar el nombre limpio (sin tags legacy)
     let finalName = form.name.trim()
-    // Limpiar cualquier tag existente si hay
     finalName = cleanName(finalName)
 
     // ✅ Determinar el role según el subtipo de Staff
@@ -728,10 +713,14 @@ const saveUser = async () => {
       finalUserType = staffSubtype.value === 'staff' ? 'staff-user' : 'scanner'
     }
 
+    // ✅ Determinar userRole para usuarios Oxford
+    const finalUserRole: UserRole = form.userType === 'user' ? oxfordSubtype.value : null
+
     const payload: any = {
       ...form,
       name: finalName,
       userType: finalUserType,
+      userRole: finalUserRole,
       preferences: preferenceNames,
     }
 

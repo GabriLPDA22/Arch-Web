@@ -71,6 +71,12 @@ const internalValue = computed({
       return
     }
     
+    // Verificar que la fecha es válida
+    if (isNaN(newValue.getTime())) {
+      console.error('DateTimePicker: Invalid date value')
+      return
+    }
+    
     // Convertir a formato datetime-local (YYYY-MM-DDTHH:mm)
     const offset = newValue.getTimezoneOffset() * 60000
     const localDate = new Date(newValue.getTime() - offset)
