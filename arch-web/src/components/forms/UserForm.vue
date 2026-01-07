@@ -728,6 +728,9 @@ const saveUser = async () => {
       delete payload.password
     }
 
+    console.log('📤 Saving user with payload:', JSON.stringify(payload, null, 2))
+    console.log('📤 oxfordSubtype value:', oxfordSubtype.value)
+
     if (isEditing.value) {
       await UserApi.update(props.userId!, payload)
       emit('user-updated')
