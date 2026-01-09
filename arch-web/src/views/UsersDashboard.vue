@@ -503,7 +503,7 @@
     </div>
 
     <div v-if="isDeleteModalOpen" class="modal-overlay" @click="closeModals">
-      <div class="modal-content small" @click.stop>
+      <div class="modal-content" :class="{ 'small': !userRelatedData?.hasRelatedData }" @click.stop>
         <div class="modal-header">
           <h2>Delete User</h2>
           <button @click="closeModals" class="modal-close">
@@ -513,7 +513,14 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="delete-warning">
+          <!-- Loading state -->
+          <div v-if="loadingRelatedData" class="delete-loading">
+            <div class="spinner"></div>
+            <p>Checking user data...</p>
+          </div>
+
+          <!-- Usuario sin datos relacionados -->
+          <div v-else-if="!userRelatedData?.hasRelatedData" class="delete-warning">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
             </svg>
@@ -523,7 +530,97 @@
             <p class="warning-text">This action cannot be undone.</p>
             <div class="modal-actions">
               <button class="btn-secondary" @click="closeModals">Cancel</button>
-              <button class="btn-danger" @click="handleDeleteConfirm">Delete</button>
+              <button class="btn-danger" @click="handleDeleteConfirm" :disabled="deletingUser">
+                <span v-if="deletingUser">Deleting...</span>
+                <span v-else>Delete</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Usuario CON datos relacionados - Requiere confirmación especial -->
+          <div v-else class="delete-warning-severe">
+            <div class="warning-icon-severe">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
+              </svg>
+            </div>
+            
+            <h3 class="warning-title">⚠️ This user has associated data</h3>
+            
+            <p class="warning-description">
+              You are about to delete <strong>{{ getCleanName(userToDelete?.name || '') }}</strong>. 
+              This user has data that will be <strong>permanently deleted</strong>:
+            </p>
+
+            <div class="related-data-list">
+              <div v-if="userRelatedData.hasDatingProfile" class="data-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z" />
+                </svg>
+                <span>Dating Profile</span>
+              </div>
+              <div v-if="userRelatedData.swipeActionsCount > 0" class="data-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10,9V5L3,12L10,19V14.9C15,14.9 18.5,16.5 21,20C20,15 17,10 10,9Z" />
+                </svg>
+                <span>{{ userRelatedData.swipeActionsCount }} Swipe Actions</span>
+              </div>
+              <div v-if="userRelatedData.likesCount > 0" class="data-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z" />
+                </svg>
+                <span>{{ userRelatedData.likesCount }} Likes</span>
+              </div>
+              <div v-if="userRelatedData.matchesCount > 0" class="data-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12,5.5A3.5,3.5 0 0,1 15.5,9A3.5,3.5 0 0,1 12,12.5A3.5,3.5 0 0,1 8.5,9A3.5,3.5 0 0,1 12,5.5M5,8C5.56,8 6.08,8.15 6.53,8.42C6.38,9.85 6.8,11.27 7.66,12.38C7.16,13.34 6.16,14 5,14A3,3 0 0,1 2,11A3,3 0 0,1 5,8M19,8A3,3 0 0,1 22,11A3,3 0 0,1 19,14C17.84,14 16.84,13.34 16.34,12.38C17.2,11.27 17.62,9.85 17.47,8.42C17.92,8.15 18.44,8 19,8M5.5,18.25C5.5,16.18 8.41,14.5 12,14.5C15.59,14.5 18.5,16.18 18.5,18.25V20H5.5V18.25M0,20V18.5C0,17.11 1.89,15.94 4.45,15.6C3.86,16.28 3.5,17.22 3.5,18.25V20H0M24,20H20.5V18.25C20.5,17.22 20.14,16.28 19.55,15.6C22.11,15.94 24,17.11 24,18.5V20Z" />
+                </svg>
+                <span>{{ userRelatedData.matchesCount }} Matches</span>
+              </div>
+              <div v-if="userRelatedData.messagesCount > 0" class="data-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M6,9H18V11H6M14,14H6V12H14M18,8H6V6H18" />
+                </svg>
+                <span>{{ userRelatedData.messagesCount }} Messages</span>
+              </div>
+              <div v-if="userRelatedData.ordersCount > 0" class="data-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17,18A2,2 0 0,1 19,20A2,2 0 0,1 17,22C15.89,22 15,21.1 15,20C15,18.89 15.89,18 17,18M1,2H4.27L5.21,4H20A1,1 0 0,1 21,5C21,5.17 20.95,5.34 20.88,5.5L17.3,11.97C16.96,12.58 16.3,13 15.55,13H8.1L7.2,14.63L7.17,14.75A0.25,0.25 0 0,0 7.42,15H19V17H7C5.89,17 5,16.1 5,15C5,14.65 5.09,14.32 5.24,14.04L6.6,11.59L3,4H1V2M7,18A2,2 0 0,1 9,20A2,2 0 0,1 7,22C5.89,22 5,21.1 5,20C5,18.89 5.89,18 7,18M16,11L18.78,6H6.14L8.5,11H16Z" />
+                </svg>
+                <span>{{ userRelatedData.ordersCount }} Orders</span>
+              </div>
+            </div>
+
+            <p class="warning-severe-text">
+              <strong>This action is irreversible.</strong> All the data listed above will be permanently deleted.
+            </p>
+
+            <div class="confirm-delete-section">
+              <label class="confirm-label">
+                To confirm, type <strong>DELETE</strong> below:
+              </label>
+              <input 
+                v-model="deleteConfirmInput" 
+                type="text" 
+                class="confirm-input"
+                placeholder="Type DELETE to confirm"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="modal-actions">
+              <button class="btn-secondary" @click="closeModals">Cancel</button>
+              <button 
+                class="btn-danger-severe" 
+                @click="handleDeleteConfirm" 
+                :disabled="deleteConfirmInput !== 'DELETE' || deletingUser"
+              >
+                <span v-if="deletingUser">
+                  <div class="spinner-small"></div>
+                  Deleting...
+                </span>
+                <span v-else>Delete User & All Data</span>
+              </button>
             </div>
           </div>
         </div>
@@ -534,7 +631,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
-import { UserApi, type UserListDto } from '@/services/Api'
+import { UserApi, type UserListDto, type UserRelatedDataDto } from '@/services/Api'
 import UserForm from '@/components/forms/UserForm.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { handleApiError } from '@/utils/validators'
@@ -562,6 +659,10 @@ const isDeleteModalOpen = ref(false)
 const isEditing = ref(false)
 const selectedUserId = ref<string | null>(null)
 const userToDelete = ref<UserListDto | null>(null)
+const userRelatedData = ref<UserRelatedDataDto | null>(null)
+const deleteConfirmInput = ref('')
+const loadingRelatedData = ref(false)
+const deletingUser = ref(false)
 const userFormComponent = ref<InstanceType<typeof UserForm> | null>(null)
 const oxfordFilterRef = ref<HTMLElement | null>(null)
 // ✅ Nuevo ref de elemento para el filtro Staff
@@ -885,15 +986,31 @@ const openEditModal = (user: UserListDto) => {
   isFormModalOpen.value = true
 }
 
-const openDeleteModal = (user: UserListDto) => {
+const openDeleteModal = async (user: UserListDto) => {
   userToDelete.value = user
+  deleteConfirmInput.value = ''
+  userRelatedData.value = null
   isDeleteModalOpen.value = true
+  
+  // Cargar datos relacionados del usuario
+  loadingRelatedData.value = true
+  try {
+    userRelatedData.value = await UserApi.getRelatedData(user.userID)
+  } catch (error) {
+    console.error('Error loading related data:', error)
+    // Si falla, asumimos que no hay datos relacionados
+    userRelatedData.value = null
+  } finally {
+    loadingRelatedData.value = false
+  }
 }
 
 const closeModals = () => {
   isFormModalOpen.value = false
   isDeleteModalOpen.value = false
   userToDelete.value = null
+  userRelatedData.value = null
+  deleteConfirmInput.value = ''
   selectedUserId.value = null
 }
 
@@ -929,14 +1046,24 @@ const handleUserSaved = () => {
 const handleDeleteConfirm = async () => {
   if (!userToDelete.value?.userID) return
 
+  // Si tiene datos relacionados, verificar que escribió DELETE
+  if (userRelatedData.value?.hasRelatedData && deleteConfirmInput.value !== 'DELETE') {
+    return
+  }
+
+  deletingUser.value = true
   try {
-    await UserApi.remove(userToDelete.value.userID)
+    // Si tiene datos relacionados, usar confirmación
+    const needsConfirm = userRelatedData.value?.hasRelatedData ?? false
+    await UserApi.remove(userToDelete.value.userID, needsConfirm)
     closeModals()
     await fetchUsers()
     console.log('User deleted successfully')
   } catch (error: unknown) {
     console.error('Failed to delete user:', error)
     handleApiError(error)
+  } finally {
+    deletingUser.value = false
   }
 }
 </script>
@@ -2129,6 +2256,156 @@ const handleDeleteConfirm = async () => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Delete modal with related data */
+.delete-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.delete-warning-severe {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.warning-icon-severe {
+  display: flex;
+  justify-content: center;
+  color: #dc2626;
+}
+
+.warning-title {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #dc2626;
+  margin: 0;
+}
+
+.warning-description {
+  text-align: center;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.related-data-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+}
+
+.data-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.data-item svg {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.warning-severe-text {
+  text-align: center;
+  color: #991b1b;
+  font-size: 0.9rem;
+  margin: 0;
+  padding: 0.75rem;
+  background: #fef2f2;
+  border-radius: 8px;
+}
+
+.confirm-delete-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.confirm-label {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.confirm-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #fecaca;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.confirm-input::placeholder {
+  color: #9ca3af;
+}
+
+.confirm-input:focus {
+  border-color: #dc2626;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  background: #ffffff;
+}
+
+.btn-danger-severe {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: #ffffff;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-danger-severe:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger-severe:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .btn-danger:hover {

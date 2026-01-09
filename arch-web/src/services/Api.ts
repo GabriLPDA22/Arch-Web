@@ -89,6 +89,16 @@ export type PagedResult<T> = {
   totalPages: number
 }
 
+export type UserRelatedDataDto = {
+  hasDatingProfile: boolean
+  swipeActionsCount: number
+  likesCount: number
+  matchesCount: number
+  messagesCount: number
+  ordersCount: number
+  hasRelatedData: boolean
+}
+
 export type EventListDto = {
   eventID: string
   name: string
@@ -291,10 +301,13 @@ export const UserApi = {
       body: JSON.stringify(data),
     }),
 
-  remove: (id: string) =>
-    request<void>(`/api/Users/${id}`, {
+  remove: (id: string, confirm?: boolean) =>
+    request<void>(`/api/Users/${id}${confirm ? '?confirm=DELETE' : ''}`, {
       method: 'DELETE',
     }),
+
+  getRelatedData: (id: string) =>
+    request<UserRelatedDataDto>(`/api/Users/${id}/related-data`),
 }
 
 // ==================== EVENTS API ====================
