@@ -1,7 +1,7 @@
 // src/utils/validators.ts
 import { useToast } from '@/composables/useToast'
 
-const { error, success } = useToast()
+const { error, success, warning } = useToast()
 
 /**
  * Validates that the email is from Oxford (@ox.ac.uk)
@@ -168,8 +168,19 @@ export function handleApiError(err: any) {
       duration: 5000,
     })
   } else {
-    // Other type of error
-    error('Error', err.message || 'An unexpected error occurred', { duration: 4000 })
+    // Check if it's a validation/required field error (more friendly warning)
+    const validationKeywords = ['required', 'invalid', 'must be', 'cannot be', 'is required', 'must fill']
+    const isValidationError = validationKeywords.some(keyword => 
+      err.message?.toLowerCase().includes(keyword)
+    )
+    
+    if (isValidationError) {
+      // Show as a friendly warning instead of scary error
+      warning('Please check your input', err.message || 'Some information is missing or invalid', { duration: 5000 })
+    } else {
+      // Other type of error
+      error('Error', err.message || 'An unexpected error occurred', { duration: 4000 })
+    }
   }
 }
 
