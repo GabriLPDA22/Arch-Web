@@ -666,20 +666,24 @@ const handleSaveEvent = async () => {
 
     const form = eventFormComponent.value.form
     
-    // Validar fechas antes de convertir a ISO
+    // Validate dates before converting to ISO
     const startDate = new Date(form.startLocal)
     if (!form.startLocal || isNaN(startDate.getTime())) {
-      throw new Error('La fecha de inicio es inválida')
+      throw new Error('Start date is invalid')
     }
     
-    let endDateISO: string | undefined
-    if (form.endLocal) {
-      const endDate = new Date(form.endLocal)
-      if (isNaN(endDate.getTime())) {
-        throw new Error('La fecha de fin es inválida')
-      }
-      endDateISO = endDate.toISOString()
+    // ✅ EndDate is now required
+    if (!form.endLocal) {
+      throw new Error('End date is required')
     }
+    const endDate = new Date(form.endLocal)
+    if (isNaN(endDate.getTime())) {
+      throw new Error('End date is invalid')
+    }
+    if (endDate <= startDate) {
+      throw new Error('End date must be after start date')
+    }
+    const endDateISO = endDate.toISOString()
     
     const payload = {
       name: form.name.trim(),
@@ -814,7 +818,7 @@ const handleExcelImport = async (event: Event) => {
 }
 
 const parseExcelDate = (value: unknown): string => {
-  if (!value) throw new Error('Fecha vacía')
+  if (!value) throw new Error('Empty date')
 
   if (value instanceof Date) {
     return value.toISOString()
@@ -833,7 +837,7 @@ const parseExcelDate = (value: unknown): string => {
     return date.toISOString()
   }
 
-  throw new Error('Formato de fecha inválido')
+  throw new Error('Invalid date format')
 }
 
 onMounted(() => {

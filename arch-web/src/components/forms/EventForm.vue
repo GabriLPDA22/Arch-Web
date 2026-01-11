@@ -124,10 +124,11 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label"> End Date & Time </label>
+            <label class="form-label"> End Date & Time <span class="required">*</span> </label>
             <DateTimePicker
               v-model="form.endLocal"
               placeholder="Select end date & time"
+              :required="true"
               :min-date="form.startLocal ? (() => {
                 const startDate = new Date(form.startLocal)
                 // Establecer minDate al mismo día pero a las 00:00 para permitir el mismo día con hora diferente
@@ -287,7 +288,7 @@ const handleImageSelection = (event: Event) => {
       // Mostrar mensaje de error
       const sizeInMB = (file.size / (1024 * 1024)).toFixed(2)
       showStatus(
-        `La imagen es demasiado grande (${sizeInMB}MB). El tamaño máximo permitido es 5MB.`,
+        `Image is too large (${sizeInMB}MB). Maximum allowed size is 5MB.`,
         true
       )
       
@@ -302,7 +303,7 @@ const handleImageSelection = (event: Event) => {
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
     if (!allowedTypes.includes(file.type)) {
       showStatus(
-        'Formato de imagen no válido. Por favor, usa PNG, JPG o GIF.',
+        'Invalid image format. Please use PNG, JPG or GIF.',
         true
       )
       target.value = ''
@@ -341,6 +342,7 @@ const validationErrors = computed(() => {
   const errors: string[] = []
   if (!form.name.trim()) errors.push('Event name is required')
   if (!form.startLocal) errors.push('Start date and time is required')
+  if (!form.endLocal) errors.push('End date and time is required')
   if (!form.address.trim()) errors.push('Address is required')
   if (!form.postcode.trim()) errors.push('Postcode is required')
   if (form.endLocal && form.startLocal) {

@@ -473,20 +473,28 @@ const handleSaveEvent = async () => {
       return
     }
 
-    let endDate: Date | undefined
-    if (form.endLocal) {
-      endDate = new Date(form.endLocal)
-      if (isNaN(endDate.getTime())) {
-        showAlertMessage('error', 'Invalid end date')
-        submitting.value = false
-        return
-      }
+    // ✅ EndDate ahora es obligatorio
+    if (!form.endLocal) {
+      showAlertMessage('error', 'End date is required')
+      submitting.value = false
+      return
+    }
+    const endDate = new Date(form.endLocal)
+    if (isNaN(endDate.getTime())) {
+      showAlertMessage('error', 'Invalid end date')
+      submitting.value = false
+      return
+    }
+    if (endDate <= startDate) {
+      showAlertMessage('error', 'End date must be after start date')
+      submitting.value = false
+      return
     }
 
     const eventData = {
       name: form.name.trim(),
       startDate: startDate.toISOString(),
-      endDate: endDate ? endDate.toISOString() : undefined,
+      endDate: endDate.toISOString(),
       address: form.address.trim(),
       postcode: form.postcode.trim(),
       description: form.description?.trim() || undefined,
@@ -562,7 +570,7 @@ const confirmDeleteWithOrders = async () => {
 }
 
 const parseExcelDate = (value: unknown): string => {
-  if (!value) throw new Error('Fecha vacía')
+  if (!value) throw new Error('Empty date')
 
   if (value instanceof Date) {
     return value.toISOString()
@@ -581,7 +589,7 @@ const parseExcelDate = (value: unknown): string => {
     return date.toISOString()
   }
 
-  throw new Error('Formato de fecha inválido')
+  throw new Error('Invalid date format')
 }
 
 const handleExcelImport = async (event: Event) => {
