@@ -736,13 +736,21 @@ export type OrganizationMemberListDto = {
   userId: string
   userName?: string
   userEmail?: string
+  // Alternative field names that backend might use
+  name?: string
+  email?: string
   role: 'Admin' | 'Member' | 'Editor'
   createdAt: string
 }
 
 export type OrganizationMemberCreateDto = {
-  userId: string
+  organizationId: string
+  name: string
+  email: string
+  password: string
   role: 'Admin' | 'Member' | 'Editor'
+  dateOfBirth?: string
+  profilePicture?: string
 }
 
 export type OrganizationMemberUpdateDto = {

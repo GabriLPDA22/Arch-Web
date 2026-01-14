@@ -264,16 +264,16 @@
                   <th class="actions-cell">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr v-for="member in organizationMembers" :key="member.id">
-                  <td>{{ member.userName || 'Unknown' }}</td>
-                  <td>{{ member.userEmail || 'N/A' }}</td>
-                  <td>
-                    <span :class="['role-badge', member.role.toLowerCase()]">
-                      {{ member.role }}
-                    </span>
-                  </td>
-                  <td>{{ formatDate(member.createdAt) }}</td>
+               <tbody>
+                 <tr v-for="member in organizationMembers" :key="member.id">
+                   <td>{{ getMemberName(member) }}</td>
+                   <td>{{ getMemberEmail(member) }}</td>
+                   <td>
+                     <span :class="['role-badge', member.role.toLowerCase()]">
+                       {{ member.role }}
+                     </span>
+                   </td>
+                   <td>{{ formatDate(member.createdAt) }}</td>
                   <td class="actions-cell">
                     <button
                       class="action-btn edit"
@@ -410,20 +410,20 @@
               <p class="form-hint">This email will be used for login</p>
             </div>
 
-            <div class="form-group">
-              <label>
-                Password <span class="required">*</span>
-              </label>
-              <input
-                v-model="newMemberForm.password"
-                type="password"
-                class="form-input"
-                placeholder="At least 8 characters"
-                required
-                minlength="8"
-              />
-              <p class="form-hint">Minimum 8 characters. The user will use this to login.</p>
-            </div>
+             <div class="form-group">
+               <label>
+                 Password <span class="required">*</span>
+               </label>
+               <input
+                 v-model="newMemberForm.password"
+                 type="password"
+                 class="form-input"
+                 placeholder="At least 6 characters"
+                 required
+                 minlength="6"
+               />
+               <p class="form-hint">Minimum 6 characters. The user will be created as a verified staff-user and can login immediately.</p>
+             </div>
 
             <div class="form-group">
               <label>
@@ -462,15 +462,15 @@
         </div>
         <div class="modal-body">
           <form @submit.prevent="handleUpdateMember" class="member-form">
-            <div class="form-group">
-              <label>Member</label>
-              <input
-                type="text"
-                class="form-input"
-                :value="editingMember?.userName || 'Unknown'"
-                disabled
-              />
-            </div>
+             <div class="form-group">
+               <label>Member</label>
+               <input
+                 type="text"
+                 class="form-input"
+                 :value="editingMember ? getMemberName(editingMember) : 'Unknown'"
+                 disabled
+               />
+             </div>
 
             <div class="form-group">
               <label>
@@ -505,7 +505,6 @@
 import { ref, onMounted, computed, reactive } from 'vue'
 import {
   OrganizationsApi,
-  UserApi,
   type OrganizationListDto,
   type OrganizationDetailDto,
   type OrganizationCreateDto,
@@ -513,8 +512,6 @@ import {
   type OrganizationMemberListDto,
   type OrganizationMemberCreateDto,
   type OrganizationMemberUpdateDto,
-  type UserListDto,
-  type UserCreateDto,
 } from '@/services/Api'
 import { useToast } from '@/composables/useToast'
 
@@ -621,7 +618,7 @@ const isNewMemberFormValid = computed(() => {
   return (
     newMemberForm.name.trim().length > 0 &&
     newMemberForm.email.trim().length > 0 &&
-    newMemberForm.password.length >= 8 &&
+    newMemberForm.password.length >= 6 &&
     newMemberForm.role.length > 0
   )
 })
@@ -652,6 +649,8 @@ const fetchMembers = async (organizationId: string) => {
   loadingMembers.value = true
   try {
     const members = await OrganizationsApi.getMembers(organizationId)
+    // Debug: log to see what the backend is actually returning
+    console.log('Members received from backend:', members)
     organizationMembersMap.value[organizationId] = members
   } catch (error: any) {
     console.error('Failed to load members:', error)
@@ -665,6 +664,14 @@ const fetchMembers = async (organizationId: string) => {
 
 const getMemberCount = (organizationId: string): number => {
   return organizationMembersMap.value[organizationId]?.length || 0
+}
+
+const getMemberName = (member: OrganizationMemberListDto): string => {
+  return member.userName || member.name || 'Unknown'
+}
+
+const getMemberEmail = (member: OrganizationMemberListDto): string => {
+  return member.userEmail || member.email || 'N/A'
 }
 
 const formatDate = (dateStr: string): string => {
@@ -806,21 +813,16 @@ const handleAddMember = async () => {
 
   addingMember.value = true
   try {
-    // First, create the new user
-    const userData: UserCreateDto = {
+    // Use the new endpoint that creates the user automatically
+    const memberData: OrganizationMemberCreateDto = {
+      organizationId: selectedOrganization.value.id,
       name: newMemberForm.name.trim(),
       email: newMemberForm.email.trim(),
       password: newMemberForm.password,
-      userType: 'user', // Regular user type for organization members
+      role: newMemberForm.role,
     }
 
-    const newUser = await UserApi.create(userData)
-
-    // Then, add the user as a member of the organization
-    await OrganizationsApi.addMember(selectedOrganization.value.id, {
-      userId: newUser.userID,
-      role: newMemberForm.role,
-    })
+    await OrganizationsApi.addMember(selectedOrganization.value.id, memberData)
 
     showToast({
       type: 'success',
@@ -879,7 +881,7 @@ const handleRemoveMember = async (member: OrganizationMemberListDto) => {
     return
   }
 
-  if (!confirm(`Are you sure you want to remove "${member.userName || 'this member'}" from the organization?`)) {
+  if (!confirm(`Are you sure you want to remove "${getMemberName(member)}" from the organization?`)) {
     return
   }
 
