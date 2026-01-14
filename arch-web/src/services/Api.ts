@@ -13,6 +13,16 @@ if (!BASE_URL) {
   )
 }
 
+// Helper: Si la URL base termina en /api-dev, las rutas no deben incluir /api/
+const isDevelopmentApi = BASE_URL.endsWith('/api-dev')
+const normalizePath = (path: string): string => {
+  if (isDevelopmentApi && path.startsWith('/api/')) {
+    // En desarrollo, eliminar /api/ de la ruta porque la base ya incluye /api-dev
+    return path.replace(/^\/api\//, '/')
+  }
+  return path
+}
+
 // ==================== TIPOS DE DATOS (DTOs) ====================
 
 export type UserRole = 'current_student' | 'alumni' | null
@@ -207,7 +217,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers['Authorization'] = `Bearer ${authStore.token}`
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const normalizedPath = normalizePath(path)
+  const res = await fetch(`${BASE_URL}${normalizedPath}`, {
     ...init,
     headers,
   })
@@ -403,7 +414,7 @@ export const FilesApi = {
       headers['Authorization'] = `Bearer ${authStore.token}`
     }
 
-    return fetch(`${BASE_URL}/api/Files/upload`, {
+    return fetch(`${BASE_URL}${normalizePath('/api/Files/upload')}`, {
       method: 'POST',
       body: formData,
       headers,
@@ -535,4 +546,211 @@ export const ReportsApi = {
     }),
 
   getStats: () => request<ReportStatsDto>(`/api/admin/reports/stats`),
+}
+
+// ==================== JOBS API ====================
+
+export type JobListDto = {
+  id: string
+  organizationId: string
+  organizationName?: string
+  createdByUserId: string
+  createdByName?: string
+  title: string
+  companyName: string
+  locationText: string
+  durationText: string
+  isPaid: boolean
+  description: string
+  applyUrl?: string
+  status: 'draft' | 'published' | 'closed'
+  visibility: 'public' | 'private'
+  createdAt: string
+  updatedAt: string
+  publishedAt?: string
+  interestedCandidatesCount?: number
+}
+
+export type JobDetailDto = JobListDto & {
+  // Additional detail fields if needed
+}
+
+export type JobCreateDto = {
+  organizationId: string
+  title: string
+  companyName: string
+  locationText: string
+  durationText: string
+  isPaid: boolean
+  description: string
+  applyUrl?: string
+  status?: 'draft' | 'published' | 'closed'
+  visibility?: 'public' | 'private'
+}
+
+export type JobUpdateDto = {
+  title?: string
+  companyName?: string
+  locationText?: string
+  durationText?: string
+  isPaid?: boolean
+  description?: string
+  applyUrl?: string
+  status?: 'draft' | 'published' | 'closed'
+  visibility?: 'public' | 'private'
+}
+
+export type JobSearchParams = {
+  query?: string
+  location?: string
+  isPaid?: boolean
+  durationText?: string
+  organizationId?: string
+  status?: string
+  visibility?: string
+  page?: number
+  pageSize?: number
+}
+
+export type InterestedCandidateDto = {
+  candidateUserId: string
+  candidateName: string
+  candidateEmail?: string
+  candidateProfilePicture?: string
+  expressedInterestAt: string
+}
+
+export const JobsApi = {
+  list: (params?: {
+    status?: string
+    organizationId?: string
+    visibility?: string
+    page?: number
+    pageSize?: number
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.append('status', params.status)
+    if (params?.organizationId) searchParams.append('organizationId', params.organizationId)
+    if (params?.visibility) searchParams.append('visibility', params.visibility)
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+    return request<PagedResult<JobListDto>>(`/api/jobs?${searchParams.toString()}`)
+  },
+
+  get: (id: string) => request<JobDetailDto>(`/api/jobs/${id}`),
+
+  search: (params?: JobSearchParams) => {
+    const searchParams = new URLSearchParams()
+    if (params?.query) searchParams.append('query', params.query)
+    if (params?.location) searchParams.append('location', params.location)
+    if (params?.isPaid !== undefined) searchParams.append('isPaid', params.isPaid.toString())
+    if (params?.durationText) searchParams.append('durationText', params.durationText)
+    if (params?.organizationId) searchParams.append('organizationId', params.organizationId)
+    if (params?.status) searchParams.append('status', params.status)
+    if (params?.visibility) searchParams.append('visibility', params.visibility)
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+    return request<PagedResult<JobListDto>>(`/api/jobs/search?${searchParams.toString()}`)
+  },
+
+  getPublished: (params?: { page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+    return request<PagedResult<JobListDto>>(`/api/jobs/published?${searchParams.toString()}`)
+  },
+
+  getMyJobs: () => request<JobListDto[]>(`/api/jobs/my`),
+
+  create: (data: JobCreateDto) =>
+    request<JobDetailDto>(`/api/jobs`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: JobUpdateDto) =>
+    request<JobDetailDto>(`/api/jobs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  remove: (id: string) =>
+    request<void>(`/api/jobs/${id}`, {
+      method: 'DELETE',
+    }),
+
+  publish: (id: string) =>
+    request<JobDetailDto>(`/api/jobs/${id}/publish`, {
+      method: 'POST',
+    }),
+
+  close: (id: string) =>
+    request<JobDetailDto>(`/api/jobs/${id}/close`, {
+      method: 'POST',
+    }),
+
+  getInterestedCandidates: (id: string) =>
+    request<InterestedCandidateDto[]>(`/api/jobs/${id}/candidates`),
+
+  expressInterest: (id: string) =>
+    request<void>(`/api/jobs/${id}/interest`, {
+      method: 'POST',
+    }),
+
+  removeInterest: (id: string) =>
+    request<void>(`/api/jobs/${id}/interest`, {
+      method: 'DELETE',
+    }),
+}
+
+// ==================== ORGANIZATIONS API ====================
+
+export type OrganizationListDto = {
+  id: string
+  name: string
+  logoUrl?: string
+  websiteUrl?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type OrganizationDetailDto = OrganizationListDto & {
+  // Additional detail fields if needed
+}
+
+export type OrganizationCreateDto = {
+  name: string
+  logoUrl?: string
+  websiteUrl?: string
+}
+
+export type OrganizationUpdateDto = {
+  name?: string
+  logoUrl?: string
+  websiteUrl?: string
+}
+
+export const OrganizationsApi = {
+  list: () => request<OrganizationListDto[]>(`/api/organizations`),
+
+  get: (id: string) => request<OrganizationDetailDto>(`/api/organizations/${id}`),
+
+  getMy: () => request<OrganizationListDto[]>(`/api/organizations/my`),
+
+  create: (data: OrganizationCreateDto) =>
+    request<OrganizationDetailDto>(`/api/organizations`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: OrganizationUpdateDto) =>
+    request<OrganizationDetailDto>(`/api/organizations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  remove: (id: string) =>
+    request<void>(`/api/organizations/${id}`, {
+      method: 'DELETE',
+    }),
 }

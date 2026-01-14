@@ -1,0 +1,1661 @@
+<!-- ============================================== -->
+<!-- RUTA: src/views/admin/JobsDashboard.vue       -->
+<!-- ============================================== -->
+
+<template>
+  <div class="dashboard">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <div class="header-content">
+        <div class="header-text">
+          <h1 class="page-title">Jobs Management</h1>
+          <p class="page-subtitle">Manage job postings and opportunities</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-create" @click="openCreateModal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+            </svg>
+            Create Job
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"
+            />
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value">{{ totalJobs }}</span>
+          <span class="stat-label">Total Jobs</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon published">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z"
+            />
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value">{{ publishedJobs }}</span>
+          <span class="stat-label">Published</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon draft">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
+            />
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value">{{ draftJobs }}</span>
+          <span class="stat-label">Draft</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon closed">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12,2C17.5,2 22,6.5 22,12C22,17.5 17.5,22 12,22C6.5,22 2,17.5 2,12C2,6.5 6.5,2 12,2M12,4C7.58,4 4,7.58 4,12C4,16.42 7.58,20 12,20C16.42,20 20,16.42 20,12C20,7.58 16.42,4 12,4M16.5,7.5L17.5,8.5L8.5,17.5L7.5,16.5L16.5,7.5Z"
+            />
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value">{{ closedJobs }}</span>
+          <span class="stat-label">Closed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="search-container">
+      <div class="filters-section">
+        <div class="filter-label">Filter by status:</div>
+        <div class="filters-group">
+          <button
+            v-for="filter in statusFilters"
+            :key="filter.value ?? 'all'"
+            :class="['filter-btn', { active: statusFilter === filter.value }]"
+            @click="handleStatusFilter(filter.value)"
+          >
+            {{ filter.label }}
+            <span v-if="statusFilter === filter.value && totalCount > 0" class="count-badge">
+              {{ totalCount }}
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading jobs...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="jobs.length === 0" class="empty-state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6Z"
+        />
+      </svg>
+      <h3>No jobs found</h3>
+      <p v-if="statusFilter">No {{ statusFilter }} jobs at this time</p>
+      <p v-else>No jobs available</p>
+    </div>
+
+    <!-- Jobs Table -->
+    <div v-else class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th
+              class="sortable-header"
+              @click="changeSort('title')"
+            >
+              Title
+              <span class="sort-indicator" v-if="sortBy === 'title'">
+                {{ sortDirection === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th
+              class="sortable-header"
+              @click="changeSort('company')"
+            >
+              Company
+              <span class="sort-indicator" v-if="sortBy === 'company'">
+                {{ sortDirection === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th>Location</th>
+            <th>Duration</th>
+            <th
+              class="sortable-header"
+              @click="changeSort('status')"
+            >
+              Status
+              <span class="sort-indicator" v-if="sortBy === 'status'">
+                {{ sortDirection === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th
+              class="sortable-header"
+              @click="changeSort('date')"
+            >
+              Created
+              <span class="sort-indicator" v-if="sortBy === 'date'">
+                {{ sortDirection === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="job in sortedJobs" :key="job.id" class="table-row">
+            <td>
+              <div class="job-title-cell">
+                <strong>{{ job.title }}</strong>
+                <span v-if="job.interestedCandidatesCount !== undefined && job.interestedCandidatesCount > 0" class="candidates-badge">
+                  {{ job.interestedCandidatesCount }} interested
+                </span>
+              </div>
+            </td>
+            <td>{{ job.companyName }}</td>
+            <td>{{ job.locationText }}</td>
+            <td>
+              <span class="duration-badge">{{ job.durationText }}</span>
+            </td>
+            <td>
+              <span :class="['status-badge', job.status]">
+                {{ job.status }}
+              </span>
+              <span v-if="job.visibility === 'private'" class="visibility-badge">
+                Private
+              </span>
+            </td>
+            <td>{{ formatDate(job.createdAt) }}</td>
+            <td class="actions-cell">
+              <button class="action-btn view" @click="openDetailModal(job)" title="View details">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+                  />
+                </svg>
+              </button>
+              <button
+                v-if="job.status === 'draft'"
+                class="action-btn publish"
+                @click="handlePublish(job)"
+                title="Publish"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+                </svg>
+              </button>
+              <button
+                v-if="job.status === 'published'"
+                class="action-btn close"
+                @click="handleClose(job)"
+                title="Close"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+                </svg>
+              </button>
+              <button
+                class="action-btn delete"
+                @click="handleDelete(job)"
+                title="Delete"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="pagination-container">
+      <div class="pagination">
+        <div class="pagination-summary">
+          Showing
+          <strong>{{ (currentPage - 1) * pageSize + 1 }}</strong>
+          –
+          <strong>{{ Math.min(currentPage * pageSize, totalCount) }}</strong>
+          of
+          <strong>{{ totalCount }}</strong>
+          jobs
+        </div>
+        <div class="pagination-controls">
+          <button
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="page-btn"
+          >
+            Previous
+          </button>
+
+          <button
+            v-for="page in visiblePages"
+            :key="page"
+            @click="goToPage(page)"
+            :class="['page-number-btn', { active: page === currentPage }]"
+          >
+            {{ page }}
+          </button>
+
+          <button
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="page-btn"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div v-if="showDetailModal" class="modal-overlay" @click="closeModals">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Job Details</h2>
+          <button @click="closeModals" class="modal-close">×</button>
+        </div>
+        <div class="modal-body" v-if="selectedJob">
+          <div class="detail-section">
+            <h4>Title</h4>
+            <p><strong>{{ selectedJob.title }}</strong></p>
+          </div>
+
+          <div class="detail-section">
+            <h4>Company</h4>
+            <p>{{ selectedJob.companyName }}</p>
+          </div>
+
+          <div class="detail-section">
+            <h4>Location</h4>
+            <p>{{ selectedJob.locationText }}</p>
+          </div>
+
+          <div class="detail-section">
+            <h4>Duration</h4>
+            <span class="duration-badge">{{ selectedJob.durationText }}</span>
+            <span v-if="selectedJob.isPaid" class="paid-badge">Paid</span>
+            <span v-else class="unpaid-badge">Unpaid</span>
+          </div>
+
+          <div class="detail-section">
+            <h4>Description</h4>
+            <p class="description-text">{{ selectedJob.description }}</p>
+          </div>
+
+          <div class="detail-section" v-if="selectedJob.applyUrl">
+            <h4>Apply URL</h4>
+            <a :href="selectedJob.applyUrl" target="_blank" rel="noopener noreferrer" class="apply-link">
+              {{ selectedJob.applyUrl }}
+            </a>
+          </div>
+
+          <div class="detail-section">
+            <h4>Status</h4>
+            <span :class="['status-badge', selectedJob.status]">
+              {{ selectedJob.status }}
+            </span>
+            <span :class="['visibility-badge', selectedJob.visibility]">
+              {{ selectedJob.visibility }}
+            </span>
+          </div>
+
+          <div class="detail-section">
+            <h4>Organization</h4>
+            <p>{{ selectedJob.organizationName || 'N/A' }}</p>
+          </div>
+
+          <div class="detail-section">
+            <h4>Created By</h4>
+            <p>{{ selectedJob.createdByName || 'Unknown' }}</p>
+          </div>
+
+          <div class="detail-section">
+            <h4>Created At</h4>
+            <p>{{ formatDate(selectedJob.createdAt) }}</p>
+          </div>
+
+          <div class="detail-section" v-if="selectedJob.publishedAt">
+            <h4>Published At</h4>
+            <p>{{ formatDate(selectedJob.publishedAt) }}</p>
+          </div>
+
+          <div class="detail-section" v-if="selectedJob.interestedCandidatesCount !== undefined && selectedJob.interestedCandidatesCount > 0">
+            <h4>Interested Candidates</h4>
+            <p>{{ selectedJob.interestedCandidatesCount }} candidate(s) expressed interest</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="closeModals">Close</button>
+          <button
+            v-if="selectedJob?.status === 'draft'"
+            class="btn-primary"
+            @click="handlePublish(selectedJob!)"
+            :disabled="processing"
+          >
+            {{ processing ? 'Publishing...' : 'Publish Job' }}
+          </button>
+          <button
+            v-if="selectedJob?.status === 'published'"
+            class="btn-warning"
+            @click="handleClose(selectedJob!)"
+            :disabled="processing"
+          >
+            {{ processing ? 'Closing...' : 'Close Job' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Job Modal -->
+    <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateModal">
+      <div class="modal-content create-modal" @click.stop>
+        <div class="modal-header">
+          <h2>Create New Job</h2>
+          <button @click="closeCreateModal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="handleCreateJob" class="job-form">
+            <div class="form-group">
+              <label>
+                Organization <span class="required">*</span>
+              </label>
+              <select
+                v-model="createForm.organizationId"
+                class="form-select"
+                required
+                :disabled="loadingOrganizations"
+              >
+                <option value="">Select an organization...</option>
+                <option
+                  v-for="org in organizations"
+                  :key="org.id"
+                  :value="org.id"
+                >
+                  {{ org.name }}
+                </option>
+              </select>
+              <p v-if="loadingOrganizations" class="form-hint">Loading organizations...</p>
+            </div>
+
+            <div class="form-group">
+              <label>
+                Job Title <span class="required">*</span>
+              </label>
+              <input
+                v-model="createForm.title"
+                type="text"
+                class="form-input"
+                placeholder="e.g., Software Engineer"
+                required
+                maxlength="200"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>
+                Company Name <span class="required">*</span>
+              </label>
+              <input
+                v-model="createForm.companyName"
+                type="text"
+                class="form-input"
+                placeholder="e.g., Tech Corp"
+                required
+                maxlength="200"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>
+                Location <span class="required">*</span>
+              </label>
+              <input
+                v-model="createForm.locationText"
+                type="text"
+                class="form-input"
+                placeholder="e.g., Oxford, UK"
+                required
+                maxlength="200"
+              />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  Duration <span class="required">*</span>
+                </label>
+                <select v-model="createForm.durationText" class="form-select" required>
+                  <option value="">Select duration...</option>
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Internship">Internship</option>
+                  <option value="Temporary">Temporary</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  Status <span class="required">*</span>
+                </label>
+                <select v-model="createForm.status" class="form-select" required>
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  Visibility <span class="required">*</span>
+                </label>
+                <select v-model="createForm.visibility" class="form-select" required>
+                  <option value="public">Public</option>
+                  <option value="private">Private</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input
+                    v-model="createForm.isPaid"
+                    type="checkbox"
+                    class="form-checkbox"
+                  />
+                  <span>Paid Position</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>
+                Description <span class="required">*</span>
+              </label>
+              <textarea
+                v-model="createForm.description"
+                class="form-textarea"
+                placeholder="Describe the job position, requirements, and responsibilities..."
+                required
+                rows="6"
+                maxlength="5000"
+              ></textarea>
+              <p class="form-hint">{{ createForm.description.length }}/5000 characters</p>
+            </div>
+
+            <div class="form-group">
+              <label>Apply URL (optional)</label>
+              <input
+                v-model="createForm.applyUrl"
+                type="url"
+                class="form-input"
+                placeholder="https://example.com/apply"
+                maxlength="500"
+              />
+              <p class="form-hint">URL where candidates can apply for this job</p>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="closeCreateModal" :disabled="creating">
+            Cancel
+          </button>
+          <button
+            class="btn-primary"
+            @click="handleCreateJob"
+            :disabled="creating || !isFormValid"
+          >
+            {{ creating ? 'Creating...' : 'Create Job' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed, reactive } from 'vue'
+import { JobsApi, OrganizationsApi, type JobListDto, type JobDetailDto, type JobCreateDto, type OrganizationListDto } from '@/services/Api'
+import { useToast } from '@/composables/useToast'
+
+const { showToast } = useToast()
+
+// State
+const loading = ref(true)
+const processing = ref(false)
+const creating = ref(false)
+const jobs = ref<JobListDto[]>([])
+const organizations = ref<OrganizationListDto[]>([])
+const loadingOrganizations = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalPages = ref(0)
+const totalCount = ref(0)
+const statusFilter = ref<string | null>(null)
+const showDetailModal = ref(false)
+const showCreateModal = ref(false)
+const selectedJob = ref<JobDetailDto | null>(null)
+const sortBy = ref<'title' | 'company' | 'status' | 'date'>('date')
+const sortDirection = ref<'asc' | 'desc'>('desc')
+
+const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'closed' }>({
+  organizationId: '',
+  title: '',
+  companyName: '',
+  locationText: '',
+  durationText: '',
+  isPaid: false,
+  description: '',
+  applyUrl: '',
+  status: 'draft',
+  visibility: 'public',
+})
+
+const statusFilters = [
+  { value: null, label: 'All' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'published', label: 'Published' },
+  { value: 'closed', label: 'Closed' },
+]
+
+// Computed
+const sortedJobs = computed(() => {
+  const items = [...jobs.value]
+
+  return items.sort((a, b) => {
+    const dir = sortDirection.value === 'asc' ? 1 : -1
+
+    switch (sortBy.value) {
+      case 'title': {
+        return a.title.localeCompare(b.title) * dir
+      }
+      case 'company': {
+        return a.companyName.localeCompare(b.companyName) * dir
+      }
+      case 'status': {
+        return a.status.localeCompare(b.status) * dir
+      }
+      case 'date':
+      default: {
+        const ad = new Date(a.createdAt).getTime()
+        const bd = new Date(b.createdAt).getTime()
+        return (ad - bd) * dir
+      }
+    }
+  })
+})
+
+const totalJobs = computed(() => totalCount.value)
+const publishedJobs = computed(() => 
+  jobs.value.filter(j => j.status === 'published').length
+)
+const draftJobs = computed(() => 
+  jobs.value.filter(j => j.status === 'draft').length
+)
+const closedJobs = computed(() => 
+  jobs.value.filter(j => j.status === 'closed').length
+)
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const maxVisible = 5
+  const end = Math.min(totalPages.value, currentPage.value - 2 + maxVisible - 1)
+  const start = Math.max(1, end - maxVisible + 1)
+
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+
+  return pages
+})
+
+const isFormValid = computed(() => {
+  return (
+    createForm.organizationId &&
+    createForm.title.trim() &&
+    createForm.companyName.trim() &&
+    createForm.locationText.trim() &&
+    createForm.durationText &&
+    createForm.description.trim()
+  )
+})
+
+// Methods
+const changeSort = (key: 'title' | 'company' | 'status' | 'date') => {
+  if (sortBy.value === key) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = key
+    sortDirection.value = key === 'date' ? 'desc' : 'asc'
+  }
+}
+
+const fetchJobs = async () => {
+  loading.value = true
+  try {
+    const response = await JobsApi.list({
+      status: statusFilter.value || undefined,
+      page: currentPage.value,
+      pageSize: pageSize.value,
+    })
+    jobs.value = response.items
+    totalPages.value = response.totalPages
+    totalCount.value = response.totalCount
+  } catch (error: any) {
+    console.error('Failed to load jobs:', error)
+    showToast({ type: 'error', title: 'Error', message: 'Failed to load jobs' })
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchOrganizations = async () => {
+  loadingOrganizations.value = true
+  try {
+    organizations.value = await OrganizationsApi.list()
+  } catch (error: any) {
+    console.error('Failed to load organizations:', error)
+    showToast({ type: 'error', title: 'Error', message: 'Failed to load organizations' })
+  } finally {
+    loadingOrganizations.value = false
+  }
+}
+
+const handleStatusFilter = (filter: string | null) => {
+  statusFilter.value = filter
+  currentPage.value = 1
+  fetchJobs()
+}
+
+const goToPage = (page: number) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    fetchJobs()
+  }
+}
+
+const formatDate = (dateStr: string): string => {
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const openDetailModal = async (job: JobListDto) => {
+  try {
+    const detail = await JobsApi.get(job.id)
+    selectedJob.value = detail
+    showDetailModal.value = true
+  } catch (error: any) {
+    console.error('Failed to load job details:', error)
+    selectedJob.value = job as unknown as JobDetailDto
+    showDetailModal.value = true
+  }
+}
+
+const closeModals = () => {
+  showDetailModal.value = false
+  selectedJob.value = null
+}
+
+const openCreateModal = async () => {
+  showCreateModal.value = true
+  if (organizations.value.length === 0) {
+    await fetchOrganizations()
+  }
+}
+
+const closeCreateModal = () => {
+  showCreateModal.value = false
+  // Reset form
+  createForm.organizationId = ''
+  createForm.title = ''
+  createForm.companyName = ''
+  createForm.locationText = ''
+  createForm.durationText = ''
+  createForm.isPaid = false
+  createForm.description = ''
+  createForm.applyUrl = ''
+  createForm.status = 'draft'
+  createForm.visibility = 'public'
+}
+
+const handleCreateJob = async () => {
+  if (!isFormValid.value) {
+    showToast({ type: 'error', title: 'Validation Error', message: 'Please fill in all required fields' })
+    return
+  }
+
+  creating.value = true
+  try {
+    const jobData: JobCreateDto = {
+      organizationId: createForm.organizationId,
+      title: createForm.title.trim(),
+      companyName: createForm.companyName.trim(),
+      locationText: createForm.locationText.trim(),
+      durationText: createForm.durationText,
+      isPaid: createForm.isPaid,
+      description: createForm.description.trim(),
+      applyUrl: createForm.applyUrl?.trim() || undefined,
+      status: createForm.status,
+      visibility: createForm.visibility,
+    }
+
+    await JobsApi.create(jobData)
+    showToast({ type: 'success', title: 'Success', message: 'Job created successfully' })
+    closeCreateModal()
+    fetchJobs()
+  } catch (error: any) {
+    console.error('Failed to create job:', error)
+    showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to create job' })
+  } finally {
+    creating.value = false
+  }
+}
+
+const handlePublish = async (job: JobListDto | JobDetailDto) => {
+  if (!confirm(`Are you sure you want to publish "${job.title}"?`)) {
+    return
+  }
+
+  processing.value = true
+  try {
+    await JobsApi.publish(job.id)
+    showToast({ type: 'success', title: 'Success', message: 'Job published successfully' })
+    closeModals()
+    fetchJobs()
+  } catch (error: any) {
+    console.error('Failed to publish job:', error)
+    showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to publish job' })
+  } finally {
+    processing.value = false
+  }
+}
+
+const handleClose = async (job: JobListDto | JobDetailDto) => {
+  if (!confirm(`Are you sure you want to close "${job.title}"?`)) {
+    return
+  }
+
+  processing.value = true
+  try {
+    await JobsApi.close(job.id)
+    showToast({ type: 'success', title: 'Success', message: 'Job closed successfully' })
+    closeModals()
+    fetchJobs()
+  } catch (error: any) {
+    console.error('Failed to close job:', error)
+    showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to close job' })
+  } finally {
+    processing.value = false
+  }
+}
+
+const handleDelete = async (job: JobListDto) => {
+  if (!confirm(`Are you sure you want to delete "${job.title}"? This action cannot be undone.`)) {
+    return
+  }
+
+  processing.value = true
+  try {
+    await JobsApi.remove(job.id)
+    showToast({ type: 'success', title: 'Success', message: 'Job deleted successfully' })
+    fetchJobs()
+  } catch (error: any) {
+    console.error('Failed to delete job:', error)
+    showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to delete job' })
+  } finally {
+    processing.value = false
+  }
+}
+
+onMounted(() => {
+  fetchJobs()
+  fetchOrganizations()
+})
+</script>
+
+<style scoped>
+/* ==================== BASE DASHBOARD STYLES ==================== */
+.dashboard {
+  padding: 0;
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.dashboard-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 2rem 2.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-create {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #dbb067;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9375rem;
+}
+
+.btn-create:hover {
+  background: #c9a05a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(219, 176, 103, 0.3);
+}
+
+.btn-create:active {
+  transform: translateY(0);
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: #718096;
+  margin: 0;
+}
+
+/* ==================== STATS CARDS ==================== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  padding: 1.5rem 2.5rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.stat-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon.total {
+  background: #dbeafe;
+  color: #2563eb;
+}
+.stat-icon.published {
+  background: #d1fae5;
+  color: #059669;
+}
+.stat-icon.draft {
+  background: #fef3c7;
+  color: #d97706;
+}
+.stat-icon.closed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* ==================== FILTERS ==================== */
+.search-container {
+  padding: 1.5rem 2.5rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.filters-section {
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filters-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.filter-btn {
+  padding: 0.625rem 1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 10px;
+  color: #6b7280;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-btn:hover {
+  border-color: #dbb067;
+  color: #0d2954;
+}
+
+.filter-btn.active {
+  background: #0d2954;
+  border-color: #0d2954;
+  color: #fff;
+}
+
+.count-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.125rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+}
+
+/* ==================== LOADING & EMPTY STATES ==================== */
+.loading-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #dbb067;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-state svg {
+  color: #d1d5db;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ==================== TABLE ==================== */
+.table-container {
+  padding: 2rem 2.5rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.data-table th,
+.data-table td {
+  padding: 1rem 1.25rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table th {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.data-table td {
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.table-row:hover {
+  background-color: #f8fafc;
+}
+
+.table-row:last-child td {
+  border-bottom: none;
+}
+
+.job-title-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.job-title-cell strong {
+  color: #1e293b;
+}
+
+.candidates-badge {
+  font-size: 0.75rem;
+  color: #059669;
+  font-weight: 600;
+}
+
+.duration-badge {
+  display: inline-flex;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-flex;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-right: 0.5rem;
+}
+
+.status-badge.draft {
+  background: #fef3c7;
+  color: #92400e;
+}
+.status-badge.published {
+  background: #d1fae5;
+  color: #065f46;
+}
+.status-badge.closed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.visibility-badge {
+  display: inline-flex;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.paid-badge {
+  display: inline-flex;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.unpaid-badge {
+  display: inline-flex;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sortable-header:hover {
+  color: #1e293b;
+}
+
+.sort-indicator {
+  font-size: 0.7rem;
+}
+
+/* ==================== ACTION BUTTONS ==================== */
+.actions-cell {
+  text-align: right;
+}
+
+.action-btn {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+}
+
+.action-btn.view {
+  color: #3b82f6;
+}
+
+.action-btn.view:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.action-btn.publish {
+  color: #059669;
+}
+
+.action-btn.publish:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.action-btn.close {
+  color: #d97706;
+}
+
+.action-btn.close:hover {
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
+.action-btn.delete {
+  color: #dc2626;
+}
+
+.action-btn.delete:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* ==================== PAGINATION ==================== */
+.pagination-container {
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pagination-summary {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.page-number-btn {
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 0.8rem;
+  color: #4b5563;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.page-number-btn.active {
+  background: #111827;
+  color: #f9fafb;
+  border-color: #111827;
+}
+
+.page-btn {
+  padding: 0.625rem 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #dbb067;
+  color: #0d2954;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ==================== MODALS ==================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.create-modal {
+  max-width: 700px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  line-height: 1;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  max-height: calc(90vh - 140px);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+/* ==================== DETAIL SECTIONS ==================== */
+.detail-section {
+  margin-bottom: 1rem;
+}
+
+.detail-section h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-section p {
+  margin: 0;
+  color: #1f2937;
+}
+
+.description-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.6;
+}
+
+.apply-link {
+  color: #2563eb;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.apply-link:hover {
+  text-decoration: underline;
+}
+
+/* ==================== BUTTONS ==================== */
+.btn-primary {
+  background: #dbb067;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #c9a05a;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #4b5563;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn-warning {
+  background: #f59e0b;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+}
+
+.btn-warning:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==================== FORM STYLES ==================== */
+.job-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.required {
+  color: #dc2626;
+  margin-left: 0.25rem;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  transition: all 0.2s;
+  background: #fff;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #dbb067;
+  box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0.75rem 0;
+}
+
+.form-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #dbb067;
+}
+
+.checkbox-label span {
+  user-select: none;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 1.5rem;
+  }
+
+  .stats-grid {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .search-container {
+    padding: 1rem;
+  }
+
+  .table-container {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .data-table {
+    min-width: 800px;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .modal-content {
+    margin: 1rem;
+    max-width: calc(100% - 2rem);
+  }
+}
+</style>

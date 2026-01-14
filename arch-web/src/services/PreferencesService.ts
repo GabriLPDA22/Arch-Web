@@ -1,7 +1,23 @@
 // services/PreferencesService.ts
 
 // ✅ NUEVO: Importamos la URL base correcta
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://api.arch-api.co.uk";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  throw new Error(
+    'VITE_API_BASE_URL is not defined in the environment files. Please check your .env files.',
+  )
+}
+
+// Helper: Si la URL base termina en /api-dev, las rutas no deben incluir /api/
+const isDevelopmentApi = API_BASE_URL.endsWith('/api-dev')
+const normalizePath = (path: string): string => {
+  if (isDevelopmentApi && path.startsWith('/api/')) {
+    // En desarrollo, eliminar /api/ de la ruta porque la base ya incluye /api-dev
+    return path.replace(/^\/api\//, '/')
+  }
+  return path
+}
 
 export interface PreferenceDto {
   preferenceId: string;
@@ -25,7 +41,7 @@ export class PreferencesService {
    */
   static async getAll(): Promise<PreferenceDto[]> {
     // ✅ MODIFICADO: Construimos la URL completa
-    const response = await fetch(`${API_BASE_URL}${this.ENDPOINT}`);
+    const response = await fetch(`${API_BASE_URL}${normalizePath(this.ENDPOINT)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch preferences: ${response.statusText}`);
     }
@@ -36,7 +52,7 @@ export class PreferencesService {
    * Obtiene una preferencia por ID
    */
   static async getById(id: string): Promise<PreferenceDto> {
-    const response = await fetch(`${API_BASE_URL}${this.ENDPOINT}/${id}`);
+    const response = await fetch(`${API_BASE_URL}${normalizePath(this.ENDPOINT)}/${id}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch preference: ${response.statusText}`);
     }
@@ -47,7 +63,7 @@ export class PreferencesService {
    * Crea una nueva preferencia
    */
   static async create(dto: CreatePreferenceDto): Promise<PreferenceDto> {
-    const response = await fetch(`${API_BASE_URL}${this.ENDPOINT}`, {
+    const response = await fetch(`${API_BASE_URL}${normalizePath(this.ENDPOINT)}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -64,7 +80,7 @@ export class PreferencesService {
    * Actualiza una preferencia existente
    */
   static async update(id: string, dto: UpdatePreferenceDto): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}${this.ENDPOINT}/${id}`, {
+    const response = await fetch(`${API_BASE_URL}${normalizePath(this.ENDPOINT)}/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -80,7 +96,7 @@ export class PreferencesService {
    * Elimina una preferencia
    */
   static async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}${this.ENDPOINT}/${id}`, {
+    const response = await fetch(`${API_BASE_URL}${normalizePath(this.ENDPOINT)}/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) {

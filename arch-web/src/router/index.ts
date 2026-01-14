@@ -14,6 +14,7 @@ import StaffRegisterView from '@/views/StaffRegisterView.vue'
 import StaffEventsView from '@/views/staff/StaffEventsView.vue'
 import StaffVerificationView from '@/views/admin/StaffVerificationView.vue'
 import ReportsDashboard from '@/views/admin/ReportsDashboard.vue' // ✅ NUEVO
+import JobsDashboard from '@/views/admin/JobsDashboard.vue' // ✅ NUEVO
 import UnauthorizedView from '../views/UnauthorizedView.vue'
 
 const router = createRouter({
@@ -65,6 +66,13 @@ const router = createRouter({
           path: 'reports',
           name: 'admin-reports',
           component: ReportsDashboard,
+          meta: { requiresAdmin: true },
+        },
+        // ✅ NUEVA RUTA - Jobs Dashboard
+        {
+          path: 'jobs',
+          name: 'admin-jobs',
+          component: JobsDashboard,
           meta: { requiresAdmin: true },
         },
         {
