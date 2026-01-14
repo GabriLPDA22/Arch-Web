@@ -15,7 +15,7 @@ import StaffEventsView from '@/views/staff/StaffEventsView.vue'
 import StaffVerificationView from '@/views/admin/StaffVerificationView.vue'
 import ReportsDashboard from '@/views/admin/ReportsDashboard.vue' // ✅ NUEVO
 import OrganizationRouter from '@/views/admin/OrganizationRouter.vue' // ✅ NUEVO - Router component
-import JobsDashboard from '@/views/admin/JobsDashboard.vue' // ✅ NUEVO
+import JobsRouter from '@/views/admin/JobsRouter.vue' // ✅ NUEVO - Router component
 import UnauthorizedView from '../views/UnauthorizedView.vue'
 
 const router = createRouter({
@@ -78,10 +78,11 @@ const router = createRouter({
           meta: { requiresAdmin: true },
         },
         // ✅ NUEVA RUTA - Jobs Dashboard
+        // Usa JobsRouter que decide qué componente mostrar según el tipo de usuario
         {
           path: 'jobs',
           name: 'admin-jobs',
-          component: JobsDashboard,
+          component: JobsRouter,
           meta: { requiresAdmin: true },
         },
         {

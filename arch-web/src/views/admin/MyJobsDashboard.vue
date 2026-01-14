@@ -1,5 +1,6 @@
 <!-- ============================================== -->
-<!-- RUTA: src/views/admin/JobsDashboard.vue       -->
+<!-- RUTA: src/views/admin/MyJobsDashboard.vue       -->
+<!-- Dashboard para org-members (solo sus jobs) -->
 <!-- ============================================== -->
 
 <template>
@@ -8,8 +9,8 @@
     <div class="dashboard-header">
       <div class="header-content">
         <div class="header-text">
-          <h1 class="page-title">Jobs Management</h1>
-          <p class="page-subtitle">Manage job postings and opportunities</p>
+          <h1 class="page-title">My Jobs</h1>
+          <p class="page-subtitle">Manage job postings for your organization</p>
         </div>
         <div class="header-actions">
           <button class="btn-create" @click="openCreateModal">
@@ -177,7 +178,7 @@
                 </svg>
               </button>
               <button
-                v-if="job.status === 'draft'"
+                v-if="job.status === 'draft' && authStore.isAdminOfOrganization(job.organizationId)"
                 class="action-btn publish"
                 @click="handlePublish(job)"
                 title="Publish"
@@ -187,7 +188,7 @@
                 </svg>
               </button>
               <button
-                v-if="job.status === 'published'"
+                v-if="job.status === 'published' && authStore.isAdminOfOrganization(job.organizationId)"
                 class="action-btn close"
                 @click="handleClose(job)"
                 title="Close"
@@ -305,11 +306,6 @@
           </div>
 
           <div class="detail-section">
-            <h4>Organization</h4>
-            <p>{{ selectedJob.organizationName || 'N/A' }}</p>
-          </div>
-
-          <div class="detail-section">
             <h4>Created By</h4>
             <p>{{ selectedJob.createdByName || 'Unknown' }}</p>
           </div>
@@ -332,7 +328,7 @@
         <div class="modal-footer">
           <button class="btn-secondary" @click="closeModals">Close</button>
           <button
-            v-if="selectedJob?.status === 'draft'"
+            v-if="selectedJob?.status === 'draft' && authStore.isAdminOfOrganization(selectedJob.organizationId)"
             class="btn-primary"
             @click="handlePublish(selectedJob!)"
             :disabled="processing"
@@ -340,7 +336,7 @@
             {{ processing ? 'Publishing...' : 'Publish Job' }}
           </button>
           <button
-            v-if="selectedJob?.status === 'published'"
+            v-if="selectedJob?.status === 'published' && authStore.isAdminOfOrganization(selectedJob.organizationId)"
             class="btn-warning"
             @click="handleClose(selectedJob!)"
             :disabled="processing"
@@ -360,28 +356,6 @@
         </div>
         <div class="modal-body">
           <form @submit.prevent="handleCreateJob" class="job-form">
-            <div class="form-group">
-              <label>
-                Organization <span class="required">*</span>
-              </label>
-              <select
-                v-model="createForm.organizationId"
-                class="form-select"
-                required
-                :disabled="loadingOrganizations"
-              >
-                <option value="">Select an organization...</option>
-                <option
-                  v-for="org in organizations"
-                  :key="org.id"
-                  :value="org.id"
-                >
-                  {{ org.name }}
-                </option>
-              </select>
-              <p v-if="loadingOrganizations" class="form-hint">Loading organizations...</p>
-            </div>
-
             <div class="form-group">
               <label>
                 Job Title <span class="required">*</span>
@@ -445,9 +419,12 @@
                 </label>
                 <select v-model="createForm.status" class="form-select" required>
                   <option value="draft">Draft</option>
-                  <option value="published">Published</option>
+                  <option value="published" v-if="authStore.isAdminOfOrganization(primaryOrganization?.organizationId || '')">Published</option>
                   <option value="closed">Closed</option>
                 </select>
+                <p class="form-hint" v-if="!authStore.isAdminOfOrganization(primaryOrganization?.organizationId || '')">
+                  Only organization admins can publish jobs
+                </p>
               </div>
             </div>
 
@@ -521,18 +498,18 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
-import { JobsApi, OrganizationsApi, type JobListDto, type JobDetailDto, type JobCreateDto, type OrganizationListDto } from '@/services/Api'
+import { JobsApi, type JobListDto, type JobDetailDto, type JobCreateDto } from '@/services/Api'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth.store'
 
 const { showToast } = useToast()
+const authStore = useAuthStore()
 
 // State
 const loading = ref(true)
 const processing = ref(false)
 const creating = ref(false)
 const jobs = ref<JobListDto[]>([])
-const organizations = ref<OrganizationListDto[]>([])
-const loadingOrganizations = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalPages = ref(0)
@@ -557,6 +534,8 @@ const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'cl
 })
 
 // Computed
+const primaryOrganization = computed(() => authStore.primaryOrganization)
+
 const sortedJobs = computed(() => {
   const items = [...jobs.value]
 
@@ -609,7 +588,7 @@ const visiblePages = computed(() => {
 
 const isFormValid = computed(() => {
   return (
-    createForm.organizationId &&
+    primaryOrganization.value &&
     createForm.title.trim() &&
     createForm.companyName.trim() &&
     createForm.locationText.trim() &&
@@ -631,7 +610,15 @@ const changeSort = (key: 'title' | 'company' | 'status' | 'date') => {
 const fetchJobs = async () => {
   loading.value = true
   try {
+    if (!primaryOrganization.value) {
+      jobs.value = []
+      totalPages.value = 0
+      totalCount.value = 0
+      return
+    }
+
     const response = await JobsApi.list({
+      organizationId: primaryOrganization.value.organizationId,
       page: currentPage.value,
       pageSize: pageSize.value,
     })
@@ -643,18 +630,6 @@ const fetchJobs = async () => {
     showToast({ type: 'error', title: 'Error', message: 'Failed to load jobs' })
   } finally {
     loading.value = false
-  }
-}
-
-const fetchOrganizations = async () => {
-  loadingOrganizations.value = true
-  try {
-    organizations.value = await OrganizationsApi.list()
-  } catch (error: any) {
-    console.error('Failed to load organizations:', error)
-    showToast({ type: 'error', title: 'Error', message: 'Failed to load organizations' })
-  } finally {
-    loadingOrganizations.value = false
   }
 }
 
@@ -692,17 +667,19 @@ const closeModals = () => {
   selectedJob.value = null
 }
 
-const openCreateModal = async () => {
-  showCreateModal.value = true
-  if (organizations.value.length === 0) {
-    await fetchOrganizations()
+const openCreateModal = () => {
+  if (!primaryOrganization.value) {
+    showToast({ type: 'error', title: 'Error', message: 'You are not a member of any organization' })
+    return
   }
+  showCreateModal.value = true
+  createForm.organizationId = primaryOrganization.value.organizationId
 }
 
 const closeCreateModal = () => {
   showCreateModal.value = false
   // Reset form
-  createForm.organizationId = ''
+  createForm.organizationId = primaryOrganization.value?.organizationId || ''
   createForm.title = ''
   createForm.companyName = ''
   createForm.locationText = ''
@@ -715,7 +692,7 @@ const closeCreateModal = () => {
 }
 
 const handleCreateJob = async () => {
-  if (!isFormValid.value) {
+  if (!isFormValid.value || !primaryOrganization.value) {
     showToast({ type: 'error', title: 'Validation Error', message: 'Please fill in all required fields' })
     return
   }
@@ -723,7 +700,7 @@ const handleCreateJob = async () => {
   creating.value = true
   try {
     const jobData: JobCreateDto = {
-      organizationId: createForm.organizationId,
+      organizationId: primaryOrganization.value.organizationId,
       title: createForm.title.trim(),
       companyName: createForm.companyName.trim(),
       locationText: createForm.locationText.trim(),
@@ -805,11 +782,11 @@ const handleDelete = async (job: JobListDto) => {
 
 onMounted(() => {
   fetchJobs()
-  fetchOrganizations()
 })
 </script>
 
 <style scoped>
+/* Copiar estilos de JobsDashboard.vue - mismo diseño */
 /* ==================== BASE DASHBOARD STYLES ==================== */
 .dashboard {
   padding: 0;
@@ -1542,6 +1519,12 @@ onMounted(() => {
   outline: none;
   border-color: #dbb067;
   box-shadow: 0 0 0 3px rgba(219, 176, 103, 0.1);
+}
+
+.form-input:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
 }
 
 .form-textarea {
