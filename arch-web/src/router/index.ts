@@ -14,7 +14,7 @@ import StaffRegisterView from '@/views/StaffRegisterView.vue'
 import StaffEventsView from '@/views/staff/StaffEventsView.vue'
 import StaffVerificationView from '@/views/admin/StaffVerificationView.vue'
 import ReportsDashboard from '@/views/admin/ReportsDashboard.vue' // ✅ NUEVO
-import OrganizationsDashboard from '@/views/admin/OrganizationsDashboard.vue' // ✅ NUEVO
+import OrganizationRouter from '@/views/admin/OrganizationRouter.vue' // ✅ NUEVO - Router component
 import JobsDashboard from '@/views/admin/JobsDashboard.vue' // ✅ NUEVO
 import UnauthorizedView from '../views/UnauthorizedView.vue'
 
@@ -70,10 +70,11 @@ const router = createRouter({
           meta: { requiresAdmin: true },
         },
         // ✅ NUEVA RUTA - Organizations Dashboard
+        // Usa OrganizationRouter que decide qué componente mostrar según el tipo de usuario
         {
           path: 'organizations',
           name: 'admin-organizations',
-          component: OrganizationsDashboard,
+          component: OrganizationRouter,
           meta: { requiresAdmin: true },
         },
         // ✅ NUEVA RUTA - Jobs Dashboard
@@ -115,19 +116,35 @@ router.beforeEach(async (to) => {
     const isAdmin = user?.userType === 'admin'
     const isModerator = user?.userType === 'moderator'
     const isStaff = user?.userType === 'staff-user'
+    const isOrgMemberUser = user?.userType === 'org-members'
     const isVerifiedStaff = isStaff && user?.isVerified === true
     const canManagePanel = isAdmin || isModerator
+    const isOrgAdmin = authStore.isOrgAdmin
+    const isOrgEditor = authStore.isOrgEditor
+    const isOrgMember = authStore.isOrgMember
 
     // Verificar acceso general al panel de administración
     if (to.matched.some((record) => record.meta.requiresPanelAccess)) {
-      if (!canManagePanel && !isVerifiedStaff) {
+      if (!canManagePanel && !isVerifiedStaff && !isOrgMemberUser) {
         return '/unauthorized'
       }
     }
 
-    // Verificar acceso específico a rutas de solo admin
-    if (to.matched.some((record) => record.meta.requiresAdmin) && !isAdmin) {
-      return '/unauthorized'
+    // Verificar acceso específico a rutas de solo admin (sistema)
+    // PERO permitir acceso a org-members con rol Admin para organizations y jobs
+    if (to.matched.some((record) => record.meta.requiresAdmin)) {
+      const isOrganizationsOrJobs = to.path === '/admin/organizations' || to.path === '/admin/jobs' || 
+                                     to.name === 'admin-organizations' || to.name === 'admin-jobs'
+      
+      if (!isAdmin && isOrganizationsOrJobs) {
+        // Para organizations y jobs, permitir si es org-members con rol Admin/Editor/Member
+        if (!isOrgMemberUser || (!isOrgAdmin && !isOrgEditor && !isOrgMember)) {
+          return '/unauthorized'
+        }
+      } else if (!isAdmin) {
+        // Para otras rutas de admin, solo admins del sistema
+        return '/unauthorized'
+      }
     }
 
     // Verificar acceso específico a rutas de staff
@@ -136,6 +153,9 @@ router.beforeEach(async (to) => {
         return '/unauthorized'
       }
     }
+
+    // Nota: La verificación de acceso a organizations y jobs ya se hace arriba
+    // en la sección de requiresAdmin, así que no necesitamos duplicar aquí
   }
 })
 

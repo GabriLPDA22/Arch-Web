@@ -8,8 +8,8 @@
     <div class="dashboard-header">
       <div class="header-content">
         <div class="header-text">
-          <h1 class="page-title">Jobs Management</h1>
-          <p class="page-subtitle">Manage job postings and opportunities</p>
+          <h1 class="page-title">{{ authStore.isAdmin ? 'Jobs Management' : 'My Jobs' }}</h1>
+          <p class="page-subtitle">{{ authStore.isAdmin ? 'Manage job postings and opportunities' : 'Manage job postings for your organization' }}</p>
         </div>
         <div class="header-actions">
           <button class="btn-create" @click="openCreateModal">
@@ -544,8 +544,10 @@
 import { ref, onMounted, computed, reactive } from 'vue'
 import { JobsApi, OrganizationsApi, type JobListDto, type JobDetailDto, type JobCreateDto, type OrganizationListDto } from '@/services/Api'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth.store'
 
 const { showToast } = useToast()
+const authStore = useAuthStore()
 
 // State
 const loading = ref(true)
@@ -660,14 +662,77 @@ const changeSort = (key: 'title' | 'company' | 'status' | 'date') => {
 const fetchJobs = async () => {
   loading.value = true
   try {
-    const response = await JobsApi.list({
-      status: statusFilter.value || undefined,
-      page: currentPage.value,
-      pageSize: pageSize.value,
-    })
-    jobs.value = response.items
-    totalPages.value = response.totalPages
-    totalCount.value = response.totalCount
+    // Si es admin del sistema, mostrar TODOS los jobs
+    if (authStore.isAdmin) {
+      const response = await JobsApi.list({
+        status: statusFilter.value || undefined,
+        page: currentPage.value,
+        pageSize: pageSize.value,
+      })
+      jobs.value = response.items
+      totalPages.value = response.totalPages
+      totalCount.value = response.totalCount
+    } 
+    // Si es org-members, obtener jobs de TODAS sus organizaciones
+    else if (authStore.isOrgMemberUser) {
+      const memberships = authStore.organizationMemberships
+      
+      if (memberships.length === 0) {
+        jobs.value = []
+        totalPages.value = 0
+        totalCount.value = 0
+        return
+      }
+      
+      // Si solo tiene una organización, usar el filtro directamente
+      if (memberships.length === 1) {
+        const response = await JobsApi.list({
+          status: statusFilter.value || undefined,
+          organizationId: memberships[0].organizationId,
+          page: currentPage.value,
+          pageSize: pageSize.value,
+        })
+        jobs.value = response.items
+        totalPages.value = response.totalPages
+        totalCount.value = response.totalCount
+      } else {
+        // Si tiene múltiples organizaciones, obtener jobs de cada una y combinar
+        const allJobs: JobListDto[] = []
+        let totalCountAll = 0
+        
+        for (const membership of memberships) {
+          try {
+            const response = await JobsApi.list({
+              status: statusFilter.value || undefined,
+              organizationId: membership.organizationId,
+              page: 1,
+              pageSize: 1000, // Obtener todos los jobs de esta org
+            })
+            allJobs.push(...response.items)
+            totalCountAll += response.totalCount
+          } catch (err) {
+            console.warn(`Failed to load jobs for organization ${membership.organizationId}:`, err)
+          }
+        }
+        
+        // Aplicar paginación manualmente
+        const startIndex = (currentPage.value - 1) * pageSize.value
+        const endIndex = startIndex + pageSize.value
+        jobs.value = allJobs.slice(startIndex, endIndex)
+        totalCount.value = totalCountAll
+        totalPages.value = Math.ceil(totalCountAll / pageSize.value)
+      }
+    } else {
+      // Para otros tipos de usuario, cargar normalmente
+      const response = await JobsApi.list({
+        status: statusFilter.value || undefined,
+        page: currentPage.value,
+        pageSize: pageSize.value,
+      })
+      jobs.value = response.items
+      totalPages.value = response.totalPages
+      totalCount.value = response.totalCount
+    }
   } catch (error: any) {
     console.error('Failed to load jobs:', error)
     showToast({ type: 'error', title: 'Error', message: 'Failed to load jobs' })
@@ -679,7 +744,15 @@ const fetchJobs = async () => {
 const fetchOrganizations = async () => {
   loadingOrganizations.value = true
   try {
-    organizations.value = await OrganizationsApi.list()
+    // Si es admin del sistema, mostrar TODAS las organizaciones
+    // Si es org-members, mostrar solo SUS organizaciones
+    if (authStore.isAdmin) {
+      organizations.value = await OrganizationsApi.list()
+    } else if (authStore.isOrgMemberUser) {
+      organizations.value = await OrganizationsApi.getMy()
+    } else {
+      organizations.value = []
+    }
   } catch (error: any) {
     console.error('Failed to load organizations:', error)
     showToast({ type: 'error', title: 'Error', message: 'Failed to load organizations' })

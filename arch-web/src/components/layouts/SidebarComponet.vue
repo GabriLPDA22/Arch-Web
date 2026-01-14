@@ -69,7 +69,7 @@
           <span class="nav-text">Reports</span>
         </RouterLink>
 
-        <!-- ✅ NUEVO: Organizations Link -->
+        <!-- ✅ NUEVO: Organizations Link (solo para admins del sistema) -->
         <RouterLink
           v-if="authStore.isAdmin"
           to="/admin/organizations"
@@ -82,7 +82,7 @@
           <span class="nav-text">Organizations</span>
         </RouterLink>
 
-        <!-- ✅ NUEVO: Jobs Link -->
+        <!-- ✅ NUEVO: Jobs Link (solo para admins del sistema) -->
         <RouterLink
           v-if="authStore.isAdmin"
           to="/admin/jobs"
@@ -93,6 +93,26 @@
             <path d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M14,6V4H10V6H14Z" />
           </svg>
           <span class="nav-text">Jobs</span>
+        </RouterLink>
+      </div>
+
+      <!-- Organization Members -->
+      <div
+        v-if="authStore.isOrgMemberUser"
+        class="nav-section"
+      >
+        <div class="section-label">My Organization</div>
+        <RouterLink to="/admin/organizations" class="nav-item" active-class="active">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
+            <path d="M12,5.5A3.5,3.5 0 0,1 15.5,9A3.5,3.5 0 0,1 12,12.5A3.5,3.5 0 0,1 8.5,9A3.5,3.5 0 0,1 12,5.5M5,8C5.56,8 6.08,8.15 6.53,8.42C6.38,9.85 6.8,11.27 7.66,12.38C7.16,13.34 6.16,14 5,14A3,3 0 0,1 2,11A3,3 0 0,1 5,8M19,8A3,3 0 0,1 22,11A3,3 0 0,1 19,14C17.84,14 16.84,13.34 16.34,12.38C17.2,11.27 17.62,9.85 17.47,8.42C17.92,8.15 18.44,8 19,8M5.5,12C6.33,12 7,12.67 7,13.5C7,14.33 6.33,15 5.5,15C4.67,15 4,14.33 4,13.5C4,12.67 4.67,12 5.5,12M18.5,12C19.33,12 20,12.67 20,13.5C20,14.33 19.33,15 18.5,15C17.67,15 17,14.33 17,13.5C17,12.67 17.67,12 18.5,12M12,14C13.33,14 18,14.67 18,16V18H6V16C6,14.67 10.67,14 12,14Z" />
+          </svg>
+          <span class="nav-text">My Organization</span>
+        </RouterLink>
+        <RouterLink to="/admin/jobs" class="nav-item" active-class="active">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
+            <path d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M14,6V4H10V6H14Z" />
+          </svg>
+          <span class="nav-text">My Jobs</span>
         </RouterLink>
       </div>
 
@@ -138,6 +158,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 
 const authStore = useAuthStore()

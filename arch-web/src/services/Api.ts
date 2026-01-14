@@ -31,7 +31,7 @@ export type UserAuthDto = {
   userID: string
   email: string
   name: string
-  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner' | 'org-members'
   userRole: UserRole
   isVerified: boolean
   dateOfBirth?: string
@@ -50,7 +50,7 @@ export type UserListDto = {
   userID: string
   name: string
   email: string
-  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner' | 'org-members'
   userRole: UserRole
   isVerified: boolean
   createdAt?: string
@@ -61,7 +61,7 @@ export type UserDetailDto = {
   userID: string
   name: string
   email: string
-  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner' | 'org-members'
   userRole: UserRole
   isVerified: boolean
   dateOfBirth?: string
@@ -74,7 +74,7 @@ export type UserCreateDto = {
   name: string
   email: string
   password: string
-  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner' | 'org-members'
   userRole?: UserRole
   preferences?: string[]
 }
@@ -83,7 +83,7 @@ export type UserUpdateDto = {
   name?: string
   email?: string
   password?: string
-  userType?: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userType?: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner' | 'org-members'
   userRole?: UserRole
   preferences?: string[]
   dateOfBirth?: string
@@ -260,7 +260,7 @@ export type RegisterDto = {
   name: string
   email: string
   password: string
-  userType?: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner'
+  userType?: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner' | 'org-members'
 }
 
 export const AuthApi = {
@@ -754,12 +754,61 @@ export type OrganizationMemberUpdateDto = {
   role: 'Admin' | 'Member' | 'Editor'
 }
 
+export type UserOrganizationMembershipDto = {
+  organizationId: string
+  organizationName: string
+  organizationLogoUrl?: string
+  role: 'Admin' | 'Member' | 'Editor'
+  memberId: string
+}
+
 export const OrganizationsApi = {
   list: () => request<OrganizationListDto[]>(`/api/organizations`),
 
   get: (id: string) => request<OrganizationDetailDto>(`/api/organizations/${id}`),
 
   getMy: () => request<OrganizationListDto[]>(`/api/organizations/my`),
+
+  getMyMemberships: async (): Promise<UserOrganizationMembershipDto[]> => {
+    try {
+      // Obtener las organizaciones del usuario usando el endpoint documentado
+      const organizations = await request<OrganizationListDto[]>(`/api/organizations/my`)
+      const memberships: UserOrganizationMembershipDto[] = []
+
+      // Obtener información del usuario actual desde el endpoint /api/Users/me
+      const userData = await request<UserDetailDto>(`/api/Users/me`)
+      const userId = userData.userID
+
+      if (!userId) {
+        return []
+      }
+
+      // Para cada organización, obtener los miembros y encontrar el rol del usuario actual
+      for (const org of organizations) {
+        try {
+          const members = await request<OrganizationMemberListDto[]>(`/api/organizations/${org.id}/members`)
+          const userMember = members.find(m => m.userId === userId)
+          
+          if (userMember) {
+            memberships.push({
+              organizationId: org.id,
+              organizationName: org.name,
+              organizationLogoUrl: org.logoUrl,
+              role: userMember.role,
+              memberId: userMember.id,
+            })
+          }
+        } catch (err) {
+          console.warn(`Failed to get members for organization ${org.id}:`, err)
+        }
+      }
+
+      return memberships
+    } catch (error) {
+      console.error('Failed to get organization memberships:', error)
+      return []
+    }
+  },
 
   create: (data: OrganizationCreateDto) =>
     request<OrganizationDetailDto>(`/api/organizations`, {

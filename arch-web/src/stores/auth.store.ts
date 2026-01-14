@@ -1,7 +1,7 @@
 // arch-web/src/stores/auth.store.ts
 import { defineStore } from 'pinia'
 import router from '@/router'
-import { AuthApi, type UserDetailDto } from '@/services/Api'
+import { AuthApi, OrganizationsApi, type UserDetailDto, type UserOrganizationMembershipDto } from '@/services/Api'
 import type { UserAuthDto } from '@/services/Api'
 
 interface AuthState {
@@ -9,6 +9,7 @@ interface AuthState {
   token: string | null
   returnUrl: string | null
   loginError: string | null
+  organizationMemberships: UserOrganizationMembershipDto[]
 }
 
 const getStoredUser = (): UserAuthDto | null => {
@@ -18,6 +19,11 @@ const getStoredUser = (): UserAuthDto | null => {
 
 const getStoredToken = (): string | null => {
   return localStorage.getItem('token')
+}
+
+const getStoredMemberships = (): UserOrganizationMembershipDto[] => {
+  const memberships = localStorage.getItem('organizationMemberships')
+  return memberships ? (JSON.parse(memberships) as UserOrganizationMembershipDto[]) : []
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -40,6 +46,7 @@ export const useAuthStore = defineStore('auth', {
     token: getStoredToken(),
     returnUrl: null,
     loginError: null,
+    organizationMemberships: getStoredMemberships(),
   }),
 
   getters: {
@@ -49,6 +56,27 @@ export const useAuthStore = defineStore('auth', {
     canManagePanel: (state) =>
       state.user?.userType === 'admin' || state.user?.userType === 'moderator',
     userName: (state) => state.user?.name || state.user?.email?.split('@')[0] || 'Usuario',
+    isStaffUser: (state) => state.user?.userType === 'staff-user',
+    isOrgMemberUser: (state) => state.user?.userType === 'org-members',
+    isOrgMember: (state) => state.organizationMemberships.length > 0,
+    isOrgAdmin: (state) => state.organizationMemberships.some(m => m.role === 'Admin'),
+    isOrgEditor: (state) => state.organizationMemberships.some(m => m.role === 'Editor'),
+    isOrgMemberOrEditor: (state) => state.organizationMemberships.some(m => m.role === 'Admin' || m.role === 'Editor'),
+    primaryOrganization: (state) => {
+      // Retorna la primera organización donde es Admin, o la primera disponible
+      const adminOrg = state.organizationMemberships.find(m => m.role === 'Admin')
+      return adminOrg || state.organizationMemberships[0] || null
+    },
+    getOrganizationRole: (state) => (organizationId: string) => {
+      const membership = state.organizationMemberships.find(m => m.organizationId === organizationId)
+      return membership?.role || null
+    },
+    isAdminOfOrganization: (state) => (organizationId: string) => {
+      return state.organizationMemberships.some(m => m.organizationId === organizationId && m.role === 'Admin')
+    },
+    isEditorOfOrganization: (state) => (organizationId: string) => {
+      return state.organizationMemberships.some(m => m.organizationId === organizationId && m.role === 'Editor')
+    },
   },
 
   actions: {
@@ -88,20 +116,65 @@ export const useAuthStore = defineStore('auth', {
           throw new Error('Invalid login response')
         }
 
-        // Permitir login a admin, moderator, o staff-user verificado
+        // Permitir login a admin, moderator, staff-user verificado, o org-members
         const isAdminOrModerator = user.userType === 'admin' || user.userType === 'moderator'
         const isVerifiedStaff = user.userType === 'staff-user' && user.isVerified === true
+        const isOrgMember = user.userType === 'org-members'
 
-        if (isAdminOrModerator || isVerifiedStaff) {
+        if (isAdminOrModerator || isVerifiedStaff || isOrgMember) {
           this.user = user
           this.token = token
 
           localStorage.setItem('user', JSON.stringify(user))
           localStorage.setItem('token', token)
 
-          // Redirigir según el tipo de usuario
-          if (user.userType === 'staff-user') {
-            await router.push('/admin/staff/events')
+          // Si es org-members o staff-user, obtener sus membresías de organizaciones
+          if (user.userType === 'org-members' || user.userType === 'staff-user') {
+            try {
+              const memberships = await OrganizationsApi.getMyMemberships()
+              this.organizationMemberships = memberships
+              localStorage.setItem('organizationMemberships', JSON.stringify(memberships))
+            } catch (error) {
+              console.warn('Failed to load organization memberships:', error)
+              this.organizationMemberships = []
+            }
+          }
+
+          // Redirigir según el tipo de usuario y rol de organización
+          if (user.userType === 'org-members') {
+            // Si es Admin de alguna organización, redirigir a organizations dashboard
+            if (this.isOrgAdmin) {
+              await router.push('/admin/organizations')
+            } 
+            // Si es Editor, redirigir a jobs dashboard
+            else if (this.isOrgEditor) {
+              await router.push('/admin/jobs')
+            }
+            // Si es solo Member, redirigir a jobs dashboard (puede ver pero no editar)
+            else if (this.isOrgMember) {
+              await router.push('/admin/jobs')
+            }
+            // Si no tiene organizaciones, redirigir a unauthorized
+            else {
+              throw new Error('You are not a member of any organization.')
+            }
+          } else if (user.userType === 'staff-user') {
+            // Si es Admin de alguna organización, redirigir a organizations dashboard
+            if (this.isOrgAdmin) {
+              await router.push('/admin/organizations')
+            } 
+            // Si es Editor, redirigir a jobs dashboard
+            else if (this.isOrgEditor) {
+              await router.push('/admin/jobs')
+            }
+            // Si es solo Member, redirigir a jobs dashboard
+            else if (this.isOrgMember) {
+              await router.push('/admin/jobs')
+            }
+            // Si no tiene organizaciones, redirigir a staff events (comportamiento anterior)
+            else {
+              await router.push('/admin/staff/events')
+            }
           } else {
             await router.push(this.returnUrl || '/admin')
           }
@@ -135,6 +208,17 @@ export const useAuthStore = defineStore('auth', {
 
         this.user = userToStore
         localStorage.setItem('user', JSON.stringify(userToStore))
+
+        // Si es org-members o staff-user, actualizar membresías de organizaciones
+        if (freshUserData.userType === 'org-members' || freshUserData.userType === 'staff-user') {
+          try {
+            const memberships = await OrganizationsApi.getMyMemberships()
+            this.organizationMemberships = memberships
+            localStorage.setItem('organizationMemberships', JSON.stringify(memberships))
+          } catch (error) {
+            console.warn('Failed to refresh organization memberships:', error)
+          }
+        }
       } catch (error) {
         console.error('Session validation failed, logging out.', error)
       }
@@ -145,8 +229,10 @@ export const useAuthStore = defineStore('auth', {
       this.token = null
       this.returnUrl = null
       this.loginError = null
+      this.organizationMemberships = []
       localStorage.removeItem('user')
       localStorage.removeItem('token')
+      localStorage.removeItem('organizationMemberships')
       router.push('/login')
     },
 
