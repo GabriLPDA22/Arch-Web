@@ -730,6 +730,25 @@ export type OrganizationUpdateDto = {
   websiteUrl?: string
 }
 
+export type OrganizationMemberListDto = {
+  id: string
+  organizationId: string
+  userId: string
+  userName?: string
+  userEmail?: string
+  role: 'Admin' | 'Member' | 'Editor'
+  createdAt: string
+}
+
+export type OrganizationMemberCreateDto = {
+  userId: string
+  role: 'Admin' | 'Member' | 'Editor'
+}
+
+export type OrganizationMemberUpdateDto = {
+  role: 'Admin' | 'Member' | 'Editor'
+}
+
 export const OrganizationsApi = {
   list: () => request<OrganizationListDto[]>(`/api/organizations`),
 
@@ -751,6 +770,27 @@ export const OrganizationsApi = {
 
   remove: (id: string) =>
     request<void>(`/api/organizations/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Organization Members endpoints
+  getMembers: (id: string) =>
+    request<OrganizationMemberListDto[]>(`/api/organizations/${id}/members`),
+
+  addMember: (id: string, data: OrganizationMemberCreateDto) =>
+    request<OrganizationMemberListDto>(`/api/organizations/${id}/members`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateMember: (id: string, memberId: string, data: OrganizationMemberUpdateDto) =>
+    request<OrganizationMemberListDto>(`/api/organizations/${id}/members/${memberId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  removeMember: (id: string, memberId: string) =>
+    request<void>(`/api/organizations/${id}/members/${memberId}`, {
       method: 'DELETE',
     }),
 }
