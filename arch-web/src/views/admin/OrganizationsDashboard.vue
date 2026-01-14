@@ -266,8 +266,8 @@
               </thead>
                <tbody>
                  <tr v-for="member in organizationMembers" :key="member.id">
-                   <td>{{ getMemberName(member) }}</td>
-                   <td>{{ getMemberEmail(member) }}</td>
+                   <td>{{ member.userName }}</td>
+                   <td>{{ member.userEmail }}</td>
                    <td>
                      <span :class="['role-badge', member.role.toLowerCase()]">
                        {{ member.role }}
@@ -467,7 +467,7 @@
                <input
                  type="text"
                  class="form-input"
-                 :value="editingMember ? getMemberName(editingMember) : 'Unknown'"
+                 :value="editingMember?.userName || 'Unknown'"
                  disabled
                />
              </div>
@@ -649,8 +649,6 @@ const fetchMembers = async (organizationId: string) => {
   loadingMembers.value = true
   try {
     const members = await OrganizationsApi.getMembers(organizationId)
-    // Debug: log to see what the backend is actually returning
-    console.log('Members received from backend:', members)
     organizationMembersMap.value[organizationId] = members
   } catch (error: any) {
     console.error('Failed to load members:', error)
@@ -661,17 +659,8 @@ const fetchMembers = async (organizationId: string) => {
   }
 }
 
-
 const getMemberCount = (organizationId: string): number => {
   return organizationMembersMap.value[organizationId]?.length || 0
-}
-
-const getMemberName = (member: OrganizationMemberListDto): string => {
-  return member.userName || member.name || 'Unknown'
-}
-
-const getMemberEmail = (member: OrganizationMemberListDto): string => {
-  return member.userEmail || member.email || 'N/A'
 }
 
 const formatDate = (dateStr: string): string => {
@@ -881,7 +870,7 @@ const handleRemoveMember = async (member: OrganizationMemberListDto) => {
     return
   }
 
-  if (!confirm(`Are you sure you want to remove "${getMemberName(member)}" from the organization?`)) {
+  if (!confirm(`Are you sure you want to remove "${member.userName}" from the organization?`)) {
     return
   }
 

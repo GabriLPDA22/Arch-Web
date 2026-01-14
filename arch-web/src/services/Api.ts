@@ -734,11 +734,8 @@ export type OrganizationMemberListDto = {
   id: string
   organizationId: string
   userId: string
-  userName?: string
-  userEmail?: string
-  // Alternative field names that backend might use
-  name?: string
-  email?: string
+  userName: string
+  userEmail: string
   role: 'Admin' | 'Member' | 'Editor'
   createdAt: string
 }
