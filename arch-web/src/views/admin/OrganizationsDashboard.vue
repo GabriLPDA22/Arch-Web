@@ -637,12 +637,28 @@ const fetchOrganizations = async () => {
   loading.value = true
   try {
     organizations.value = await OrganizationsApi.list()
+    // Cargar miembros de todas las organizaciones
+    await fetchAllMembers()
   } catch (error: any) {
     console.error('Failed to load organizations:', error)
     showToast({ type: 'error', title: 'Error', message: 'Failed to load organizations' })
   } finally {
     loading.value = false
   }
+}
+
+const fetchAllMembers = async () => {
+  // Cargar miembros de todas las organizaciones en paralelo
+  const memberPromises = organizations.value.map(async (org) => {
+    try {
+      const members = await OrganizationsApi.getMembers(org.id)
+      organizationMembersMap.value[org.id] = members
+    } catch (error: any) {
+      console.error(`Failed to load members for organization ${org.id}:`, error)
+      organizationMembersMap.value[org.id] = []
+    }
+  })
+  await Promise.all(memberPromises)
 }
 
 const fetchMembers = async (organizationId: string) => {
