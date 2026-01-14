@@ -122,12 +122,9 @@
         v-for="(event, index) in events"
         :key="event.eventID"
         class="event-card"
-        :class="{ 'is-finished': isEventFinished(event) }"
       >
-        <div v-if="isEventFinished(event)" class="finished-overlay">
-          <span class="finished-text">Event Finished</span>
-        </div>
         <div class="event-image">
+          <span v-if="isEventFinished(event)" class="finished-badge">Finished</span>
           <img
             :src="event.imageUrl || defaultEventImage"
             :alt="event.name"
@@ -615,7 +612,7 @@ const handleExcelImport = async (event: Event) => {
     }) as unknown[]
 
     if (jsonData.length === 0) {
-      alert('El archivo Excel está vacío')
+      alert('The Excel file is empty')
       return
     }
 
@@ -624,7 +621,7 @@ const handleExcelImport = async (event: Event) => {
     const missingColumns = requiredColumns.filter((col) => !(col in firstRow))
 
     if (missingColumns.length > 0) {
-      alert(`Faltan columnas requeridas: ${missingColumns.join(', ')}`)
+      alert(`Missing required columns: ${missingColumns.join(', ')}`)
       return
     }
 
@@ -636,10 +633,15 @@ const handleExcelImport = async (event: Event) => {
       const row = jsonData[i] as Record<string, unknown>
 
       try {
+        // Validate endDate is present (now required)
+        if (!row.endDate) {
+          throw new Error('End date is required')
+        }
+
         const payload: EventCreateDto = {
           name: (row.name?.toString().trim() || '') as string,
           startDate: parseExcelDate(row.startDate),
-          endDate: row.endDate ? parseExcelDate(row.endDate) : undefined,
+          endDate: parseExcelDate(row.endDate),
           address: (row.address?.toString().trim() || '') as string,
           postcode: (row.postcode?.toString().trim() || '') as string,
           description: row.description?.toString().trim() || undefined,
@@ -650,17 +652,17 @@ const handleExcelImport = async (event: Event) => {
           imageUrl: row.imageUrl?.toString().trim() || undefined,
         }
 
-        if (!payload.name || !payload.startDate || !payload.address || !payload.postcode) {
-          throw new Error('Faltan campos obligatorios')
+        if (!payload.name || !payload.startDate || !payload.endDate || !payload.address || !payload.postcode) {
+          throw new Error('Required fields are missing')
         }
 
         await EventApi.create(payload)
         successCount++
       } catch (error: unknown) {
         errorCount++
-        const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-        errors.push(`Fila ${i + 2}: ${errorMessage}`)
-        console.error(`Error en fila ${i + 2}:`, error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        errors.push(`Row ${i + 2}: ${errorMessage}`)
+        console.error(`Error in row ${i + 2}:`, error)
       }
     }
 
@@ -673,9 +675,9 @@ const handleExcelImport = async (event: Event) => {
 
     await loadEvents()
   } catch (error: unknown) {
-    console.error('Error al procesar el Excel:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-    alert(`Error al procesar el archivo: ${errorMessage}`)
+    console.error('Error processing Excel:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    alert(`Error processing file: ${errorMessage}`)
   } finally {
     loading.value = false
     if (input) {
@@ -891,38 +893,20 @@ onMounted(() => {
   height: 180px;
 }
 
-.event-card.is-finished {
-  opacity: 0.7;
-}
-
-.event-card.is-finished .event-image,
-.event-card.is-finished .event-content {
-  filter: grayscale(0.3);
-}
-
-.finished-overlay {
+.finished-badge {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.finished-text {
-  background: rgba(0, 0, 0, 0.8);
+  top: 1rem;
+  left: 1rem;
+  background: rgba(239, 68, 68, 0.9);
+  backdrop-filter: blur(8px);
   color: #ffffff;
-  padding: 0.5rem 1.5rem;
-  border-radius: 20px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.5px;
+  z-index: 5;
 }
 
 .event-image {
@@ -1040,9 +1024,9 @@ onMounted(() => {
 
 .event-title-wrapper {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+  gap: 6px;
   margin-bottom: 0.75rem;
 }
 
@@ -1052,7 +1036,15 @@ onMounted(() => {
   color: #1a202c;
   margin: 0;
   line-height: 1.4;
-  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .event-location {
