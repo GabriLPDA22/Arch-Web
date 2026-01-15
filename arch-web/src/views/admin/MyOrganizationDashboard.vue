@@ -362,7 +362,7 @@ const editMemberForm = reactive<OrganizationMemberUpdateDto>({
 
 // Computed
 const isFormValid = computed(() => {
-  return editForm.name?.trim().length > 0
+  return (editForm.name?.trim()?.length ?? 0) > 0
 })
 
 const isNewMemberFormValid = computed(() => {
