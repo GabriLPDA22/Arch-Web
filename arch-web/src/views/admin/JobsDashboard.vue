@@ -176,6 +176,13 @@
                   />
                 </svg>
               </button>
+              <button class="action-btn edit" @click="openEditModal(job)" title="Edit">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
+                  />
+                </svg>
+              </button>
               <button
                 v-if="job.status === 'draft'"
                 class="action-btn publish"
@@ -294,6 +301,14 @@
             </a>
           </div>
 
+          <div class="detail-section" v-if="selectedJob.imageUrl">
+            <h4>Image</h4>
+            <img :src="selectedJob.imageUrl" :alt="selectedJob.title" class="job-image" />
+            <a :href="selectedJob.imageUrl" target="_blank" rel="noopener noreferrer" class="apply-link">
+              {{ selectedJob.imageUrl }}
+            </a>
+          </div>
+
           <div class="detail-section">
             <h4>Status</h4>
             <span :class="['status-badge', selectedJob.status]">
@@ -332,6 +347,13 @@
         <div class="modal-footer">
           <button class="btn-secondary" @click="closeModals">Close</button>
           <button
+            class="btn-primary"
+            @click="openEditModal(selectedJob!)"
+            :disabled="processing"
+          >
+            Edit Job
+          </button>
+          <button
             v-if="selectedJob?.status === 'draft'"
             class="btn-primary"
             @click="handlePublish(selectedJob!)"
@@ -355,7 +377,7 @@
     <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateModal">
       <div class="modal-content create-modal" @click.stop>
         <div class="modal-header">
-          <h2>Create New Job</h2>
+          <h2>{{ isEditing ? 'Edit Job' : 'Create New Job' }}</h2>
           <button @click="closeCreateModal" class="modal-close">×</button>
         </div>
         <div class="modal-body">
@@ -368,7 +390,7 @@
                 v-model="createForm.organizationId"
                 class="form-select"
                 required
-                :disabled="loadingOrganizations"
+                :disabled="loadingOrganizations || isEditing"
               >
                 <option value="">Select an organization...</option>
                 <option
@@ -500,6 +522,49 @@
               />
               <p class="form-hint">URL where candidates can apply for this job</p>
             </div>
+
+            <div class="form-group">
+              <label>Job Image (optional)</label>
+              <p class="image-hint">Maximum file size: 5MB. Accepted formats: PNG, JPG, GIF</p>
+              <div class="image-upload-wrapper">
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/gif, image/jpg"
+                  class="file-input"
+                  @change="handleImageSelection"
+                />
+                <div v-if="imagePreviewUrl" class="image-preview">
+                  <img :src="imagePreviewUrl" alt="Image preview" />
+                  <button 
+                    type="button" 
+                    class="remove-image-btn"
+                    @click="removeImage"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div v-else class="image-placeholder">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-width="2"/>
+                    <polyline points="17 8 12 3 7 8" stroke-width="2"/>
+                    <line x1="12" y1="3" x2="12" y2="15" stroke-width="2"/>
+                  </svg>
+                  <p>Click to upload image</p>
+                  <span class="file-size-hint">Max 5MB</span>
+                </div>
+              </div>
+              <div v-if="createForm.imageUrl && !imageFile" class="form-group" style="margin-top: 0.5rem;">
+                <label style="font-size: 0.875rem; color: #6b7280;">Or enter image URL:</label>
+                <input
+                  v-model="createForm.imageUrl"
+                  type="url"
+                  class="form-input"
+                  placeholder="https://example.com/image.jpg"
+                  maxlength="2000"
+                  style="margin-top: 0.25rem;"
+                />
+              </div>
+            </div>
           </form>
         </div>
         <div class="modal-footer">
@@ -511,7 +576,7 @@
             @click="handleCreateJob"
             :disabled="creating || !isFormValid"
           >
-            {{ creating ? 'Creating...' : 'Create Job' }}
+            {{ creating ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Job') }}
           </button>
         </div>
       </div>
@@ -521,7 +586,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
-import { JobsApi, OrganizationsApi, type JobListDto, type JobDetailDto, type JobCreateDto, type OrganizationListDto } from '@/services/Api'
+import { JobsApi, OrganizationsApi, type JobListDto, type JobDetailDto, type JobCreateDto, type JobUpdateDto, type OrganizationListDto } from '@/services/Api'
 import { useToast } from '@/composables/useToast'
 
 const { showToast } = useToast()
@@ -540,8 +605,12 @@ const totalCount = ref(0)
 const showDetailModal = ref(false)
 const showCreateModal = ref(false)
 const selectedJob = ref<JobDetailDto | null>(null)
+const editingJob = ref<JobDetailDto | null>(null)
+const isEditing = ref(false)
 const sortBy = ref<'title' | 'company' | 'status' | 'date'>('date')
 const sortDirection = ref<'asc' | 'desc'>('desc')
+const imageFile = ref<File | null>(null)
+const imagePreviewUrl = ref<string | null>(null)
 
 const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'closed' }>({
   organizationId: '',
@@ -552,6 +621,7 @@ const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'cl
   isPaid: false,
   description: '',
   applyUrl: '',
+  imageUrl: '',
   status: 'draft',
   visibility: 'public',
 })
@@ -693,14 +763,58 @@ const closeModals = () => {
 }
 
 const openCreateModal = async () => {
+  isEditing.value = false
+  editingJob.value = null
   showCreateModal.value = true
   if (organizations.value.length === 0) {
     await fetchOrganizations()
   }
 }
 
+const openEditModal = async (job: JobListDto | JobDetailDto) => {
+  isEditing.value = true
+  showDetailModal.value = false
+  
+  try {
+    const detail = await JobsApi.get(job.id)
+    editingJob.value = detail
+    
+    // Cargar datos en el formulario
+    createForm.organizationId = detail.organizationId
+    createForm.title = detail.title
+    createForm.companyName = detail.companyName
+    createForm.locationText = detail.locationText || ''
+    createForm.durationText = detail.durationText
+    createForm.isPaid = detail.isPaid
+    createForm.description = detail.description || ''
+    createForm.applyUrl = detail.applyUrl || ''
+    createForm.imageUrl = detail.imageUrl || ''
+    createForm.status = detail.status
+    createForm.visibility = detail.visibility
+    
+    // Si hay imagen URL, mostrar preview
+    if (detail.imageUrl) {
+      imagePreviewUrl.value = detail.imageUrl
+      imageFile.value = null
+    } else {
+      imagePreviewUrl.value = null
+      imageFile.value = null
+    }
+    
+    showCreateModal.value = true
+    if (organizations.value.length === 0) {
+      await fetchOrganizations()
+    }
+  } catch (error: any) {
+    console.error('Failed to load job details for editing:', error)
+    showToast({ type: 'error', title: 'Error', message: 'Failed to load job details' })
+  }
+}
+
 const closeCreateModal = () => {
   showCreateModal.value = false
+  isEditing.value = false
+  editingJob.value = null
   // Reset form
   createForm.organizationId = ''
   createForm.title = ''
@@ -710,8 +824,73 @@ const closeCreateModal = () => {
   createForm.isPaid = false
   createForm.description = ''
   createForm.applyUrl = ''
+  createForm.imageUrl = ''
   createForm.status = 'draft'
   createForm.visibility = 'public'
+  // Reset image upload
+  imageFile.value = null
+  imagePreviewUrl.value = null
+  const fileInput = document.querySelector('.create-modal .file-input') as HTMLInputElement
+  if (fileInput) {
+    fileInput.value = ''
+  }
+}
+
+const handleImageSelection = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+
+  if (file) {
+    // Validar tamaño del archivo (5MB = 5 * 1024 * 1024 bytes)
+    const maxSizeInBytes = 5 * 1024 * 1024 // 5MB
+    
+    if (file.size > maxSizeInBytes) {
+      const sizeInMB = (file.size / (1024 * 1024)).toFixed(2)
+      showToast({ 
+        type: 'error', 
+        title: 'Image too large', 
+        message: `Image is too large (${sizeInMB}MB). Maximum allowed size is 5MB.` 
+      })
+      target.value = ''
+      imageFile.value = null
+      imagePreviewUrl.value = null
+      return
+    }
+
+    // Validar tipo de archivo
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      showToast({ 
+        type: 'error', 
+        title: 'Invalid format', 
+        message: 'Invalid image format. Please use PNG, JPG or GIF.' 
+      })
+      target.value = ''
+      imageFile.value = null
+      imagePreviewUrl.value = null
+      return
+    }
+
+    // Si todo está bien, procesar la imagen
+    imageFile.value = file
+    imagePreviewUrl.value = URL.createObjectURL(file)
+    // Limpiar el campo de URL manual si hay un archivo
+    createForm.imageUrl = ''
+  } else {
+    imageFile.value = null
+    imagePreviewUrl.value = null
+  }
+}
+
+const removeImage = () => {
+  imageFile.value = null
+  imagePreviewUrl.value = null
+  
+  // Limpiar el input file
+  const fileInput = document.querySelector('.create-modal .file-input') as HTMLInputElement
+  if (fileInput) {
+    fileInput.value = ''
+  }
 }
 
 const handleCreateJob = async () => {
@@ -722,26 +901,59 @@ const handleCreateJob = async () => {
 
   creating.value = true
   try {
-    const jobData: JobCreateDto = {
-      organizationId: createForm.organizationId,
-      title: createForm.title.trim(),
-      companyName: createForm.companyName.trim(),
-      locationText: createForm.locationText.trim(),
-      durationText: createForm.durationText,
-      isPaid: createForm.isPaid,
-      description: createForm.description.trim(),
-      applyUrl: createForm.applyUrl?.trim() || undefined,
-      status: createForm.status,
-      visibility: createForm.visibility,
+    let imageUrl: string | undefined = createForm.imageUrl?.trim() || undefined
+
+    // Si hay un archivo de imagen, subirlo primero
+    if (imageFile.value) {
+      const uploadResult = await JobsApi.uploadImage(imageFile.value)
+      imageUrl = uploadResult.imageUrl
+    } else if (isEditing.value && editingJob.value?.imageUrl && !createForm.imageUrl) {
+      // Si estamos editando y no hay nueva imagen ni URL manual, mantener la existente
+      imageUrl = editingJob.value.imageUrl
     }
 
-    await JobsApi.create(jobData)
-    showToast({ type: 'success', title: 'Success', message: 'Job created successfully' })
+    if (isEditing.value && editingJob.value) {
+      // Actualizar job existente
+      const updateData: JobUpdateDto = {
+        title: createForm.title.trim(),
+        companyName: createForm.companyName.trim(),
+        locationText: createForm.locationText.trim(),
+        durationText: createForm.durationText,
+        isPaid: createForm.isPaid,
+        description: createForm.description.trim(),
+        applyUrl: createForm.applyUrl?.trim() || undefined,
+        imageUrl: imageUrl,
+        status: createForm.status,
+        visibility: createForm.visibility,
+      }
+
+      await JobsApi.update(editingJob.value.id, updateData)
+      showToast({ type: 'success', title: 'Success', message: 'Job updated successfully' })
+    } else {
+      // Crear nuevo job
+      const jobData: JobCreateDto = {
+        organizationId: createForm.organizationId,
+        title: createForm.title.trim(),
+        companyName: createForm.companyName.trim(),
+        locationText: createForm.locationText.trim(),
+        durationText: createForm.durationText,
+        isPaid: createForm.isPaid,
+        description: createForm.description.trim(),
+        applyUrl: createForm.applyUrl?.trim() || undefined,
+        imageUrl: imageUrl,
+        status: createForm.status,
+        visibility: createForm.visibility,
+      }
+
+      await JobsApi.create(jobData)
+      showToast({ type: 'success', title: 'Success', message: 'Job created successfully' })
+    }
+
     closeCreateModal()
     fetchJobs()
   } catch (error: any) {
-    console.error('Failed to create job:', error)
-    showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to create job' })
+    console.error(`Failed to ${isEditing.value ? 'update' : 'create'} job:`, error)
+    showToast({ type: 'error', title: 'Error', message: error.message || `Failed to ${isEditing.value ? 'update' : 'create'} job` })
   } finally {
     creating.value = false
   }
@@ -1435,6 +1647,116 @@ onMounted(() => {
 
 .apply-link:hover {
   text-decoration: underline;
+}
+
+.job-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  object-fit: contain;
+  display: block;
+}
+
+.image-hint {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0.25rem 0 0.5rem 0;
+}
+
+.image-upload-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 0.75rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
+.image-upload-wrapper:hover {
+  border-color: #dbb067;
+  background-color: #fffbf5;
+}
+
+.file-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.image-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  transition: all 0.2s ease;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+}
+
+.remove-image-btn:hover {
+  background: rgba(220, 38, 38, 1);
+  transform: scale(1.1);
+}
+
+.image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #9ca3af;
+  padding: 2rem;
+  text-align: center;
+}
+
+.image-placeholder svg {
+  color: #d1d5db;
+}
+
+.image-placeholder p {
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+}
+
+.file-size-hint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
 }
 
 /* ==================== BUTTONS ==================== */

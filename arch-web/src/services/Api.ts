@@ -563,6 +563,7 @@ export type JobListDto = {
   isPaid: boolean
   description: string
   applyUrl?: string
+  imageUrl?: string
   status: 'draft' | 'published' | 'closed'
   visibility: 'public' | 'private'
   createdAt: string
@@ -584,6 +585,7 @@ export type JobCreateDto = {
   isPaid: boolean
   description: string
   applyUrl?: string
+  imageUrl?: string
   status?: 'draft' | 'published' | 'closed'
   visibility?: 'public' | 'private'
 }
@@ -596,6 +598,7 @@ export type JobUpdateDto = {
   isPaid?: boolean
   description?: string
   applyUrl?: string
+  imageUrl?: string
   status?: 'draft' | 'published' | 'closed'
   visibility?: 'public' | 'private'
 }
@@ -701,6 +704,36 @@ export const JobsApi = {
     request<void>(`/api/jobs/${id}/interest`, {
       method: 'DELETE',
     }),
+
+  uploadImage: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const authStore = useAuthStore()
+    const headers: Record<string, string> = {}
+    if (authStore.isLoggedIn && authStore.token) {
+      headers['Authorization'] = `Bearer ${authStore.token}`
+    }
+
+    return fetch(`${BASE_URL}${normalizePath('/api/jobs/upload-image')}`, {
+      method: 'POST',
+      body: formData,
+      headers,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        const error = {
+          message: data?.message || `Image upload failed with status ${res.status}`,
+          response: {
+            data: data,
+            status: res.status,
+          },
+        }
+        throw error
+      }
+      return res.json() as Promise<{ imageUrl: string }>
+    })
+  },
 }
 
 // ==================== ORGANIZATIONS API ====================
