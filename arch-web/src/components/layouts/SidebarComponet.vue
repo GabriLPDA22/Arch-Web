@@ -56,6 +56,20 @@
           <span class="nav-text">Staff Requests</span>
         </RouterLink>
 
+        <RouterLink
+          v-if="authStore.isAdmin"
+          to="/admin/alumni/verification"
+          class="nav-item"
+          active-class="active"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="nav-icon">
+            <path
+              d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z"
+            />
+          </svg>
+          <span class="nav-text">Alumni Requests</span>
+        </RouterLink>
+
         <!-- ✅ NUEVO: Reports Link -->
         <RouterLink
           v-if="authStore.isAdmin"

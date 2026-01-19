@@ -13,6 +13,7 @@ import UsersDashboard from '@/views/UsersDashboard.vue'
 import StaffRegisterView from '@/views/StaffRegisterView.vue'
 import StaffEventsView from '@/views/staff/StaffEventsView.vue'
 import StaffVerificationView from '@/views/admin/StaffVerificationView.vue'
+import AlumniVerificationView from '@/views/admin/AlumniVerificationView.vue'
 import ReportsDashboard from '@/views/admin/ReportsDashboard.vue' // ✅ NUEVO
 import OrganizationRouter from '@/views/admin/OrganizationRouter.vue' // ✅ NUEVO - Router component
 import JobsRouter from '@/views/admin/JobsRouter.vue' // ✅ NUEVO - Router component
@@ -60,6 +61,13 @@ const router = createRouter({
           path: 'staff/verification',
           name: 'staff-verification',
           component: StaffVerificationView,
+          meta: { requiresAdmin: true },
+        },
+        // Alumni Verification Route
+        {
+          path: 'alumni/verification',
+          name: 'alumni-verification',
+          component: AlumniVerificationView,
           meta: { requiresAdmin: true },
         },
         // ✅ NUEVA RUTA - Reports Dashboard
