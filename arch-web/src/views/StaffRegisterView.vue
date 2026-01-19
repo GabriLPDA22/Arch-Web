@@ -12,7 +12,7 @@
         </div>
 
         <n-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleSubmit">
-          <n-form-item label="Organization Name" path="organizationName" :show-feedback="false">
+          <n-form-item label="Organization Name" path="organizationName">
             <n-input
               v-model:value="form.organizationName"
               placeholder="Enter your organization name"
@@ -22,7 +22,7 @@
             />
           </n-form-item>
 
-          <n-form-item label="Email" path="email" :show-feedback="false">
+          <n-form-item label="Email" path="email">
             <n-input
               v-model:value="form.email"
               type="text"
@@ -32,12 +32,9 @@
               :input-props="{ type: 'email', autocomplete: 'email' }"
               class="custom-input"
             />
-            <template #feedback>
-              <span class="email-hint">Only Oxford University domains (@ox.ac.uk) are allowed</span>
-            </template>
           </n-form-item>
 
-          <n-form-item label="Password" path="password" :show-feedback="false">
+          <n-form-item label="Password" path="password">
             <n-input
               v-model:value="form.password"
               type="password"
@@ -262,12 +259,6 @@ const handleSubmit = async () => {
 
 :deep(.n-input__input-el::placeholder) {
   color: #94a3b8;
-}
-
-.email-hint {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-top: 0.25rem;
 }
 
 /* Botón personalizado con colores del proyecto */
