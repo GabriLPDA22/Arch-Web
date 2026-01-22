@@ -535,7 +535,7 @@ const form = reactive({
   name: '',
   email: '',
   password: '',
-  userType: 'user' as 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner',
+  userType: 'user' as 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner' | 'org-members',
 })
 
 const oxfordSubtype = ref<UserRole>('current_student')
@@ -590,7 +590,7 @@ const getEmailPlaceholder = () => {
   }
 }
 
-const handleUserTypeChange = (newType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner') => {
+const handleUserTypeChange = (newType: 'admin' | 'user' | 'staff-user' | 'moderator' | 'scanner' | 'org-members') => {
   if (!canChangeRole.value) {
     form.userType = newType
   }
