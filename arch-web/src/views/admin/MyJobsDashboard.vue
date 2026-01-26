@@ -82,10 +82,20 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading jobs...</p>
+    <!-- Skeleton loading state -->
+    <div v-if="loading">
+      <TableSkeleton
+        :rows="6"
+        :columns="[
+          { type: 'text', size: 'large' },
+          { type: 'text', size: 'medium' },
+          { type: 'text', size: 'medium' },
+          { type: 'badge' },
+          { type: 'badge' },
+          { type: 'text', size: 'small' },
+          { type: 'actions', count: 3 }
+        ]"
+      />
     </div>
 
     <!-- Empty State -->
@@ -309,10 +319,15 @@
 
           <div class="detail-section" v-if="selectedJob.imageUrl">
             <h4>Image</h4>
-            <img :src="selectedJob.imageUrl" :alt="selectedJob.title" class="job-image" />
-            <a :href="selectedJob.imageUrl" target="_blank" rel="noopener noreferrer" class="apply-link">
-              {{ selectedJob.imageUrl }}
-            </a>
+            <ImageWithSkeleton
+              :src="selectedJob.imageUrl"
+              :alt="selectedJob.title"
+              width="100%"
+              :height="200"
+              :border-radius="12"
+              object-fit="contain"
+              image-class="job-image"
+            />
           </div>
 
           <div class="detail-section">
@@ -327,7 +342,7 @@
 
           <div class="detail-section">
             <h4>Created By</h4>
-            <p>{{ selectedJob.createdByName || 'Unknown' }}</p>
+            <p>{{ selectedJob.createdByName || 'You' }}</p>
           </div>
 
           <div class="detail-section">
@@ -570,6 +585,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
 import { JobsApi, type JobListDto, type JobDetailDto, type JobCreateDto, type JobUpdateDto } from '@/services/Api'
+import TableSkeleton from '@/components/ui/TableSkeleton.vue'
+import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth.store'
 
@@ -594,6 +611,7 @@ const sortBy = ref<'title' | 'company' | 'status' | 'date'>('date')
 const sortDirection = ref<'asc' | 'desc'>('desc')
 const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
+const imageLoaded = ref(false)
 
 const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'closed' }>({
   organizationId: '',
@@ -727,6 +745,7 @@ const formatDate = (dateStr: string): string => {
 }
 
 const openDetailModal = async (job: JobListDto) => {
+  imageLoaded.value = false // Reset image loading state
   try {
     const detail = await JobsApi.get(job.id)
     selectedJob.value = detail
@@ -1638,6 +1657,11 @@ onMounted(() => {
 
 .apply-link:hover {
   text-decoration: underline;
+}
+
+.job-image-container {
+  position: relative;
+  min-height: 200px;
 }
 
 .job-image {

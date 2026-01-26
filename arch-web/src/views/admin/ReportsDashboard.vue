@@ -93,10 +93,20 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading reports...</p>
+    <!-- Skeleton loading state -->
+    <div v-if="loading">
+      <TableSkeleton
+        :rows="8"
+        :columns="[
+          { type: 'badge' },
+          { type: 'avatar-text', hasSubtext: true },
+          { type: 'avatar-text', hasSubtext: true },
+          { type: 'text', size: 'medium' },
+          { type: 'text', size: 'small' },
+          { type: 'badge' },
+          { type: 'actions', count: 2 }
+        ]"
+      />
     </div>
 
     <!-- Empty State -->
@@ -181,11 +191,14 @@
             <td>
               <div class="user-cell">
                 <div class="user-avatar reported">
-                  <img
+                  <ImageWithSkeleton
                     v-if="report.reportedUserProfilePicture"
                     :src="report.reportedUserProfilePicture"
                     alt="Reported user"
-                    class="user-avatar-img"
+                    :width="32"
+                    :height="32"
+                    :border-radius="16"
+                    image-class="user-avatar-img"
                   />
                   <span v-else>
                     {{
@@ -304,11 +317,14 @@
             <h4>Reported User</h4>
             <div class="user-cell">
               <div class="user-avatar reported">
-                <img
+                <ImageWithSkeleton
                   v-if="selectedReport.reportedUserProfilePicture"
                   :src="selectedReport.reportedUserProfilePicture"
                   alt="Reported user"
-                  class="user-avatar-img"
+                  :width="40"
+                  :height="40"
+                  :border-radius="20"
+                  image-class="user-avatar-img"
                 />
                 <span v-else>
                   {{ selectedReport.reportedUserName.charAt(0) }}
@@ -343,12 +359,15 @@
               >
                 <strong>Photos:</strong>
                 <div class="photos-grid">
-                  <img
+                  <ImageWithSkeleton
                     v-for="(photo, index) in selectedReport.reportedUserPhotos"
                     :key="index"
                     :src="photo"
                     alt="Profile photo"
-                    class="profile-photo"
+                    :width="80"
+                    :height="80"
+                    :border-radius="8"
+                    image-class="profile-photo"
                     @click="openPhotoModal(photo)"
                   />
                 </div>
@@ -365,11 +384,14 @@
             <div class="reported-message-card">
               <div class="reported-message-header">
                 <div class="user-avatar">
-                  <img
+                  <ImageWithSkeleton
                     v-if="selectedReport.reportedMessage.senderProfilePicture"
                     :src="selectedReport.reportedMessage.senderProfilePicture"
                     alt="Sender"
-                    class="user-avatar-img"
+                    :width="32"
+                    :height="32"
+                    :border-radius="16"
+                    image-class="user-avatar-img"
                   />
                   <span v-else>
                     {{ selectedReport.reportedMessage.senderName.charAt(0) }}
@@ -427,12 +449,15 @@
           <div class="detail-section" v-if="selectedReport.evidenceUrls && selectedReport.evidenceUrls.length > 0">
             <h4>Evidence</h4>
             <div class="evidence-grid">
-              <img
+              <ImageWithSkeleton
                 v-for="(url, index) in selectedReport.evidenceUrls"
                 :key="index"
                 :src="url"
                 alt="Evidence"
-                class="evidence-photo"
+                :width="100"
+                :height="100"
+                :border-radius="8"
+                image-class="evidence-photo"
                 @click="openPhotoModal(url)"
               />
             </div>
@@ -579,6 +604,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, computed, watch } from 'vue'
 import { ReportsApi, type ReportListDto, type ReportDetailDto, type ReportStatsDto } from '@/services/Api'
+import TableSkeleton from '@/components/ui/TableSkeleton.vue'
+import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
 
 // State
 const loading = ref(true)

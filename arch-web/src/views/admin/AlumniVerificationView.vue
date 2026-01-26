@@ -66,9 +66,24 @@
 
     <!-- Main Content -->
     <div class="panel-container">
-      <n-spin :show="isLoading">
+      <!-- Skeleton loading state -->
+      <div v-if="isLoading">
+        <TableSkeleton
+          :rows="6"
+          :columns="[
+            { type: 'avatar-text', hasSubtext: true },
+            { type: 'text', size: 'medium' },
+            { type: 'text', size: 'small' },
+            { type: 'badge' },
+            { type: 'text', size: 'small' },
+            { type: 'actions', count: 2 }
+          ]"
+        />
+      </div>
+
+      <n-spin v-else :show="false">
         <!-- Empty State -->
-        <div v-if="!isLoading && verifications.length === 0" class="empty-state">
+        <div v-if="verifications.length === 0" class="empty-state">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M9,12L11,14L15,10M21,12C21,16.97 16.97,21 12,21C7.03,21 3,16.97 3,12C3,7.03 7.03,3 12,3C16.97,3 21,7.03 21,12Z" />
           </svg>
@@ -387,6 +402,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { NButton, NBadge, NTag, NSpin, useMessage, useDialog } from 'naive-ui'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
+import TableSkeleton from '@/components/ui/TableSkeleton.vue'
 import {
   AlumniVerificationApi,
   formatDate,

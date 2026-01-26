@@ -81,10 +81,19 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading organizations...</p>
+    <!-- Skeleton loading state -->
+    <div v-if="loading">
+      <TableSkeleton
+        :rows="8"
+        :columns="[
+          { type: 'text', size: 'large' },
+          { type: 'image', size: 'medium' },
+          { type: 'link' },
+          { type: 'text', size: 'small' },
+          { type: 'text', size: 'small' },
+          { type: 'actions', count: 3 }
+        ]"
+      />
     </div>
 
     <!-- Organizations Table -->
@@ -140,11 +149,14 @@
               </div>
             </td>
             <td>
-              <img
+              <ImageWithSkeleton
                 v-if="org.logoUrl"
                 :src="org.logoUrl"
                 :alt="org.name"
-                class="org-logo"
+                :width="40"
+                :height="40"
+                :border-radius="8"
+                image-class="org-logo"
               />
               <span v-else class="no-logo">No logo</span>
             </td>
@@ -208,7 +220,14 @@
 
           <div class="detail-section" v-if="selectedOrganization.logoUrl">
             <h4>Logo</h4>
-            <img :src="selectedOrganization.logoUrl" :alt="selectedOrganization.name" class="detail-logo" />
+            <ImageWithSkeleton
+              :src="selectedOrganization.logoUrl"
+              :alt="selectedOrganization.name"
+              :width="120"
+              :height="120"
+              :border-radius="12"
+              image-class="detail-logo"
+            />
           </div>
 
           <div class="detail-section" v-if="selectedOrganization.websiteUrl">
@@ -503,6 +522,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
+import TableSkeleton from '@/components/ui/TableSkeleton.vue'
+import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
+import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
 import {
   OrganizationsApi,
   type OrganizationListDto,
@@ -535,6 +557,7 @@ const addingMember = ref(false)
 const updatingMember = ref(false)
 const sortBy = ref<'name' | 'date'>('date')
 const sortDirection = ref<'asc' | 'desc'>('desc')
+const logoLoaded = ref(false)
 
 const orgForm = reactive<OrganizationCreateDto>({
   name: '',
@@ -690,6 +713,7 @@ const formatDate = (dateStr: string): string => {
 }
 
 const openDetailModal = async (org: OrganizationListDto) => {
+  logoLoaded.value = false // Reset logo loading state
   try {
     const detail = await OrganizationsApi.get(org.id)
     selectedOrganization.value = detail
@@ -1362,6 +1386,12 @@ onMounted(() => {
 .detail-section p {
   margin: 0;
   color: #1f2937;
+}
+
+.logo-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
 }
 
 .detail-logo {

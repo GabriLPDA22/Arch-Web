@@ -15,10 +15,33 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading organization...</p>
+    <!-- Skeleton loading state -->
+    <div v-if="loading" class="org-details-container">
+      <div class="org-info-card">
+        <SkeletonLoader width="200px" height="24px" :border-radius="6" />
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+          <SkeletonLoader variant="image" width="80px" height="80px" />
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
+            <SkeletonLoader width="60%" height="20px" />
+            <SkeletonLoader width="40%" height="16px" />
+            <SkeletonLoader width="50%" height="16px" />
+          </div>
+        </div>
+      </div>
+      <div class="members-card" style="margin-top: 1.5rem;">
+        <SkeletonLoader width="150px" height="24px" :border-radius="6" />
+        <TableSkeleton
+          :rows="4"
+          :columns="[
+            { type: 'text', size: 'large' },
+            { type: 'text', size: 'medium' },
+            { type: 'badge' },
+            { type: 'text', size: 'small' },
+            { type: 'actions', count: 2 }
+          ]"
+          style="margin-top: 1rem;"
+        />
+      </div>
     </div>
 
     <!-- Organization Details -->
@@ -42,7 +65,14 @@
           </div>
           <div class="info-row" v-if="organization.logoUrl">
             <label>Logo</label>
-            <img :src="organization.logoUrl" :alt="organization.name" class="org-logo-display" />
+            <ImageWithSkeleton
+              :src="organization.logoUrl"
+              :alt="organization.name"
+              :width="80"
+              :height="80"
+              :border-radius="12"
+              image-class="org-logo-display"
+            />
           </div>
           <div class="info-row" v-if="organization.websiteUrl">
             <label>Website</label>
@@ -311,6 +341,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
+import TableSkeleton from '@/components/ui/TableSkeleton.vue'
+import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
+import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
 import {
   OrganizationsApi,
   type OrganizationDetailDto,

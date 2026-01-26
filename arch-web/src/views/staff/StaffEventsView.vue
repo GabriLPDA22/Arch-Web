@@ -92,9 +92,9 @@
       </div>
     </div>
 
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading events...</p>
+    <!-- Skeleton loading state -->
+    <div v-if="loading" class="events-container" :class="viewMode">
+      <EventCardSkeleton v-for="i in 8" :key="i" :view-mode="viewMode" />
     </div>
 
     <div v-else-if="!loading && events.length === 0" class="empty-state">
@@ -312,6 +312,7 @@ import { EventApi, type EventListDto, type EventCreateDto, type EventDetailDto }
 import EventForm from '@/components/forms/EventForm.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
 import AlertMessage from '@/components/common/AlertMessage.vue'
+import EventCardSkeleton from '@/components/ui/EventCardSkeleton.vue'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
 import { successMessages, handleApiError } from '@/utils/validators'
 
@@ -352,9 +353,24 @@ const formatDate = (dateString: string) => {
   })
 }
 
+/**
+ * Determines if an event has finished.
+ * Uses UK timezone (Europe/London) for comparison since all events are UK-based.
+ */
 const isEventFinished = (event: EventListDto) => {
   if (!event.endDate) return false
-  return new Date(event.endDate) < new Date()
+  
+  // Parse the event end date (stored in ISO format / UTC)
+  const eventEndDate = new Date(event.endDate)
+  
+  // Get current time in UK timezone
+  const nowInUK = new Date(new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' }))
+  
+  // Convert event end date to UK timezone for comparison
+  const eventEndInUK = new Date(eventEndDate.toLocaleString('en-GB', { timeZone: 'Europe/London' }))
+  eventEndInUK.setHours(23, 59, 59, 999)
+  
+  return nowInUK > eventEndInUK
 }
 
 const loadEvents = async () => {

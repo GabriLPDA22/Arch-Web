@@ -28,7 +28,20 @@
     </div>
 
     <div class="panel-container">
-      <n-spin :show="isLoading">
+      <!-- Skeleton loading state -->
+      <div v-if="isLoading" class="requests-grid">
+        <CardSkeleton
+          v-for="i in 6"
+          :key="i"
+          variant="horizontal"
+          avatar-size="medium"
+          :show-badges="true"
+          :badge-count="1"
+          :action-count="2"
+        />
+      </div>
+
+      <n-spin v-else :show="false">
         <div v-if="pendingStaff.length === 0" class="empty-state">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M9,12L11,14L15,10M21,12C21,16.97 16.97,21 12,21C7.03,21 3,16.97 3,12C3,7.03 7.03,3 12,3C16.97,3 21,7.03 21,12Z" />
@@ -100,6 +113,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { NCard, NButton, NBadge, NTag, NSpin, useMessage, useDialog } from 'naive-ui'
 import { StaffApi, type PendingStaffUser } from '@/services/StaffService'
+import CardSkeleton from '@/components/ui/CardSkeleton.vue'
 
 const message = useMessage()
 const dialog = useDialog()

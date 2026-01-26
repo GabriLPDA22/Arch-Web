@@ -246,9 +246,19 @@
     </div>
 
 
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading users...</p>
+    <!-- Skeleton loading state -->
+    <div v-if="loading">
+      <!-- Table Skeleton -->
+      <TableSkeleton
+        :rows="10"
+        :columns="[
+          { type: 'text', size: 'large' },
+          { type: 'text', size: 'medium' },
+          { type: 'badge' },
+          { type: 'badge' },
+          { type: 'actions', count: 2 }
+        ]"
+      />
     </div>
 
     <div v-else-if="paginatedUsers.length === 0" class="empty-state">
@@ -633,6 +643,7 @@
 import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
 import { UserApi, type UserListDto, type UserRelatedDataDto } from '@/services/Api'
 import UserForm from '@/components/forms/UserForm.vue'
+import TableSkeleton from '@/components/ui/TableSkeleton.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { handleApiError } from '@/utils/validators'
 

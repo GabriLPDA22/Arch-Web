@@ -158,9 +158,9 @@
       </div>
     </div>
 
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading events...</p>
+    <!-- Skeleton loading state -->
+    <div v-if="loading" class="events-container" :class="viewMode">
+      <EventCardSkeleton v-for="i in pageSize" :key="i" :view-mode="viewMode" />
     </div>
 
     <div v-else-if="!loading && events.length === 0" class="empty-state">
@@ -421,6 +421,7 @@ import EventForm from '@/components/forms/EventForm.vue'
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
 import AlertMessage from '@/components/common/AlertMessage.vue'
+import EventCardSkeleton from '@/components/ui/EventCardSkeleton.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import defaultEventImage from '@/assets/images/default_event_image.jpg'
 import { successMessages, handleApiError } from '@/utils/validators'
@@ -473,13 +474,27 @@ const categoryFilters = computed(() =>
   filters.value.filter((f) => !['all', 'active', 'finished'].includes(f.id)),
 )
 
+/**
+ * Determines if an event has finished.
+ * Uses UK timezone (Europe/London) for comparison since all events are UK-based.
+ * An event is considered finished if the current UK time is past the event's end date/time.
+ */
 const isEventFinished = (event: EventListDto): boolean => {
   const eventEndDateString = event.endDate || event.startDate
   if (!eventEndDateString) return false
+  
+  // Parse the event end date (stored in ISO format / UTC)
   const eventEndDate = new Date(eventEndDateString)
-  const now = new Date()
-  eventEndDate.setHours(23, 59, 59, 999)
-  return now > eventEndDate
+  
+  // Get current time in UK timezone
+  const nowInUK = new Date(new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' }))
+  
+  // For the comparison, we consider the event finished after 23:59:59 UK time on the end date
+  // First, convert the event end date to UK timezone for accurate day comparison
+  const eventEndInUK = new Date(eventEndDate.toLocaleString('en-GB', { timeZone: 'Europe/London' }))
+  eventEndInUK.setHours(23, 59, 59, 999)
+  
+  return nowInUK > eventEndInUK
 }
 
 const fetchEvents = async () => {
@@ -526,7 +541,6 @@ const fetchEvents = async () => {
     // Es un filtro de categoría (preferenceId)
     params.preferenceId = filter
     // En producción, también excluir eventos terminados cuando se filtra por categoría
-    // Esto asegura que la paginación funcione correctamente
     if (isProduction) {
       params.status = 'active'
     }
@@ -534,7 +548,6 @@ const fetchEvents = async () => {
 
   try {
     const pagedResult = await EventApi.listForAdmin(params)
-    // El backend ya filtró los eventos terminados en producción, no necesitamos filtrar en el cliente
     events.value = pagedResult.items || []
     totalPages.value = pagedResult.totalPages || 1
   } catch (err: unknown) {
