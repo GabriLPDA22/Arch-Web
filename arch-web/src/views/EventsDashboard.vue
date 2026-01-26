@@ -7,6 +7,14 @@
           <p class="page-subtitle">Manage and organize all your events</p>
         </div>
         <div class="header-buttons">
+          <button class="download-template-btn" @click="downloadExcelTemplate">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z"
+              />
+            </svg>
+            Download Template
+          </button>
           <label class="import-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -739,12 +747,17 @@ const handleExcelImport = async (event: Event) => {
 
   try {
     const data = await file.arrayBuffer()
-    const workbook = XLSX.read(data, { cellDates: true, cellNF: true })
+    const workbook = XLSX.read(data, { 
+      cellDates: true, 
+      cellNF: false,
+      type: 'array',
+    })
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
     const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-      raw: false,
+      raw: true, // Keep raw values to preserve Date objects
       defval: null,
+      dateNF: 'yyyy-mm-dd hh:mm:ss',
     }) as unknown[]
 
     if (jsonData.length === 0) {
@@ -774,20 +787,55 @@ const handleExcelImport = async (event: Event) => {
           throw new Error('End date is required')
         }
 
+        // Helper function to convert empty strings to undefined
+        const toOptionalString = (value: unknown): string | undefined => {
+          const str = value?.toString().trim()
+          return str && str.length > 0 ? str : undefined
+        }
+
+        // Helper function to parse optional number
+        const toOptionalNumber = (value: unknown): number | undefined => {
+          if (value === null || value === undefined || value === '') return undefined
+          const num = typeof value === 'number' ? value : parseFloat(value.toString())
+          return !isNaN(num) ? num : undefined
+        }
+
+        // Build payload, only including defined values
         const payload: EventCreateDto = {
           name: (row.name?.toString().trim() || '') as string,
           startDate: parseExcelDate(row.startDate),
           endDate: parseExcelDate(row.endDate),
           address: (row.address?.toString().trim() || '') as string,
           postcode: (row.postcode?.toString().trim() || '') as string,
-          description: row.description?.toString().trim() || undefined,
-          capacity: row.capacity ? parseInt(row.capacity.toString()) : undefined,
-          price: row.price ? parseFloat(row.price.toString()) : undefined,
-          organizer: row.organizer?.toString().trim() || undefined,
-          externalUrl: row.externalUrl?.toString().trim() || undefined,
-          preferenceId: row.preferenceId?.toString().trim() || undefined,
-          imageUrl: row.imageUrl?.toString().trim() || undefined,
         }
+
+        // Add optional fields only if they have values
+        const description = toOptionalString(row.description)
+        if (description !== undefined) {
+          payload.description = description
+        }
+
+        const capacity = toOptionalNumber(row.capacity)
+        if (capacity !== undefined) {
+          payload.capacity = capacity
+        }
+
+        const price = toOptionalNumber(row.price)
+        if (price !== undefined) {
+          payload.price = price
+        }
+
+        const organizer = toOptionalString(row.organizer)
+        if (organizer !== undefined) {
+          payload.organizer = organizer
+        }
+
+        const externalUrl = toOptionalString(row.externalUrl)
+        if (externalUrl !== undefined) {
+          payload.externalUrl = externalUrl
+        }
+
+        // preferenceId is not included - backend will assign "General" by default
 
         if (!payload.name || !payload.startDate || !payload.endDate || !payload.address || !payload.postcode) {
           throw new Error('Required fields are missing')
@@ -797,7 +845,23 @@ const handleExcelImport = async (event: Event) => {
         successCount++
       } catch (error: unknown) {
         errorCount++
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        let errorMessage = 'Unknown error'
+        
+        if (error instanceof Error) {
+          errorMessage = error.message
+        } else if (error && typeof error === 'object' && 'response' in error) {
+          // Handle API error response
+          const apiError = error as { response?: { data?: { errors?: Record<string, string[]> } } }
+          if (apiError.response?.data?.errors) {
+            const validationErrors = Object.entries(apiError.response.data.errors)
+              .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+              .join('; ')
+            errorMessage = `Validation errors: ${validationErrors}`
+          } else if (apiError.response?.data && typeof apiError.response.data === 'object' && 'title' in apiError.response.data) {
+            errorMessage = (apiError.response.data as { title?: string }).title || errorMessage
+          }
+        }
+        
         errors.push(`Row ${i + 2}: ${errorMessage}`)
         console.error(`Error in row ${i + 2}:`, error)
       }
@@ -822,26 +886,132 @@ const handleExcelImport = async (event: Event) => {
 }
 
 const parseExcelDate = (value: unknown): string => {
-  if (!value) throw new Error('Empty date')
+  if (!value && value !== 0) throw new Error('Empty date')
 
+  // If it's already a Date object
   if (value instanceof Date) {
+    if (isNaN(value.getTime())) {
+      throw new Error('Invalid date')
+    }
     return value.toISOString()
   }
 
+  // If it's a string, try to parse it
   if (typeof value === 'string') {
-    const date = new Date(value)
+    const trimmed = value.trim()
+    if (!trimmed) throw new Error('Empty date string')
+    
+    // Try ISO format first
+    let date = new Date(trimmed)
     if (!isNaN(date.getTime())) {
       return date.toISOString()
     }
+    
+    // Try common date formats
+    // Format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}):(\d{2}))?/)
+    if (isoMatch) {
+      const [, year, month, day, hour = '00', minute = '00', second = '00'] = isoMatch
+      date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`)
+      if (!isNaN(date.getTime())) {
+        return date.toISOString()
+      }
+    }
+    
+    // Try DD/MM/YYYY or MM/DD/YYYY format
+    const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/)
+    if (slashMatch) {
+      const [, part1, part2, year, hour = '00', minute = '00', second = '00'] = slashMatch
+      // Try both DD/MM/YYYY and MM/DD/YYYY
+      date = new Date(`${year}-${part2}-${part1}T${hour}:${minute}:${second}`)
+      if (isNaN(date.getTime())) {
+        date = new Date(`${year}-${part1}-${part2}T${hour}:${minute}:${second}`)
+      }
+      if (!isNaN(date.getTime())) {
+        return date.toISOString()
+      }
+    }
+    
+    throw new Error(`Invalid date format: ${trimmed}`)
   }
 
+  // If it's a number, treat it as Excel serial date
   if (typeof value === 'number') {
+    // Excel epoch is December 30, 1899
     const excelEpoch = new Date(1899, 11, 30)
     const date = new Date(excelEpoch.getTime() + value * 86400000)
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid Excel date number')
+    }
     return date.toISOString()
   }
 
-  throw new Error('Invalid date format')
+  throw new Error(`Invalid date format: ${typeof value}`)
+}
+
+const downloadExcelTemplate = () => {
+  // Define the template data with headers and example row
+  // Using Date objects for proper Excel date formatting
+  const exampleStartDate = new Date('2024-01-15T10:00:00')
+  const exampleEndDate = new Date('2024-01-15T18:00:00')
+  
+  const templateData = [
+    {
+      name: 'Event Name',
+      startDate: exampleStartDate,
+      endDate: exampleEndDate,
+      address: '123 Main Street',
+      postcode: 'SW1A 1AA',
+      description: '',
+      capacity: '',
+      price: '',
+      organizer: '',
+      externalUrl: '',
+    },
+  ]
+
+  // Create a new workbook
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.json_to_sheet(templateData, {
+    cellDates: true,
+    dateNF: 'yyyy-mm-dd hh:mm:ss',
+  })
+
+  // Set column widths for better readability
+  const colWidths = [
+    { wch: 25 }, // name
+    { wch: 20 }, // startDate
+    { wch: 20 }, // endDate
+    { wch: 30 }, // address
+    { wch: 15 }, // postcode
+    { wch: 40 }, // description
+    { wch: 10 }, // capacity
+    { wch: 10 }, // price
+    { wch: 25 }, // organizer
+    { wch: 30 }, // externalUrl
+  ]
+  ws['!cols'] = colWidths
+
+  // Format date columns
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1')
+  for (let row = 1; row <= range.e.r; row++) {
+    // Column B (startDate) and C (endDate) - 0-indexed
+    const startDateCell = XLSX.utils.encode_cell({ r: row, c: 1 })
+    const endDateCell = XLSX.utils.encode_cell({ r: row, c: 2 })
+    
+    if (ws[startDateCell]) {
+      ws[startDateCell].z = 'yyyy-mm-dd hh:mm:ss'
+    }
+    if (ws[endDateCell]) {
+      ws[endDateCell].z = 'yyyy-mm-dd hh:mm:ss'
+    }
+  }
+
+  // Add the worksheet to the workbook
+  XLSX.utils.book_append_sheet(wb, ws, 'Events Template')
+
+  // Generate Excel file and download
+  XLSX.writeFile(wb, 'events_template.xlsx')
 }
 
 onMounted(() => {
@@ -900,6 +1070,30 @@ onMounted(() => {
   display: flex;
   gap: 1rem;
   align-items: center;
+}
+
+.download-template-btn {
+  background: #ffffff;
+  color: #1a202c;
+  border: 1px solid #e5e7eb;
+  padding: 1rem 1.75rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.download-template-btn:hover {
+  background: #f9fafb;
+  border-color: #0d2954;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .import-btn {
@@ -1586,6 +1780,7 @@ onMounted(() => {
     flex-direction: column;
   }
 
+  .download-template-btn,
   .import-btn,
   .create-btn {
     width: 100%;
