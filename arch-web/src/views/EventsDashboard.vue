@@ -501,26 +501,41 @@ const fetchEvents = async () => {
   }
 
   const filter = activeFilterId.value
+  
   // En producción, si el filtro es "finished", cambiarlo a "all"
   if (isProduction && filter === 'finished') {
     activeFilterId.value = 'all'
-    // No establecer params.status, así se muestran todos los eventos y luego los filtramos
-  } else if (filter === 'active' || filter === 'finished') {
-    params.status = filter
+  }
+  
+  // Determinar el status a enviar al backend
+  if (filter === 'active') {
+    params.status = 'active'
+  } else if (filter === 'finished') {
+    // Solo permitir "finished" en desarrollo
+    if (!isProduction) {
+      params.status = 'finished'
+    }
+  } else if (filter === 'all') {
+    // En producción, cuando es "all", enviar "active" para excluir finished en el backend
+    // Esto asegura que la paginación funcione correctamente
+    if (isProduction) {
+      params.status = 'active'
+    }
+    // En desarrollo, no enviamos status para obtener todos los eventos
   } else if (filter && filter !== 'all') {
+    // Es un filtro de categoría (preferenceId)
     params.preferenceId = filter
+    // En producción, también excluir eventos terminados cuando se filtra por categoría
+    // Esto asegura que la paginación funcione correctamente
+    if (isProduction) {
+      params.status = 'active'
+    }
   }
 
   try {
     const pagedResult = await EventApi.listForAdmin(params)
-    let fetchedEvents = pagedResult.items || []
-    
-    // En producción, filtrar eventos terminados
-    if (isProduction) {
-      fetchedEvents = fetchedEvents.filter((event) => !isEventFinished(event))
-    }
-    
-    events.value = fetchedEvents
+    // El backend ya filtró los eventos terminados en producción, no necesitamos filtrar en el cliente
+    events.value = pagedResult.items || []
     totalPages.value = pagedResult.totalPages || 1
   } catch (err: unknown) {
     console.error('Failed to load events:', err)
