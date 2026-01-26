@@ -804,7 +804,7 @@ const fetchJobs = async () => {
     jobs.value = response.items
     totalPages.value = response.totalPages
     totalCount.value = response.totalCount
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to load jobs:', error)
     showToast({ type: 'error', title: 'Error', message: 'Failed to load jobs' })
   } finally {
@@ -816,7 +816,7 @@ const fetchOrganizations = async () => {
   loadingOrganizations.value = true
   try {
     organizations.value = await OrganizationsApi.list()
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to load organizations:', error)
     showToast({ type: 'error', title: 'Error', message: 'Failed to load organizations' })
   } finally {
@@ -853,7 +853,7 @@ const openDetailModal = async (job: JobListDto) => {
     const detail = await JobsApi.get(job.id)
     selectedJob.value = detail
     showDetailModal.value = true
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to load job details:', error)
     selectedJob.value = job as unknown as JobDetailDto
     showDetailModal.value = true
@@ -882,11 +882,11 @@ const openCandidatesModal = async (jobId: string) => {
       try {
         const profile = await CandidateProfilesApi.getByUserId(candidate.candidateUserId)
         candidateProfiles.value[candidate.candidateUserId] = profile
-      } catch (e) {
+      } catch {
         console.warn(`Could not load profile for ${candidate.candidateUserId}`)
       }
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to load candidates:', error)
     showToast({ type: 'error', title: 'Error', message: 'Failed to load candidates' })
   } finally {
@@ -943,7 +943,7 @@ const openEditModal = async (job: JobListDto | JobDetailDto) => {
     if (organizations.value.length === 0) {
       await fetchOrganizations()
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to load job details for editing:', error)
     showToast({ type: 'error', title: 'Error', message: 'Failed to load job details' })
   }
@@ -1089,9 +1089,9 @@ const handleCreateJob = async () => {
 
     closeCreateModal()
     fetchJobs()
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Failed to ${isEditing.value ? 'update' : 'create'} job:`, error)
-    showToast({ type: 'error', title: 'Error', message: error.message || `Failed to ${isEditing.value ? 'update' : 'create'} job` })
+    showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || `Failed to ${isEditing.value ? 'update' : 'create'} job` })
   } finally {
     creating.value = false
   }
@@ -1108,9 +1108,9 @@ const handlePublish = async (job: JobListDto | JobDetailDto) => {
     showToast({ type: 'success', title: 'Success', message: 'Job published successfully' })
     closeModals()
     fetchJobs()
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to publish job:', error)
-    showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to publish job' })
+    showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || 'Failed to publish job' })
   } finally {
     processing.value = false
   }
@@ -1127,9 +1127,9 @@ const handleClose = async (job: JobListDto | JobDetailDto) => {
     showToast({ type: 'success', title: 'Success', message: 'Job closed successfully' })
     closeModals()
     fetchJobs()
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to close job:', error)
-    showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to close job' })
+    showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || 'Failed to close job' })
   } finally {
     processing.value = false
   }
@@ -1145,9 +1145,9 @@ const handleDelete = async (job: JobListDto) => {
     await JobsApi.remove(job.id)
     showToast({ type: 'success', title: 'Success', message: 'Job deleted successfully' })
     fetchJobs()
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to delete job:', error)
-    showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to delete job' })
+    showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || 'Failed to delete job' })
   } finally {
     processing.value = false
   }
