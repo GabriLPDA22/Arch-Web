@@ -459,9 +459,16 @@ const showAlert = ref(false)
 const alertType = ref<'error' | 'success' | 'warning' | 'info'>('info')
 const alertMessage = ref('')
 
-const statusFilters = computed(() =>
-  filters.value.filter((f) => ['all', 'active', 'finished'].includes(f.id)),
-)
+const isProduction = import.meta.env.PROD
+
+const statusFilters = computed(() => {
+  const baseFilters = filters.value.filter((f) => ['all', 'active', 'finished'].includes(f.id))
+  // En producción, ocultar el filtro "Finished Events"
+  if (isProduction) {
+    return baseFilters.filter((f) => f.id !== 'finished')
+  }
+  return baseFilters
+})
 const categoryFilters = computed(() =>
   filters.value.filter((f) => !['all', 'active', 'finished'].includes(f.id)),
 )
@@ -494,7 +501,11 @@ const fetchEvents = async () => {
   }
 
   const filter = activeFilterId.value
-  if (filter === 'active' || filter === 'finished') {
+  // En producción, si el filtro es "finished", cambiarlo a "all"
+  if (isProduction && filter === 'finished') {
+    activeFilterId.value = 'all'
+    // No establecer params.status, así se muestran todos los eventos y luego los filtramos
+  } else if (filter === 'active' || filter === 'finished') {
     params.status = filter
   } else if (filter && filter !== 'all') {
     params.preferenceId = filter
@@ -502,7 +513,14 @@ const fetchEvents = async () => {
 
   try {
     const pagedResult = await EventApi.listForAdmin(params)
-    events.value = pagedResult.items || []
+    let fetchedEvents = pagedResult.items || []
+    
+    // En producción, filtrar eventos terminados
+    if (isProduction) {
+      fetchedEvents = fetchedEvents.filter((event) => !isEventFinished(event))
+    }
+    
+    events.value = fetchedEvents
     totalPages.value = pagedResult.totalPages || 1
   } catch (err: unknown) {
     console.error('Failed to load events:', err)
@@ -530,7 +548,8 @@ const loadFilters = async () => {
   const staticFilters = [
     { label: 'All Events', id: 'all' },
     { label: 'Active Events', id: 'active' },
-    { label: 'Finished Events', id: 'finished' },
+    // En producción, no incluir el filtro "Finished Events"
+    ...(isProduction ? [] : [{ label: 'Finished Events', id: 'finished' }]),
   ]
 
   const cachedPreferences = localStorage.getItem('preferencesCache')
@@ -1016,6 +1035,10 @@ const downloadExcelTemplate = () => {
 
 onMounted(() => {
   if (authStore.isLoggedIn) {
+    // En producción, si el filtro activo es "finished", cambiarlo a "all"
+    if (isProduction && activeFilterId.value === 'finished') {
+      activeFilterId.value = 'all'
+    }
     fetchEvents()
     loadFilters()
   } else {
