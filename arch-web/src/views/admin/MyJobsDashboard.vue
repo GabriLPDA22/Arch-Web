@@ -358,6 +358,12 @@
           <div class="detail-section" v-if="selectedJob.interestedCandidatesCount !== undefined && selectedJob.interestedCandidatesCount > 0">
             <h4>Interested Candidates</h4>
             <p>{{ selectedJob.interestedCandidatesCount }} candidate(s) expressed interest</p>
+            <button class="btn-view-candidates" @click="openCandidatesModal(selectedJob.id)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
+              </svg>
+              View Candidates
+            </button>
           </div>
         </div>
         <div class="modal-footer">
@@ -579,12 +585,78 @@
         </div>
       </div>
     </div>
+
+    <!-- Candidates Modal -->
+    <div v-if="showCandidatesModal" class="modal-overlay" @click="closeCandidatesModal">
+      <div class="modal-content candidates-modal" @click.stop>
+        <div class="modal-header">
+          <h2>Interested Candidates</h2>
+          <button @click="closeCandidatesModal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="loadingCandidates" class="loading-candidates">
+            <div class="spinner"></div>
+            <p>Loading candidates...</p>
+          </div>
+          <div v-else-if="interestedCandidates.length === 0" class="empty-candidates">
+            <p>No candidates have expressed interest yet.</p>
+          </div>
+          <div v-else class="candidates-list">
+            <div v-for="candidate in interestedCandidates" :key="candidate.candidateUserId" class="candidate-card">
+              <div class="candidate-header">
+                <img 
+                  v-if="candidate.candidateProfilePicture" 
+                  :src="candidate.candidateProfilePicture" 
+                  :alt="candidate.candidateName"
+                  class="candidate-avatar"
+                />
+                <div v-else class="candidate-avatar-placeholder">
+                  {{ candidate.candidateName.charAt(0).toUpperCase() }}
+                </div>
+                <div class="candidate-info">
+                  <h4>{{ candidate.candidateName }}</h4>
+                  <p v-if="candidate.candidateEmail" class="candidate-email">{{ candidate.candidateEmail }}</p>
+                  <p class="candidate-date">Applied: {{ formatDate(candidate.expressedInterestAt) }}</p>
+                </div>
+              </div>
+              <div v-if="candidateProfiles[candidate.candidateUserId]" class="cv-points">
+                <h5>CV Highlights</h5>
+                <div class="cv-point" v-if="parseCvPoints(candidateProfiles[candidate.candidateUserId].sellingPoints).top">
+                  <span class="cv-label">1. Top thing on CV:</span>
+                  <span class="cv-value">{{ parseCvPoints(candidateProfiles[candidate.candidateUserId].sellingPoints).top }}</span>
+                </div>
+                <div class="cv-point" v-if="parseCvPoints(candidateProfiles[candidate.candidateUserId].sellingPoints).second">
+                  <span class="cv-label">2. Next best thing:</span>
+                  <span class="cv-value">{{ parseCvPoints(candidateProfiles[candidate.candidateUserId].sellingPoints).second }}</span>
+                </div>
+                <div class="cv-point" v-if="parseCvPoints(candidateProfiles[candidate.candidateUserId].sellingPoints).third">
+                  <span class="cv-label">3. Third best thing:</span>
+                  <span class="cv-value">{{ parseCvPoints(candidateProfiles[candidate.candidateUserId].sellingPoints).third }}</span>
+                </div>
+                <div v-if="candidateProfiles[candidate.candidateUserId].college" class="cv-extra">
+                  <strong>College:</strong> {{ candidateProfiles[candidate.candidateUserId].college }}
+                </div>
+                <div v-if="candidateProfiles[candidate.candidateUserId].course" class="cv-extra">
+                  <strong>Course:</strong> {{ candidateProfiles[candidate.candidateUserId].course }}
+                </div>
+              </div>
+              <div v-else class="cv-loading">
+                <span>Loading profile...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="closeCandidatesModal">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
-import { JobsApi, type JobListDto, type JobDetailDto, type JobCreateDto, type JobUpdateDto } from '@/services/Api'
+import { JobsApi, CandidateProfilesApi, parseCvPoints, type JobListDto, type JobDetailDto, type JobCreateDto, type JobUpdateDto, type InterestedCandidateDto, type CandidateProfileDto } from '@/services/Api'
 import TableSkeleton from '@/components/ui/TableSkeleton.vue'
 import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
 import { useToast } from '@/composables/useToast'
@@ -612,6 +684,12 @@ const sortDirection = ref<'asc' | 'desc'>('desc')
 const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
 const imageLoaded = ref(false)
+
+// Candidates modal state
+const showCandidatesModal = ref(false)
+const loadingCandidates = ref(false)
+const interestedCandidates = ref<InterestedCandidateDto[]>([])
+const candidateProfiles = ref<Record<string, CandidateProfileDto>>({})
 
 const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'closed' }>({
   organizationId: '',
@@ -760,6 +838,41 @@ const openDetailModal = async (job: JobListDto) => {
 const closeModals = () => {
   showDetailModal.value = false
   selectedJob.value = null
+}
+
+// Candidates modal functions
+const openCandidatesModal = async (jobId: string) => {
+  showCandidatesModal.value = true
+  loadingCandidates.value = true
+  interestedCandidates.value = []
+  candidateProfiles.value = {}
+
+  try {
+    // Cargar lista de candidatos interesados
+    const candidates = await JobsApi.getInterestedCandidates(jobId)
+    interestedCandidates.value = candidates
+
+    // Cargar perfiles de cada candidato
+    for (const candidate of candidates) {
+      try {
+        const profile = await CandidateProfilesApi.getByUserId(candidate.candidateUserId)
+        candidateProfiles.value[candidate.candidateUserId] = profile
+      } catch (e) {
+        console.warn(`Could not load profile for ${candidate.candidateUserId}`)
+      }
+    }
+  } catch (error: any) {
+    console.error('Failed to load candidates:', error)
+    showToast({ type: 'error', title: 'Error', message: 'Failed to load candidates' })
+  } finally {
+    loadingCandidates.value = false
+  }
+}
+
+const closeCandidatesModal = () => {
+  showCandidatesModal.value = false
+  interestedCandidates.value = []
+  candidateProfiles.value = {}
 }
 
 const openCreateModal = () => {
@@ -1964,5 +2077,153 @@ onMounted(() => {
     margin: 1rem;
     max-width: calc(100% - 2rem);
   }
+}
+
+/* ==================== CANDIDATES MODAL ==================== */
+.btn-view-candidates {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: #0d2954;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view-candidates:hover {
+  background: #1a3d6e;
+}
+
+.candidates-modal {
+  max-width: 700px;
+}
+
+.loading-candidates,
+.empty-candidates {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.loading-candidates .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #dbb067;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+.candidates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.candidate-card {
+  background: #f9fafb;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.candidate-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.candidate-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.candidate-avatar-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #dbb067;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.candidate-info h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.candidate-email {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.candidate-date {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.cv-points {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.cv-points h5 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #0d2954;
+  font-weight: 700;
+}
+
+.cv-point {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.cv-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.cv-value {
+  display: block;
+  font-size: 0.875rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.cv-extra {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.cv-loading {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  font-style: italic;
 }
 </style>

@@ -623,6 +623,43 @@ export type InterestedCandidateDto = {
   expressedInterestAt: string
 }
 
+// ==================== CANDIDATE PROFILES ====================
+
+export type CandidateProfileDto = {
+  id: string
+  userId: string
+  name: string
+  age: number | null
+  college: string | null
+  course: string | null
+  sellingPoints: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+// Helper para parsear CV points (formato: "Top|||Second|||Third")
+export const parseCvPoints = (sellingPoints: string | null): { top: string; second: string; third: string } => {
+  if (!sellingPoints) return { top: '', second: '', third: '' }
+  const parts = sellingPoints.split('|||').map(p => p.trim())
+  return {
+    top: parts[0] || '',
+    second: parts[1] || '',
+    third: parts[2] || ''
+  }
+}
+
+export const CandidateProfilesApi = {
+  getByUserId: (userId: string) =>
+    request<CandidateProfileDto>(`/api/candidateprofiles/${userId}`),
+
+  getAll: (params?: { page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+    return request<PagedResult<CandidateProfileDto>>(`/api/candidateprofiles?${searchParams.toString()}`)
+  },
+}
+
 export const JobsApi = {
   list: (params?: {
     status?: string
