@@ -672,7 +672,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive, watch } from 'vue'
+import { ref, onMounted, computed, reactive } from 'vue'
 import { JobsApi, OrganizationsApi, CandidateProfilesApi, parseCvPoints, type JobListDto, type JobDetailDto, type JobCreateDto, type JobUpdateDto, type OrganizationListDto, type InterestedCandidateDto, type CandidateProfileDto } from '@/services/Api'
 import TableSkeleton from '@/components/ui/TableSkeleton.vue'
 import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
