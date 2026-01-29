@@ -336,7 +336,7 @@
 
           <div class="detail-section">
             <h4>Organization</h4>
-            <p>{{ selectedJob.organizationName || getOrganizationName(selectedJob.organizationId) }}</p>
+            <p>{{ selectedJob.organizationName || (selectedJob.organizationId ? getOrganizationName(selectedJob.organizationId) : 'No Organization') }}</p>
           </div>
 
           <div class="detail-section" v-if="selectedJob.createdByName">
@@ -405,15 +405,14 @@
           <form @submit.prevent="handleCreateJob" class="job-form">
             <div class="form-group">
               <label>
-                Organization <span class="required">*</span>
+                Organization
               </label>
               <select
                 v-model="createForm.organizationId"
                 class="form-select"
-                required
                 :disabled="loadingOrganizations || isEditing"
               >
-                <option value="">Select an organization...</option>
+                <option value="">No Organization</option>
                 <option
                   v-for="org in organizations"
                   :key="org.id"
@@ -423,6 +422,7 @@
                 </option>
               </select>
               <p v-if="loadingOrganizations" class="form-hint">Loading organizations...</p>
+              <p class="form-hint">Leave as "No Organization" to create a job without an organization</p>
             </div>
 
             <div class="form-group">
@@ -708,7 +708,7 @@ const loadingCandidates = ref(false)
 const interestedCandidates = ref<InterestedCandidateDto[]>([])
 const candidateProfiles = ref<Record<string, CandidateProfileDto>>({})
 
-const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'closed' }>({
+const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'closed'; organizationId: string | null }>({
   organizationId: '',
   title: '',
   companyName: '',
@@ -775,7 +775,6 @@ const visiblePages = computed(() => {
 
 const isFormValid = computed(() => {
   return (
-    createForm.organizationId &&
     createForm.title.trim() &&
     createForm.companyName.trim() &&
     createForm.locationText.trim() &&
@@ -918,7 +917,7 @@ const openEditModal = async (job: JobListDto | JobDetailDto) => {
     editingJob.value = detail
     
     // Cargar datos en el formulario
-    createForm.organizationId = detail.organizationId
+    createForm.organizationId = detail.organizationId || ''
     createForm.title = detail.title
     createForm.companyName = detail.companyName
     createForm.locationText = detail.locationText || ''
@@ -1070,7 +1069,7 @@ const handleCreateJob = async () => {
     } else {
       // Crear nuevo job
       const jobData: JobCreateDto = {
-        organizationId: createForm.organizationId,
+        organizationId: createForm.organizationId && createForm.organizationId.trim() ? createForm.organizationId : undefined,
         title: createForm.title.trim(),
         companyName: createForm.companyName.trim(),
         locationText: createForm.locationText.trim(),
