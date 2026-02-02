@@ -620,12 +620,80 @@ export type JobSearchParams = {
   pageSize?: number
 }
 
+// Job Categories
+export type JobCategoryDto = {
+  id: string
+  name: string
+  description?: string
+  icon?: string
+  displayOrder: number
+  isActive: boolean
+  createdAt: string
+}
+
+export type CreateJobCategoryDto = {
+  name: string
+  description?: string
+  icon?: string
+  displayOrder?: number
+  isActive?: boolean
+}
+
+export type UpdateJobCategoryDto = {
+  name?: string
+  description?: string
+  icon?: string
+  displayOrder?: number
+  isActive?: boolean
+}
+
 export type InterestedCandidateDto = {
   candidateUserId: string
   candidateName: string
   candidateEmail?: string
   candidateProfilePicture?: string
   expressedInterestAt: string
+}
+
+// ==================== CANDIDATE PROFILES (CV) ====================
+
+export type CandidateProfileDto = {
+  userId: string
+  sellingPoints: string
+  college?: string
+  course?: string
+}
+
+export type ParsedCvPoints = {
+  top?: string
+  second?: string
+  third?: string
+}
+
+/**
+ * Utilidad para extraer hasta 3 "highlights" del CV a partir del campo `sellingPoints`.
+ * Admite texto separado por saltos de línea, `;` o `|`.
+ */
+export const parseCvPoints = (sellingPoints?: string | null): ParsedCvPoints => {
+  if (!sellingPoints) {
+    return { top: undefined, second: undefined, third: undefined }
+  }
+
+  const parts = sellingPoints
+    .split(/[\n|;]+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  return {
+    top: parts[0],
+    second: parts[1],
+    third: parts[2],
+  }
+}
+
+export const CandidateProfilesApi = {
+  getByUserId: (userId: string) =>
+    request<CandidateProfileDto>(`/api/candidate-profiles/${userId}`),
 }
 
 export const JobsApi = {
@@ -659,6 +727,29 @@ export const JobsApi = {
   },
 
   getCategories: () => request<string[]>(`/api/jobs/categories`),
+
+  // Job Categories Management
+  getCategoriesFull: () => request<JobCategoryDto[]>(`/api/jobcategories`),
+  getCategoryById: (id: string) => request<JobCategoryDto>(`/api/jobcategories/${id}`),
+  createCategory: (data: CreateJobCategoryDto) =>
+    request<JobCategoryDto>(`/api/jobcategories`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateCategory: (id: string, data: UpdateJobCategoryDto) =>
+    request<JobCategoryDto>(`/api/jobcategories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteCategory: (id: string) =>
+    request<void>(`/api/jobcategories/${id}`, {
+      method: 'DELETE',
+    }),
+  reorderCategories: (categoryIds: string[]) =>
+    request<void>(`/api/jobcategories/reorder`, {
+      method: 'POST',
+      body: JSON.stringify(categoryIds),
+    }),
 
   getMyJobs: () => request<JobListDto[]>(`/api/jobs/my`),
 

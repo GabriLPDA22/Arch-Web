@@ -698,12 +698,8 @@ const loadingCandidates = ref(false)
 const interestedCandidates = ref<InterestedCandidateDto[]>([])
 const candidateProfiles = ref<Record<string, CandidateProfileDto>>({})
 
-// Lista de categorías disponibles
-const categories = ref<string[]>([
-  'Finance', 'Law', 'IT', 'Biomedicine', 'Consulting', 'Marketing',
-  'Education', 'Engineering', 'Healthcare', 'Research', 'Arts & Culture',
-  'Media & Communications', 'Public Sector', 'Non-Profit', 'Startup', 'Other'
-])
+// Lista de categorías (cargadas desde el API)
+const categories = ref<string[]>([])
 
 const createForm = reactive<JobCreateDto>({
   organizationId: '',
@@ -1119,9 +1115,21 @@ const handleDelete = async (job: JobListDto) => {
   }
 }
 
+const fetchCategories = async () => {
+  try {
+    const result = await JobsApi.getCategories()
+    categories.value = result
+  } catch (error) {
+    console.error('Failed to load categories:', error)
+    // Fallback a categorías por defecto si falla
+    categories.value = ['Finance', 'Law', 'IT', 'Other']
+  }
+}
+
 onMounted(() => {
   fetchJobs()
   fetchOrganizations()
+  fetchCategories()
 })
 </script>
 
