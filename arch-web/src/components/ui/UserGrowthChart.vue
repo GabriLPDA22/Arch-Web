@@ -1,51 +1,45 @@
 <template>
   <div class="chart-container">
     <div class="chart-header">
-      <h3 class="chart-title">Crecimiento de Usuarios</h3>
+      <h3 class="chart-title">User Growth</h3>
       <div class="chart-controls">
         <div class="chart-stats">
           <div class="stat-item">
             <span class="stat-label">Total:</span>
             <span class="stat-value">{{ totalUsers }}</span>
           </div>
-          <div class="stat-item" v-if="growthPercentage !== null">
-            <span class="stat-label">Crecimiento:</span>
-            <span class="stat-value" :class="{ positive: growthPercentage > 0, negative: growthPercentage < 0 }">
-              {{ growthPercentage > 0 ? '+' : '' }}{{ growthPercentage.toFixed(1) }}%
-            </span>
-          </div>
         </div>
         <div class="type-filter">
-          <label class="filter-label">Filtrar por tipo:</label>
+          <label class="filter-label">Filter by type:</label>
           <select v-model="selectedUserType" class="type-select">
-            <option value="">Todos los tipos</option>
-            <option value="user">Oxford (Estudiantes/Alumni)</option>
+            <option value="">All types</option>
+            <option value="user">Oxford (Students/Alumni)</option>
             <option value="staff-user">Staff</option>
             <option value="admin">Admin</option>
-            <option value="moderator">Moderador</option>
-            <option value="scanner">Organizador</option>
+            <option value="moderator">Moderator</option>
+            <option value="scanner">Organizer</option>
           </select>
         </div>
       </div>
     </div>
     <div v-if="loading" class="chart-loading">
       <div class="spinner"></div>
-      <p>Cargando datos...</p>
+      <p>Loading data...</p>
     </div>
     <div v-else class="chart-wrapper">
-      <canvas ref="chartCanvas" v-show="hasData"></canvas>
+      <canvas ref="chartCanvas"></canvas>
       <div v-if="!hasData && totalUsers > 0" class="chart-info">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,16.5V18H13V16.5H11M11,6V14H13V6H11Z" />
         </svg>
-        <p>Los usuarios no tienen fechas de registro disponibles</p>
-        <p class="info-subtitle">Total de usuarios: {{ totalUsers }}</p>
+        <p>Users do not have registration dates available</p>
+        <p class="info-subtitle">Total users: {{ totalUsers }}</p>
       </div>
       <div v-else-if="!hasData" class="chart-info">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,16.5V18H13V16.5H11M11,6V14H13V6H11Z" />
         </svg>
-        <p>No hay usuarios registrados aún</p>
+        <p>No users registered yet</p>
       </div>
     </div>
   </div>
@@ -59,6 +53,7 @@ import {
   LinearScale,
   PointElement,
   LineElement,
+  LineController,
   Title,
   Tooltip,
   Legend,
@@ -71,6 +66,7 @@ Chart.register(
   LinearScale,
   PointElement,
   LineElement,
+  LineController,
   Title,
   Tooltip,
   Legend,
@@ -82,6 +78,8 @@ interface Props {
     createdAt?: string
     userType?: string
     userRole?: string | null
+    name?: string
+    email?: string
   }>
   loading?: boolean
 }
@@ -170,24 +168,54 @@ const filteredUsers = computed(() => {
 const chartData = computed((): ChartDataResult => {
   const usersToProcess = filteredUsers.value
   
+  console.log('🔍 [CHART] Iniciando procesamiento de datos')
+  console.log('🔍 [CHART] Total usuarios recibidos:', usersToProcess?.length || 0)
+  console.log('🔍 [CHART] Primeros 3 usuarios:', usersToProcess?.slice(0, 3).map(u => ({
+    name: u.name,
+    userType: u.userType,
+    createdAt: u.createdAt,
+    hasCreatedAt: !!u.createdAt,
+    createdAtType: typeof u.createdAt
+  })))
+  
   if (!usersToProcess || usersToProcess.length === 0) {
+    console.warn('⚠️ [CHART] No hay usuarios para procesar')
     return { labels: [], datasets: [], rawDates: [] }
   }
 
   // Filtrar usuarios que tienen createdAt válido
   const usersWithDate = usersToProcess.filter((u) => {
     if (!u.createdAt) {
-      console.debug('Usuario sin createdAt:', u)
+      console.warn('⚠️ [CHART] Usuario sin createdAt:', {
+        name: u.name,
+        email: u.email,
+        userType: u.userType,
+        allFields: Object.keys(u)
+      })
       return false
     }
     const date = parseDate(u.createdAt)
     if (!date) {
-      console.warn('No se pudo parsear fecha:', u.createdAt)
+      console.error('❌ [CHART] No se pudo parsear fecha:', {
+        createdAt: u.createdAt,
+        createdAtType: typeof u.createdAt,
+        user: u.name
+      })
+    } else {
+      console.debug('✅ [CHART] Fecha parseada correctamente:', {
+        original: u.createdAt,
+        parsed: date.toISOString(),
+        user: u.name
+      })
     }
     return date !== null
   })
   
-  console.debug(`Usuarios procesados: ${usersWithDate.length} de ${usersToProcess.length}`)
+  console.log(`📊 [CHART] Usuarios con fecha válida: ${usersWithDate.length} de ${usersToProcess.length}`)
+  
+  if (usersWithDate.length === 0) {
+    console.error('❌ [CHART] NINGÚN usuario tiene fecha válida. Revisar backend.')
+  }
 
   if (usersWithDate.length === 0) {
     return { labels: [], datasets: [], rawDates: [] }
@@ -254,7 +282,7 @@ const chartData = computed((): ChartDataResult => {
     const colors = typeColors[userType] || { border: '#6b7280', background: 'rgba(107, 114, 128, 0.1)' }
     const typeLabel = userType === 'user' ? 'Oxford' : 
                      userType === 'staff-user' ? 'Staff' :
-                     userType === 'scanner' ? 'Organizador' :
+                     userType === 'scanner' ? 'Organizer' :
                      userType.charAt(0).toUpperCase() + userType.slice(1)
     
     datasets.push({
@@ -295,43 +323,79 @@ const totalUsers = computed(() => {
 })
 
 const growthPercentage = computed((): number | null => {
-  // Calcular crecimiento basado en el total de todos los tipos
-  const totalCumulative = chartData.value.datasets.reduce((acc, dataset) => {
-    const lastValue = dataset.cumulativeData[dataset.cumulativeData.length - 1] || 0
-    return acc + lastValue
+  const data = chartData.value
+  if (!data || data.datasets.length === 0 || data.labels.length < 2) return null
+  
+  // Calcular el total acumulado en el primer día y en el último día
+  const firstDayTotal = data.datasets.reduce((acc, dataset) => {
+    return acc + (dataset.cumulativeData[0] || 0)
   }, 0)
   
-  if (totalCumulative === 0) return null
+  const lastDayTotal = data.datasets.reduce((acc, dataset) => {
+    const lastIndex = dataset.cumulativeData.length - 1
+    return acc + (dataset.cumulativeData[lastIndex] || 0)
+  }, 0)
   
-  // Obtener el primer y último valor acumulado total
-  const firstValues = chartData.value.datasets.map(d => d.cumulativeData[0] || 0)
-  const lastValues = chartData.value.datasets.map(d => {
-    const last = d.cumulativeData[d.cumulativeData.length - 1]
-    return last || 0
-  })
+  if (firstDayTotal === 0) {
+    // Si empezó en 0, el crecimiento es infinito, mejor mostrar null o un mensaje
+    return null
+  }
   
-  const firstTotal = firstValues.reduce((a, b) => a + b, 0)
-  const lastTotal = lastValues.reduce((a, b) => a + b, 0)
+  // Calcular crecimiento porcentual
+  const growth = ((lastDayTotal - firstDayTotal) / firstDayTotal) * 100
   
-  if (firstTotal === 0) return null
+  // Limitar a un máximo razonable (ej: 10000%) para evitar valores absurdos
+  if (Math.abs(growth) > 10000) {
+    return null
+  }
   
-  return ((lastTotal - firstTotal) / firstTotal) * 100
+  return growth
 })
 
 const createChart = () => {
-  if (!chartCanvas.value || !hasData.value) return
+  console.log('🎨 [CHART] createChart llamado')
+  console.log('🎨 [CHART] chartCanvas.value:', !!chartCanvas.value)
+  console.log('🎨 [CHART] hasData.value:', hasData.value)
+  
+  if (!chartCanvas.value) {
+    console.warn('⚠️ [CHART] No hay canvas disponible')
+    return
+  }
+  
+  if (!hasData.value) {
+    console.warn('⚠️ [CHART] No hay datos para mostrar')
+    return
+  }
 
   const ctx = chartCanvas.value.getContext('2d')
-  if (!ctx) return
+  if (!ctx) {
+    console.error('❌ [CHART] No se pudo obtener contexto del canvas')
+    return
+  }
 
   // Destruir gráfica anterior si existe
   if (chartInstance) {
+    console.log('🗑️ [CHART] Destruyendo gráfica anterior')
     chartInstance.destroy()
+    chartInstance = null
   }
 
   const data = chartData.value
 
+  console.log('📊 [CHART] Datos para gráfica:', {
+    labelsCount: data.labels.length,
+    datasetsCount: data.datasets.length,
+    labels: data.labels.slice(0, 5),
+    datasets: data.datasets.map(d => ({
+      label: d.label,
+      dataPoints: d.cumulativeData.length,
+      firstValue: d.cumulativeData[0],
+      lastValue: d.cumulativeData[d.cumulativeData.length - 1]
+    }))
+  })
+
   if (!data || !data.labels || data.datasets.length === 0) {
+    console.error('❌ [CHART] Datos inválidos para crear gráfica')
     return
   }
 
@@ -347,7 +411,7 @@ const createChart = () => {
     })
     
     chartDatasets.push({
-      label: 'Total Acumulado',
+      label: 'Total',
       data: totalCumulative,
       borderColor: '#0d2954',
       backgroundColor: 'rgba(13, 41, 84, 0.1)',
@@ -365,7 +429,7 @@ const createChart = () => {
   // Agregar línea acumulada para cada tipo
   data.datasets.forEach((dataset) => {
     chartDatasets.push({
-      label: `${dataset.label} (Acumulado)`,
+      label: dataset.label,
       data: dataset.cumulativeData,
       borderColor: dataset.borderColor,
       backgroundColor: dataset.backgroundColor,
@@ -380,27 +444,6 @@ const createChart = () => {
     })
   })
   
-  // Agregar línea de nuevos usuarios diarios (solo si hay un tipo seleccionado o pocos tipos)
-  if (selectedUserType.value || data.datasets.length <= 2) {
-    data.datasets.forEach((dataset) => {
-      chartDatasets.push({
-        label: `${dataset.label} (Nuevos/Día)`,
-        data: dataset.dailyData,
-        borderColor: dataset.borderColor,
-        backgroundColor: dataset.backgroundColor,
-        borderWidth: 1.5,
-        fill: false,
-        tension: 0.4,
-        pointRadius: 2,
-        pointHoverRadius: 4,
-        pointBackgroundColor: dataset.borderColor,
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 1,
-        yAxisID: 'y1',
-        borderDash: [5, 5],
-      })
-    })
-  }
 
   const config: ChartConfiguration<'line'> = {
     type: 'line',
@@ -451,12 +494,8 @@ const createChart = () => {
               }
               const yValue = context.parsed.y
               if (yValue !== null && yValue !== undefined) {
-                label += yValue.toLocaleString('es-ES')
-                if (context.datasetIndex === 0) {
-                  label += ' usuarios'
-                } else {
-                  label += ' nuevos'
-                }
+                label += yValue.toLocaleString('en-US')
+                label += ' users'
               }
               return label
             },
@@ -494,32 +533,7 @@ const createChart = () => {
           },
           title: {
             display: true,
-            text: 'Usuarios Acumulados',
-            color: '#475569',
-            font: {
-              size: 12,
-              weight: 'bold',
-            },
-          },
-        },
-        y1: {
-          beginAtZero: true,
-          position: 'right',
-          grid: {
-            display: false,
-          },
-          ticks: {
-            color: '#64748b',
-            font: {
-              size: 11,
-            },
-            callback: function (value) {
-              return value.toLocaleString('es-ES')
-            },
-          },
-          title: {
-            display: true,
-            text: 'Nuevos Usuarios',
+            text: 'Total Users',
             color: '#475569',
             font: {
               size: 12,
@@ -531,26 +545,40 @@ const createChart = () => {
     },
   }
 
-  chartInstance = new Chart(ctx, config)
+  try {
+    chartInstance = new Chart(ctx, config)
+    console.log('✅ [CHART] Gráfica creada exitosamente')
+  } catch (error) {
+    console.error('❌ [CHART] Error al crear gráfica:', error)
+  }
 }
 
 watch(
   () => [props.users, props.loading, selectedUserType.value],
   () => {
+    console.log('👀 [CHART] Watch activado:', {
+      usersCount: props.users?.length,
+      loading: props.loading,
+      selectedType: selectedUserType.value
+    })
     if (!props.loading) {
       setTimeout(() => {
         createChart()
-      }, 100)
+      }, 200)
     }
   },
-  { deep: true }
+  { deep: true, immediate: true }
 )
 
 onMounted(() => {
+  console.log('🚀 [CHART] Componente montado')
+  console.log('🚀 [CHART] loading:', props.loading)
+  console.log('🚀 [CHART] users:', props.users?.length)
+  
   if (!props.loading) {
     setTimeout(() => {
       createChart()
-    }, 100)
+    }, 300)
   }
 })
 
