@@ -188,7 +188,7 @@
                 </svg>
               </button>
               <button 
-                v-if="authStore.isAdminOfOrganization(job.organizationId)"
+                v-if="job.organizationId && authStore.isAdminOfOrganization(job.organizationId)"
                 class="action-btn edit" 
                 @click="openEditModal(job)" 
                 title="Edit"
@@ -200,7 +200,7 @@
                 </svg>
               </button>
               <button
-                v-if="job.status === 'draft' && authStore.isAdminOfOrganization(job.organizationId)"
+                v-if="job.status === 'draft' && job.organizationId && authStore.isAdminOfOrganization(job.organizationId)"
                 class="action-btn publish"
                 @click="handlePublish(job)"
                 title="Publish"
@@ -210,7 +210,7 @@
                 </svg>
               </button>
               <button
-                v-if="job.status === 'published' && authStore.isAdminOfOrganization(job.organizationId)"
+                v-if="job.status === 'published' && job.organizationId && authStore.isAdminOfOrganization(job.organizationId)"
                 class="action-btn close"
                 @click="handleClose(job)"
                 title="Close"
@@ -377,7 +377,7 @@
             Edit Job
           </button>
           <button
-            v-if="selectedJob?.status === 'draft' && authStore.isAdminOfOrganization(selectedJob.organizationId)"
+            v-if="selectedJob?.status === 'draft' && selectedJob.organizationId && authStore.isAdminOfOrganization(selectedJob.organizationId)"
             class="btn-primary"
             @click="handlePublish(selectedJob!)"
             :disabled="processing"
@@ -385,7 +385,7 @@
             {{ processing ? 'Publishing...' : 'Publish Job' }}
           </button>
           <button
-            v-if="selectedJob?.status === 'published' && authStore.isAdminOfOrganization(selectedJob.organizationId)"
+            v-if="selectedJob?.status === 'published' && selectedJob.organizationId && authStore.isAdminOfOrganization(selectedJob.organizationId)"
             class="btn-warning"
             @click="handleClose(selectedJob!)"
             :disabled="processing"
@@ -887,7 +887,7 @@ const openCreateModal = () => {
 }
 
 const openEditModal = async (job: JobListDto | JobDetailDto) => {
-  if (!authStore.isAdminOfOrganization(job.organizationId)) {
+  if (!job.organizationId || !authStore.isAdminOfOrganization(job.organizationId)) {
     showToast({ type: 'error', title: 'Error', message: 'You do not have permission to edit this job' })
     return
   }
@@ -1031,7 +1031,7 @@ const handleCreateJob = async () => {
 
     if (isEditing.value && editingJob.value) {
       // Verificar permisos antes de actualizar
-      if (!authStore.isAdminOfOrganization(editingJob.value.organizationId)) {
+      if (!editingJob.value.organizationId || !authStore.isAdminOfOrganization(editingJob.value.organizationId)) {
         showToast({ type: 'error', title: 'Error', message: 'You do not have permission to edit this job' })
         return
       }

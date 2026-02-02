@@ -881,3 +881,42 @@ export const OrganizationsApi = {
       method: 'DELETE',
     }),
 }
+
+// ==================== CANDIDATE PROFILES API ====================
+
+export type CandidateProfileDto = {
+  userId: string
+  sellingPoints?: string
+  college?: string
+  course?: string
+  [key: string]: unknown
+}
+
+export const CandidateProfilesApi = {
+  getByUserId: (userId: string) =>
+    request<CandidateProfileDto>(`/api/candidate-profiles/${userId}`),
+}
+
+// ==================== CV PARSING UTILITY ====================
+
+export function parseCvPoints(sellingPoints?: string): {
+  top?: string
+  second?: string
+  third?: string
+} {
+  if (!sellingPoints) {
+    return {}
+  }
+
+  // Parse selling points - assuming they're separated by newlines or semicolons
+  const points = sellingPoints
+    .split(/[\n;]/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0)
+
+  return {
+    top: points[0],
+    second: points[1],
+    third: points[2],
+  }
+}
