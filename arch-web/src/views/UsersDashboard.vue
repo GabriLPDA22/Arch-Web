@@ -15,6 +15,11 @@
       </div>
     </div>
 
+    <!-- User Growth Chart -->
+    <div class="chart-section">
+      <UserGrowthChart :users="allUsers" :loading="loading" />
+    </div>
+
     <div class="search-container">
       <div class="search-wrapper">
         <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -644,6 +649,7 @@ import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
 import { UserApi, type UserListDto, type UserRelatedDataDto } from '@/services/Api'
 import UserForm from '@/components/forms/UserForm.vue'
 import TableSkeleton from '@/components/ui/TableSkeleton.vue'
+import UserGrowthChart from '@/components/ui/UserGrowthChart.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { handleApiError } from '@/utils/validators'
 
@@ -2421,5 +2427,12 @@ const handleDeleteConfirm = async () => {
 
 .btn-danger:hover {
   background: #dc2626;
+}
+
+/* Chart Section */
+.chart-section {
+  padding: 2rem 2.5rem;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 </style>
