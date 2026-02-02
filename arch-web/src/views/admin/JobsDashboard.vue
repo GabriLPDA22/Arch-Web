@@ -47,8 +47,8 @@
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ publishedJobs }}</span>
-          <span class="stat-label">Published</span>
+          <span class="stat-value">{{ alumniJobs }}</span>
+          <span class="stat-label">Alumni Jobs</span>
         </div>
       </div>
 
@@ -56,13 +56,13 @@
         <div class="stat-icon draft">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path
-              d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
+              d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"
             />
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ draftJobs }}</span>
-          <span class="stat-label">Draft</span>
+          <span class="stat-value">{{ studentJobs }}</span>
+          <span class="stat-label">Student Jobs</span>
         </div>
       </div>
 
@@ -70,13 +70,13 @@
         <div class="stat-icon closed">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path
-              d="M12,2C17.5,2 22,6.5 22,12C22,17.5 17.5,22 12,22C6.5,22 2,17.5 2,12C2,6.5 6.5,2 12,2M12,4C7.58,4 4,7.58 4,12C4,16.42 7.58,20 12,20C16.42,20 20,16.42 20,12C20,7.58 16.42,4 12,4M16.5,7.5L17.5,8.5L8.5,17.5L7.5,16.5L16.5,7.5Z"
+              d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z"
             />
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ closedJobs }}</span>
-          <span class="stat-label">Closed</span>
+          <span class="stat-value">{{ paidJobs }}</span>
+          <span class="stat-label">Paid Jobs</span>
         </div>
       </div>
     </div>
@@ -131,17 +131,9 @@
                 {{ sortDirection === 'asc' ? '▲' : '▼' }}
               </span>
             </th>
-            <th>Location</th>
-            <th>Duration</th>
-            <th
-              class="sortable-header"
-              @click="changeSort('status')"
-            >
-              Status
-              <span class="sort-indicator" v-if="sortBy === 'status'">
-                {{ sortDirection === 'asc' ? '▲' : '▼' }}
-              </span>
-            </th>
+            <th>Category</th>
+            <th>Pay Range</th>
+            <th>Target</th>
             <th
               class="sortable-header"
               @click="changeSort('date')"
@@ -165,16 +157,13 @@
               </div>
             </td>
             <td>{{ job.companyName }}</td>
-            <td>{{ job.locationText }}</td>
             <td>
-              <span class="duration-badge">{{ job.durationText }}</span>
+              <span class="category-badge">{{ job.category }}</span>
             </td>
+            <td>{{ job.payRange || '-' }}</td>
             <td>
-              <span :class="['status-badge', job.status]">
-                {{ job.status }}
-              </span>
-              <span v-if="job.visibility === 'private'" class="visibility-badge">
-                Private
+              <span :class="['target-badge', job.isFromAlumni ? 'alumni' : 'student']">
+                {{ job.isFromAlumni ? '🎓 Alumni' : '📚 Students' }}
               </span>
             </td>
             <td>{{ formatDate(job.createdAt) }}</td>
@@ -191,26 +180,6 @@
                   <path
                     d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
                   />
-                </svg>
-              </button>
-              <button
-                v-if="job.status === 'draft'"
-                class="action-btn publish"
-                @click="handlePublish(job)"
-                title="Publish"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
-                </svg>
-              </button>
-              <button
-                v-if="job.status === 'published'"
-                class="action-btn close"
-                @click="handleClose(job)"
-                title="Close"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
                 </svg>
               </button>
               <button
@@ -293,10 +262,32 @@
           </div>
 
           <div class="detail-section">
-            <h4>Duration</h4>
+            <h4>Duration & Payment</h4>
             <span class="duration-badge">{{ selectedJob.durationText }}</span>
             <span v-if="selectedJob.isPaid" class="paid-badge">Paid</span>
             <span v-else class="unpaid-badge">Unpaid</span>
+          </div>
+
+          <div class="detail-section">
+            <h4>Category</h4>
+            <span class="category-badge">{{ selectedJob.category }}</span>
+          </div>
+
+          <div class="detail-section" v-if="selectedJob.payRange">
+            <h4>Pay Range</h4>
+            <p>{{ selectedJob.payRange }}</p>
+          </div>
+
+          <div class="detail-section" v-if="selectedJob.applicationDeadline">
+            <h4>Application Deadline</h4>
+            <p>{{ selectedJob.applicationDeadline }}</p>
+          </div>
+
+          <div class="detail-section">
+            <h4>Target Audience</h4>
+            <span :class="['target-badge', selectedJob.isFromAlumni ? 'alumni' : 'student']">
+              {{ selectedJob.isFromAlumni ? '🎓 Alumni Only' : '📚 Students' }}
+            </span>
           </div>
 
           <div class="detail-section">
@@ -322,16 +313,6 @@
               object-fit="contain"
               image-class="job-image"
             />
-          </div>
-
-          <div class="detail-section">
-            <h4>Status</h4>
-            <span :class="['status-badge', selectedJob.status]">
-              {{ selectedJob.status }}
-            </span>
-            <span :class="['visibility-badge', selectedJob.visibility]">
-              {{ selectedJob.visibility }}
-            </span>
           </div>
 
           <div class="detail-section">
@@ -373,22 +354,6 @@
             :disabled="processing"
           >
             Edit Job
-          </button>
-          <button
-            v-if="selectedJob?.status === 'draft'"
-            class="btn-primary"
-            @click="handlePublish(selectedJob!)"
-            :disabled="processing"
-          >
-            {{ processing ? 'Publishing...' : 'Publish Job' }}
-          </button>
-          <button
-            v-if="selectedJob?.status === 'published'"
-            class="btn-warning"
-            @click="handleClose(selectedJob!)"
-            :disabled="processing"
-          >
-            {{ processing ? 'Closing...' : 'Close Job' }}
           </button>
         </div>
       </div>
@@ -484,27 +449,40 @@
 
               <div class="form-group">
                 <label>
-                  Status <span class="required">*</span>
+                  Category <span class="required">*</span>
                 </label>
-                <select v-model="createForm.status" class="form-select" required>
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                  <option value="closed">Closed</option>
+                <select v-model="createForm.category" class="form-select" required>
+                  <option value="">Select category...</option>
+                  <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
                 </select>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label>
-                  Visibility <span class="required">*</span>
-                </label>
-                <select v-model="createForm.visibility" class="form-select" required>
-                  <option value="public">Public</option>
-                  <option value="private">Private</option>
-                </select>
+                <label>Pay Range</label>
+                <input
+                  v-model="createForm.payRange"
+                  type="text"
+                  class="form-input"
+                  placeholder="e.g., £1500-£2000"
+                  maxlength="100"
+                />
               </div>
 
+              <div class="form-group">
+                <label>Application Deadline</label>
+                <input
+                  v-model="createForm.applicationDeadline"
+                  type="text"
+                  class="form-input"
+                  placeholder="e.g., Friday Week 5"
+                  maxlength="100"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
               <div class="form-group">
                 <label class="checkbox-label">
                   <input
@@ -514,6 +492,18 @@
                   />
                   <span>Paid Position</span>
                 </label>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label alumni-checkbox">
+                  <input
+                    v-model="createForm.isForAlumni"
+                    type="checkbox"
+                    class="form-checkbox"
+                  />
+                  <span>🎓 For Alumni Only</span>
+                </label>
+                <p class="form-hint">If checked, this job will only be visible to Alumni users (with golden tick)</p>
               </div>
             </div>
 
@@ -696,7 +686,7 @@ const showCreateModal = ref(false)
 const selectedJob = ref<JobDetailDto | null>(null)
 const editingJob = ref<JobDetailDto | null>(null)
 const isEditing = ref(false)
-const sortBy = ref<'title' | 'company' | 'status' | 'date'>('date')
+const sortBy = ref<'title' | 'company' | 'date'>('date')
 const sortDirection = ref<'asc' | 'desc'>('desc')
 const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
@@ -708,7 +698,14 @@ const loadingCandidates = ref(false)
 const interestedCandidates = ref<InterestedCandidateDto[]>([])
 const candidateProfiles = ref<Record<string, CandidateProfileDto>>({})
 
-const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'closed'; organizationId: string | null }>({
+// Lista de categorías disponibles
+const categories = ref<string[]>([
+  'Finance', 'Law', 'IT', 'Biomedicine', 'Consulting', 'Marketing',
+  'Education', 'Engineering', 'Healthcare', 'Research', 'Arts & Culture',
+  'Media & Communications', 'Public Sector', 'Non-Profit', 'Startup', 'Other'
+])
+
+const createForm = reactive<JobCreateDto>({
   organizationId: '',
   title: '',
   companyName: '',
@@ -718,8 +715,10 @@ const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'cl
   description: '',
   applyUrl: '',
   imageUrl: '',
-  status: 'draft',
-  visibility: 'public',
+  category: '',
+  payRange: '',
+  applicationDeadline: '',
+  isForAlumni: false,
 })
 
 // Computed
@@ -736,9 +735,6 @@ const sortedJobs = computed(() => {
       case 'company': {
         return a.companyName.localeCompare(b.companyName) * dir
       }
-      case 'status': {
-        return a.status.localeCompare(b.status) * dir
-      }
       case 'date':
       default: {
         const ad = new Date(a.createdAt).getTime()
@@ -750,14 +746,14 @@ const sortedJobs = computed(() => {
 })
 
 const totalJobs = computed(() => totalCount.value)
-const publishedJobs = computed(() => 
-  jobs.value.filter(j => j.status === 'published').length
+const alumniJobs = computed(() => 
+  jobs.value.filter(j => j.isFromAlumni).length
 )
-const draftJobs = computed(() => 
-  jobs.value.filter(j => j.status === 'draft').length
+const studentJobs = computed(() => 
+  jobs.value.filter(j => !j.isFromAlumni).length
 )
-const closedJobs = computed(() => 
-  jobs.value.filter(j => j.status === 'closed').length
+const paidJobs = computed(() => 
+  jobs.value.filter(j => j.isPaid).length
 )
 
 const visiblePages = computed(() => {
@@ -779,12 +775,13 @@ const isFormValid = computed(() => {
     createForm.companyName.trim() &&
     createForm.locationText.trim() &&
     createForm.durationText &&
+    createForm.category &&
     createForm.description.trim()
   )
 })
 
 // Methods
-const changeSort = (key: 'title' | 'company' | 'status' | 'date') => {
+const changeSort = (key: 'title' | 'company' | 'date') => {
   if (sortBy.value === key) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
   } else {
@@ -926,8 +923,10 @@ const openEditModal = async (job: JobListDto | JobDetailDto) => {
     createForm.description = detail.description || ''
     createForm.applyUrl = detail.applyUrl || ''
     createForm.imageUrl = detail.imageUrl || ''
-    createForm.status = detail.status
-    createForm.visibility = detail.visibility
+    createForm.category = detail.category || ''
+    createForm.payRange = detail.payRange || ''
+    createForm.applicationDeadline = detail.applicationDeadline || ''
+    createForm.isForAlumni = detail.isFromAlumni || false
     
     // Si hay imagen URL, mostrar preview
     if (detail.imageUrl) {
@@ -962,8 +961,10 @@ const closeCreateModal = () => {
   createForm.description = ''
   createForm.applyUrl = ''
   createForm.imageUrl = ''
-  createForm.status = 'draft'
-  createForm.visibility = 'public'
+  createForm.category = ''
+  createForm.payRange = ''
+  createForm.applicationDeadline = ''
+  createForm.isForAlumni = false
   // Reset image upload
   imageFile.value = null
   imagePreviewUrl.value = null
@@ -1060,8 +1061,10 @@ const handleCreateJob = async () => {
         description: createForm.description.trim(),
         applyUrl: createForm.applyUrl?.trim() || undefined,
         imageUrl: imageUrl,
-        status: createForm.status,
-        visibility: createForm.visibility,
+        category: createForm.category,
+        payRange: createForm.payRange?.trim() || undefined,
+        applicationDeadline: createForm.applicationDeadline?.trim() || undefined,
+        isForAlumni: createForm.isForAlumni,
       }
 
       await JobsApi.update(editingJob.value.id, updateData)
@@ -1078,8 +1081,10 @@ const handleCreateJob = async () => {
         description: createForm.description.trim(),
         applyUrl: createForm.applyUrl?.trim() || undefined,
         imageUrl: imageUrl,
-        status: createForm.status,
-        visibility: createForm.visibility,
+        category: createForm.category,
+        payRange: createForm.payRange?.trim() || undefined,
+        applicationDeadline: createForm.applicationDeadline?.trim() || undefined,
+        isForAlumni: createForm.isForAlumni,
       }
 
       await JobsApi.create(jobData)
@@ -1093,44 +1098,6 @@ const handleCreateJob = async () => {
     showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || `Failed to ${isEditing.value ? 'update' : 'create'} job` })
   } finally {
     creating.value = false
-  }
-}
-
-const handlePublish = async (job: JobListDto | JobDetailDto) => {
-  if (!confirm(`Are you sure you want to publish "${job.title}"?`)) {
-    return
-  }
-
-  processing.value = true
-  try {
-    await JobsApi.publish(job.id)
-    showToast({ type: 'success', title: 'Success', message: 'Job published successfully' })
-    closeModals()
-    fetchJobs()
-  } catch (error) {
-    console.error('Failed to publish job:', error)
-    showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || 'Failed to publish job' })
-  } finally {
-    processing.value = false
-  }
-}
-
-const handleClose = async (job: JobListDto | JobDetailDto) => {
-  if (!confirm(`Are you sure you want to close "${job.title}"?`)) {
-    return
-  }
-
-  processing.value = true
-  try {
-    await JobsApi.close(job.id)
-    showToast({ type: 'success', title: 'Success', message: 'Job closed successfully' })
-    closeModals()
-    fetchJobs()
-  } catch (error) {
-    console.error('Failed to close job:', error)
-    showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || 'Failed to close job' })
-  } finally {
-    processing.value = false
   }
 }
 
@@ -1492,17 +1459,38 @@ onMounted(() => {
   margin-right: 0.5rem;
 }
 
-.status-badge.draft {
-  background: #fef3c7;
+.category-badge {
+  display: inline-flex;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.target-badge {
+  display: inline-flex;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.target-badge.alumni {
+  background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
   color: #92400e;
+  border: 1px solid #f59e0b;
 }
-.status-badge.published {
-  background: #d1fae5;
-  color: #065f46;
+
+.target-badge.student {
+  background: #dbeafe;
+  color: #1e40af;
 }
-.status-badge.closed {
-  background: #fee2e2;
-  color: #991b1b;
+
+.alumni-checkbox span {
+  color: #92400e;
+  font-weight: 600;
 }
 
 .visibility-badge {

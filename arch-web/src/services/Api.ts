@@ -564,8 +564,10 @@ export type JobListDto = {
   description: string
   applyUrl?: string
   imageUrl?: string
-  status: 'draft' | 'published' | 'closed'
-  visibility: 'public' | 'private'
+  applicationDeadline?: string  // e.g. "Friday Week 5"
+  category: string              // e.g. "Finance", "Law", "IT"
+  payRange?: string             // e.g. "£1500-£2000"
+  isFromAlumni: boolean         // true = job for Alumni (golden tick)
   createdAt: string
   updatedAt: string
   publishedAt?: string
@@ -586,8 +588,10 @@ export type JobCreateDto = {
   description: string
   applyUrl?: string
   imageUrl?: string
-  status?: 'draft' | 'published' | 'closed'
-  visibility?: 'public' | 'private'
+  applicationDeadline?: string
+  category: string
+  payRange?: string
+  isForAlumni?: boolean  // true = job for Alumni
 }
 
 export type JobUpdateDto = {
@@ -599,8 +603,10 @@ export type JobUpdateDto = {
   description?: string
   applyUrl?: string
   imageUrl?: string
-  status?: 'draft' | 'published' | 'closed'
-  visibility?: 'public' | 'private'
+  applicationDeadline?: string
+  category?: string
+  payRange?: string
+  isForAlumni?: boolean
 }
 
 export type JobSearchParams = {
@@ -609,8 +615,7 @@ export type JobSearchParams = {
   isPaid?: boolean
   durationText?: string
   organizationId?: string
-  status?: string
-  visibility?: string
+  category?: string
   page?: number
   pageSize?: number
 }
@@ -625,16 +630,14 @@ export type InterestedCandidateDto = {
 
 export const JobsApi = {
   list: (params?: {
-    status?: string
+    category?: string
     organizationId?: string
-    visibility?: string
     page?: number
     pageSize?: number
   }) => {
     const searchParams = new URLSearchParams()
-    if (params?.status) searchParams.append('status', params.status)
+    if (params?.category) searchParams.append('category', params.category)
     if (params?.organizationId) searchParams.append('organizationId', params.organizationId)
-    if (params?.visibility) searchParams.append('visibility', params.visibility)
     if (params?.page) searchParams.append('page', params.page.toString())
     if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
     return request<PagedResult<JobListDto>>(`/api/jobs?${searchParams.toString()}`)
@@ -649,19 +652,13 @@ export const JobsApi = {
     if (params?.isPaid !== undefined) searchParams.append('isPaid', params.isPaid.toString())
     if (params?.durationText) searchParams.append('durationText', params.durationText)
     if (params?.organizationId) searchParams.append('organizationId', params.organizationId)
-    if (params?.status) searchParams.append('status', params.status)
-    if (params?.visibility) searchParams.append('visibility', params.visibility)
+    if (params?.category) searchParams.append('category', params.category)
     if (params?.page) searchParams.append('page', params.page.toString())
     if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
     return request<PagedResult<JobListDto>>(`/api/jobs/search?${searchParams.toString()}`)
   },
 
-  getPublished: (params?: { page?: number; pageSize?: number }) => {
-    const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.append('page', params.page.toString())
-    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString())
-    return request<PagedResult<JobListDto>>(`/api/jobs/published?${searchParams.toString()}`)
-  },
+  getCategories: () => request<string[]>(`/api/jobs/categories`),
 
   getMyJobs: () => request<JobListDto[]>(`/api/jobs/my`),
 
@@ -680,16 +677,6 @@ export const JobsApi = {
   remove: (id: string) =>
     request<void>(`/api/jobs/${id}`, {
       method: 'DELETE',
-    }),
-
-  publish: (id: string) =>
-    request<JobDetailDto>(`/api/jobs/${id}/publish`, {
-      method: 'POST',
-    }),
-
-  close: (id: string) =>
-    request<JobDetailDto>(`/api/jobs/${id}/close`, {
-      method: 'POST',
     }),
 
   getInterestedCandidates: (id: string) =>
