@@ -550,50 +550,72 @@ export const ReportsApi = {
 
 // ==================== JOBS API ====================
 
+// Matches backend: ArchBackend.DTOs.Job.JobListDto
 export type JobListDto = {
   id: string
   organizationId?: string
-  organizationName?: string
-  createdByUserId: string
-  createdByName?: string
+  organizationName: string
   title: string
   companyName: string
-  locationText: string
-  durationText: string
+  locationText?: string
+  durationText?: string
   isPaid: boolean
-  description: string
+  description?: string
   applyUrl?: string
   imageUrl?: string
-  applicationDeadline?: string  // e.g. "Friday Week 5"
   category: string              // e.g. "Finance", "Law", "IT"
+  applicationDeadline?: string  // e.g. "Friday Week 5"
   payRange?: string             // e.g. "£1500-£2000"
   isFromAlumni: boolean         // true = job for Alumni (golden tick)
   createdAt: string
+  publishedAt?: string
+  interestedCandidatesCount: number
+}
+
+// Matches backend: ArchBackend.DTOs.Job.JobResponseDto
+export type JobDetailDto = {
+  id: string
+  organizationId?: string
+  createdByUserId: string
+  title: string
+  companyName: string
+  locationText?: string
+  durationText?: string
+  isPaid: boolean
+  description?: string
+  applyUrl?: string
+  imageUrl?: string
+  category: string
+  applicationDeadline?: string
+  payRange?: string
+  isFromAlumni: boolean
+  createdAt: string
   updatedAt: string
   publishedAt?: string
+  // Extra fields for dashboard compatibility (may not be in all responses)
+  organizationName?: string
+  createdByName?: string
   interestedCandidatesCount?: number
 }
 
-export type JobDetailDto = JobListDto & {
-  // Additional detail fields if needed
-}
-
+// Matches backend: ArchBackend.DTOs.Job.JobCreateDto
 export type JobCreateDto = {
   organizationId?: string
   title: string
   companyName: string
-  locationText: string
-  durationText: string
-  isPaid: boolean
-  description: string
+  locationText?: string
+  durationText?: string
+  description?: string
   applyUrl?: string
   imageUrl?: string
+  isPaid?: boolean              // default: false
+  category?: string             // default: "Other"
   applicationDeadline?: string
-  category: string
   payRange?: string
-  isForAlumni?: boolean  // true = job for Alumni
+  isFromAlumni?: boolean        // default: false
 }
 
+// Matches backend: ArchBackend.DTOs.Job.JobUpdateDto
 export type JobUpdateDto = {
   title?: string
   companyName?: string
@@ -603,10 +625,10 @@ export type JobUpdateDto = {
   description?: string
   applyUrl?: string
   imageUrl?: string
-  applicationDeadline?: string
   category?: string
+  applicationDeadline?: string
   payRange?: string
-  isForAlumni?: boolean
+  isFromAlumni?: boolean
 }
 
 export type JobSearchParams = {
@@ -958,43 +980,4 @@ export const OrganizationsApi = {
     request<void>(`/api/organizations/${id}/members/${memberId}`, {
       method: 'DELETE',
     }),
-}
-
-// ==================== CANDIDATE PROFILES API ====================
-
-export type CandidateProfileDto = {
-  userId: string
-  sellingPoints?: string
-  college?: string
-  course?: string
-  [key: string]: unknown
-}
-
-export const CandidateProfilesApi = {
-  getByUserId: (userId: string) =>
-    request<CandidateProfileDto>(`/api/candidate-profiles/${userId}`),
-}
-
-// ==================== CV PARSING UTILITY ====================
-
-export function parseCvPoints(sellingPoints?: string): {
-  top?: string
-  second?: string
-  third?: string
-} {
-  if (!sellingPoints) {
-    return {}
-  }
-
-  // Parse selling points - assuming they're separated by newlines or semicolons
-  const points = sellingPoints
-    .split(/[\n;]/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0)
-
-  return {
-    top: points[0],
-    second: points[1],
-    third: points[2],
-  }
 }

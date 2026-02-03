@@ -497,7 +497,7 @@
               <div class="form-group">
                 <label class="checkbox-label alumni-checkbox">
                   <input
-                    v-model="createForm.isForAlumni"
+                    v-model="createForm.isFromAlumni"
                     type="checkbox"
                     class="form-checkbox"
                   />
@@ -701,7 +701,24 @@ const candidateProfiles = ref<Record<string, CandidateProfileDto>>({})
 // Lista de categorías (cargadas desde el API)
 const categories = ref<string[]>([])
 
-const createForm = reactive<JobCreateDto>({
+// Tipo interno para el formulario con todos los campos como strings
+type JobFormData = {
+  organizationId: string
+  title: string
+  companyName: string
+  locationText: string
+  durationText: string
+  isPaid: boolean
+  description: string
+  applyUrl: string
+  imageUrl: string
+  category: string
+  payRange: string
+  applicationDeadline: string
+  isFromAlumni: boolean
+}
+
+const createForm = reactive<JobFormData>({
   organizationId: '',
   title: '',
   companyName: '',
@@ -714,7 +731,7 @@ const createForm = reactive<JobCreateDto>({
   category: '',
   payRange: '',
   applicationDeadline: '',
-  isForAlumni: false,
+  isFromAlumni: false,
 })
 
 // Computed
@@ -922,7 +939,7 @@ const openEditModal = async (job: JobListDto | JobDetailDto) => {
     createForm.category = detail.category || ''
     createForm.payRange = detail.payRange || ''
     createForm.applicationDeadline = detail.applicationDeadline || ''
-    createForm.isForAlumni = detail.isFromAlumni || false
+    createForm.isFromAlumni = detail.isFromAlumni || false
     
     // Si hay imagen URL, mostrar preview
     if (detail.imageUrl) {
@@ -960,7 +977,7 @@ const closeCreateModal = () => {
   createForm.category = ''
   createForm.payRange = ''
   createForm.applicationDeadline = ''
-  createForm.isForAlumni = false
+  createForm.isFromAlumni = false
   // Reset image upload
   imageFile.value = null
   imagePreviewUrl.value = null
@@ -1060,7 +1077,7 @@ const handleCreateJob = async () => {
         category: createForm.category,
         payRange: createForm.payRange?.trim() || undefined,
         applicationDeadline: createForm.applicationDeadline?.trim() || undefined,
-        isForAlumni: createForm.isForAlumni,
+        isFromAlumni: createForm.isFromAlumni,
       }
 
       await JobsApi.update(editingJob.value.id, updateData)
@@ -1080,7 +1097,7 @@ const handleCreateJob = async () => {
         category: createForm.category,
         payRange: createForm.payRange?.trim() || undefined,
         applicationDeadline: createForm.applicationDeadline?.trim() || undefined,
-        isForAlumni: createForm.isForAlumni,
+        isFromAlumni: createForm.isFromAlumni,
       }
 
       await JobsApi.create(jobData)
