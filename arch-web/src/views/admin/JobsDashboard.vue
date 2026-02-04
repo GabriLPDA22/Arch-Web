@@ -163,7 +163,18 @@
             <td>{{ job.payRange || '-' }}</td>
             <td>
               <span :class="['target-badge', job.isFromAlumni ? 'alumni' : 'student']">
-                {{ job.isFromAlumni ? '🎓 Alumni' : '📚 Students' }}
+                <template v-if="job.isFromAlumni">
+                  <svg class="target-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M5,13V21H9V17H15V21H19V13L12,9L5,13M12,11L15.5,13L12,15L8.5,13L12,11Z M12,2L15.09,5.59L12,7L8.91,5.59L12,2M5,5V9L8,7L12,9L16,7L19,9V5L12,1L5,5Z"/>
+                  </svg>
+                  Alumni
+                </template>
+                <template v-else>
+                  <svg class="target-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M18,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V4A2,2 0 0,0 18,2M13,8H19V14H13V8M11,8V14H7V8H11M13,16H19V20H13V16M11,20V16H7V20H11M7,4H11V6H7V4M13,4H19V6H13V4Z"/>
+                  </svg>
+                  Students
+                </template>
               </span>
             </td>
             <td>{{ formatDate(job.createdAt) }}</td>
@@ -197,45 +208,22 @@
       </table>
     </div>
 
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="pagination-container">
-      <div class="pagination">
-        <div class="pagination-summary">
-          Showing
-          <strong>{{ (currentPage - 1) * pageSize + 1 }}</strong>
-          –
-          <strong>{{ Math.min(currentPage * pageSize, totalCount) }}</strong>
-          of
-          <strong>{{ totalCount }}</strong>
-          jobs
-        </div>
-        <div class="pagination-controls">
-          <button
-            @click="goToPage(currentPage - 1)"
-            :disabled="currentPage === 1"
-            class="page-btn"
-          >
-            Previous
-          </button>
-
-          <button
-            v-for="page in visiblePages"
-            :key="page"
-            @click="goToPage(page)"
-            :class="['page-number-btn', { active: page === currentPage }]"
-          >
-            {{ page }}
-          </button>
-
-          <button
-            @click="goToPage(currentPage + 1)"
-            :disabled="currentPage === totalPages"
-            class="page-btn"
-          >
-            Next
-          </button>
-        </div>
+    <!-- Pagination (mismo componente que el resto del admin) -->
+    <div v-if="totalPages > 1" class="pagination-wrapper">
+      <div class="pagination-summary">
+        Showing
+        <strong>{{ (currentPage - 1) * pageSize + 1 }}</strong>
+        –
+        <strong>{{ Math.min(currentPage * pageSize, totalCount) }}</strong>
+        of
+        <strong>{{ totalCount }}</strong>
+        jobs
       </div>
+      <PaginationComponent
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        @page-changed="goToPage"
+      />
     </div>
 
     <!-- Detail Modal -->
@@ -286,7 +274,18 @@
           <div class="detail-section">
             <h4>Target Audience</h4>
             <span :class="['target-badge', selectedJob.isFromAlumni ? 'alumni' : 'student']">
-              {{ selectedJob.isFromAlumni ? '🎓 Alumni Only' : '📚 Students' }}
+              <template v-if="selectedJob.isFromAlumni">
+                <svg class="target-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M5,13V21H9V17H15V21H19V13L12,9L5,13M12,11L15.5,13L12,15L8.5,13L12,11Z M12,2L15.09,5.59L12,7L8.91,5.59L12,2M5,5V9L8,7L12,9L16,7L19,9V5L12,1L5,5Z"/>
+                </svg>
+                Alumni Only
+              </template>
+              <template v-else>
+                <svg class="target-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M18,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V4A2,2 0 0,0 18,2M13,8H19V14H13V8M11,8V14H7V8H11M13,16H19V20H13V16M11,20V16H7V20H11M7,4H11V6H7V4M13,4H19V6H13V4Z"/>
+                </svg>
+                Students
+              </template>
             </span>
           </div>
 
@@ -666,6 +665,7 @@ import { ref, onMounted, computed, reactive } from 'vue'
 import { JobsApi, OrganizationsApi, CandidateProfilesApi, parseCvPoints, type JobListDto, type JobDetailDto, type JobCreateDto, type JobUpdateDto, type OrganizationListDto, type InterestedCandidateDto, type CandidateProfileDto } from '@/services/Api'
 import TableSkeleton from '@/components/ui/TableSkeleton.vue'
 import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
+import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import { useToast } from '@/composables/useToast'
 
 const { showToast } = useToast()
@@ -768,19 +768,6 @@ const studentJobs = computed(() =>
 const paidJobs = computed(() => 
   jobs.value.filter(j => j.isPaid).length
 )
-
-const visiblePages = computed(() => {
-  const pages: number[] = []
-  const maxVisible = 5
-  const end = Math.min(totalPages.value, currentPage.value - 2 + maxVisible - 1)
-  const start = Math.max(1, end - maxVisible + 1)
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i)
-  }
-
-  return pages
-})
 
 const isFormValid = computed(() => {
   return (
@@ -1496,10 +1483,17 @@ onMounted(() => {
 
 .target-badge {
   display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.375rem 0.75rem;
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+.target-icon {
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 
 .target-badge.alumni {
@@ -1621,14 +1615,10 @@ onMounted(() => {
 }
 
 /* ==================== PAGINATION ==================== */
-.pagination-container {
+.pagination-wrapper {
   padding: 2rem;
   display: flex;
-  justify-content: center;
-}
-
-.pagination {
-  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 1rem;
 }
@@ -1636,50 +1626,6 @@ onMounted(() => {
 .pagination-summary {
   font-size: 0.85rem;
   color: #4b5563;
-}
-
-.pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.page-number-btn {
-  min-width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  font-size: 0.8rem;
-  color: #4b5563;
-  cursor: pointer;
-  padding: 0 0.5rem;
-}
-
-.page-number-btn.active {
-  background: #111827;
-  color: #f9fafb;
-  border-color: #111827;
-}
-
-.page-btn {
-  padding: 0.625rem 1rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.page-btn:hover:not(:disabled) {
-  border-color: #dbb067;
-  color: #0d2954;
-}
-
-.page-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* ==================== MODALS ==================== */
