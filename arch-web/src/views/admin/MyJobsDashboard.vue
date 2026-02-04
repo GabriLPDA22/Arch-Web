@@ -42,42 +42,36 @@
       <div class="stat-card">
         <div class="stat-icon published">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z"
-            />
+            <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ publishedJobs }}</span>
-          <span class="stat-label">Published</span>
+          <span class="stat-value">{{ alumniJobs }}</span>
+          <span class="stat-label">Alumni Jobs</span>
         </div>
       </div>
 
       <div class="stat-card">
         <div class="stat-icon draft">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
-            />
+            <path d="M12,5.5A3.5,3.5 0 0,1 15.5,9A3.5,3.5 0 0,1 12,12.5A3.5,3.5 0 0,1 8.5,9A3.5,3.5 0 0,1 12,5.5M5,8C5.56,8 6.08,8.15 6.53,8.42C6.38,9.85 6.8,11.27 7.66,12.38C7.16,13.34 6.16,14 5,14A3,3 0 0,1 2,11A3,3 0 0,1 5,8M19,8A3,3 0 0,1 22,11A3,3 0 0,1 19,14C17.84,14 16.84,13.34 16.34,12.38C17.2,11.27 17.62,9.85 17.47,8.42C17.92,8.15 18.44,8 19,8M5.5,18.25C5.5,16.18 8.41,14.5 12,14.5C15.59,14.5 18.5,16.18 18.5,18.25V20H5.5V18.25M0,20V18.5C0,17.11 1.89,15.94 4.45,15.6C3.86,16.28 3.5,17.22 3.5,18.25V20H0M24,20H20.5V18.25C20.5,17.22 20.14,16.28 19.55,15.6C22.11,15.94 24,17.11 24,18.5V20Z" />
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ draftJobs }}</span>
-          <span class="stat-label">Draft</span>
+          <span class="stat-value">{{ studentJobs }}</span>
+          <span class="stat-label">Student Jobs</span>
         </div>
       </div>
 
       <div class="stat-card">
         <div class="stat-icon closed">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12,2C17.5,2 22,6.5 22,12C22,17.5 17.5,22 12,22C6.5,22 2,17.5 2,12C2,6.5 6.5,2 12,2M12,4C7.58,4 4,7.58 4,12C4,16.42 7.58,20 12,20C16.42,20 20,16.42 20,12C20,7.58 16.42,4 12,4M16.5,7.5L17.5,8.5L8.5,17.5L7.5,16.5L16.5,7.5Z"
-            />
+            <path d="M7,15H9C9,16.08 10.37,17 12,17C13.63,17 15,16.08 15,15C15,13.9 13.96,13.5 11.76,12.97C9.64,12.44 7,11.78 7,9C7,7.21 8.47,5.69 10.5,5.18V3H13.5V5.18C15.53,5.69 17,7.21 17,9H15C15,7.92 13.63,7 12,7C10.37,7 9,7.92 9,9C9,10.1 10.04,10.5 12.24,11.03C14.36,11.56 17,12.22 17,15C17,16.79 15.53,18.31 13.5,18.82V21H10.5V18.82C8.47,18.31 7,16.79 7,15Z" />
           </svg>
         </div>
         <div class="stat-content">
-          <span class="stat-value">{{ closedJobs }}</span>
-          <span class="stat-label">Closed</span>
+          <span class="stat-value">{{ paidJobs }}</span>
+          <span class="stat-label">Paid Jobs</span>
         </div>
       </div>
     </div>
@@ -134,15 +128,7 @@
             </th>
             <th>Location</th>
             <th>Duration</th>
-            <th
-              class="sortable-header"
-              @click="changeSort('status')"
-            >
-              Status
-              <span class="sort-indicator" v-if="sortBy === 'status'">
-                {{ sortDirection === 'asc' ? '▲' : '▼' }}
-              </span>
-            </th>
+            <th>Category / Target</th>
             <th
               class="sortable-header"
               @click="changeSort('date')"
@@ -171,11 +157,11 @@
               <span class="duration-badge">{{ job.durationText }}</span>
             </td>
             <td>
-              <span :class="['status-badge', job.status]">
-                {{ job.status }}
+              <span class="category-badge">
+                {{ job.category || 'Other' }}
               </span>
-              <span v-if="job.visibility === 'private'" class="visibility-badge">
-                Private
+              <span :class="['target-badge', job.isFromAlumni ? 'alumni' : 'student']">
+                {{ job.isFromAlumni ? '🎓 Alumni' : '📚 Students' }}
               </span>
             </td>
             <td>{{ formatDate(job.createdAt) }}</td>
@@ -197,26 +183,6 @@
                   <path
                     d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
                   />
-                </svg>
-              </button>
-              <button
-                v-if="job.status === 'draft' && job.organizationId && authStore.isAdminOfOrganization(job.organizationId)"
-                class="action-btn publish"
-                @click="handlePublish(job)"
-                title="Publish"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
-                </svg>
-              </button>
-              <button
-                v-if="job.status === 'published' && job.organizationId && authStore.isAdminOfOrganization(job.organizationId)"
-                class="action-btn close"
-                @click="handleClose(job)"
-                title="Close"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
                 </svg>
               </button>
               <button
@@ -331,12 +297,12 @@
           </div>
 
           <div class="detail-section">
-            <h4>Status</h4>
-            <span :class="['status-badge', selectedJob.status]">
-              {{ selectedJob.status }}
+            <h4>Category & Target</h4>
+            <span class="category-badge">
+              {{ selectedJob.category || 'Other' }}
             </span>
-            <span :class="['visibility-badge', selectedJob.visibility]">
-              {{ selectedJob.visibility }}
+            <span :class="['target-badge', selectedJob.isFromAlumni ? 'alumni' : 'student']">
+              {{ selectedJob.isFromAlumni ? '🎓 Alumni' : '📚 Students' }}
             </span>
           </div>
 
@@ -375,22 +341,6 @@
             :disabled="processing"
           >
             Edit Job
-          </button>
-          <button
-            v-if="selectedJob?.status === 'draft' && selectedJob.organizationId && authStore.isAdminOfOrganization(selectedJob.organizationId)"
-            class="btn-primary"
-            @click="handlePublish(selectedJob!)"
-            :disabled="processing"
-          >
-            {{ processing ? 'Publishing...' : 'Publish Job' }}
-          </button>
-          <button
-            v-if="selectedJob?.status === 'published' && selectedJob.organizationId && authStore.isAdminOfOrganization(selectedJob.organizationId)"
-            class="btn-warning"
-            @click="handleClose(selectedJob!)"
-            :disabled="processing"
-          >
-            {{ processing ? 'Closing...' : 'Close Job' }}
           </button>
         </div>
       </div>
@@ -464,30 +414,38 @@
 
               <div class="form-group">
                 <label>
-                  Status <span class="required">*</span>
+                  Category <span class="required">*</span>
                 </label>
-                <select v-model="createForm.status" class="form-select" required>
-                  <option value="draft">Draft</option>
-                  <option value="published" v-if="authStore.isAdminOfOrganization(primaryOrganization?.organizationId || '')">Published</option>
-                  <option value="closed">Closed</option>
+                <select v-model="createForm.category" class="form-select" required>
+                  <option value="">Select a category</option>
+                  <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
                 </select>
-                <p class="form-hint" v-if="!authStore.isAdminOfOrganization(primaryOrganization?.organizationId || '')">
-                  Only organization admins can publish jobs
-                </p>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label>
-                  Visibility <span class="required">*</span>
-                </label>
-                <select v-model="createForm.visibility" class="form-select" required>
-                  <option value="public">Public</option>
-                  <option value="private">Private</option>
-                </select>
+                <label>Pay Range</label>
+                <input
+                  v-model="createForm.payRange"
+                  type="text"
+                  class="form-input"
+                  placeholder="e.g. £1500-£2000"
+                />
               </div>
 
+              <div class="form-group">
+                <label>Application Deadline</label>
+                <input
+                  v-model="createForm.applicationDeadline"
+                  type="text"
+                  class="form-input"
+                  placeholder="e.g. Friday Week 5"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
               <div class="form-group">
                 <label class="checkbox-label">
                   <input
@@ -496,6 +454,17 @@
                     class="form-checkbox"
                   />
                   <span>Paid Position</span>
+                </label>
+              </div>
+
+              <div class="form-group alumni-checkbox">
+                <label class="checkbox-label">
+                  <input
+                    v-model="createForm.isFromAlumni"
+                    type="checkbox"
+                    class="form-checkbox"
+                  />
+                  <span>For Alumni Only 🎓</span>
                 </label>
               </div>
             </div>
@@ -512,7 +481,7 @@
                 rows="6"
                 maxlength="5000"
               ></textarea>
-              <p class="form-hint">{{ createForm.description.length }}/5000 characters</p>
+              <p class="form-hint">{{ (createForm.description || '').length }}/5000 characters</p>
             </div>
 
             <div class="form-group">
@@ -679,7 +648,8 @@ const showCreateModal = ref(false)
 const selectedJob = ref<JobDetailDto | null>(null)
 const editingJob = ref<JobDetailDto | null>(null)
 const isEditing = ref(false)
-const sortBy = ref<'title' | 'company' | 'status' | 'date'>('date')
+const sortBy = ref<'title' | 'company' | 'date'>('date')
+const categories = ref<string[]>([])
 const sortDirection = ref<'asc' | 'desc'>('desc')
 const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
@@ -691,7 +661,7 @@ const loadingCandidates = ref(false)
 const interestedCandidates = ref<InterestedCandidateDto[]>([])
 const candidateProfiles = ref<Record<string, CandidateProfileDto>>({})
 
-const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'closed' }>({
+const createForm = reactive<JobCreateDto>({
   organizationId: '',
   title: '',
   companyName: '',
@@ -701,8 +671,10 @@ const createForm = reactive<JobCreateDto & { status: 'draft' | 'published' | 'cl
   description: '',
   applyUrl: '',
   imageUrl: '',
-  status: 'draft',
-  visibility: 'public',
+  category: '',
+  payRange: '',
+  applicationDeadline: '',
+  isFromAlumni: false,
 })
 
 // Computed
@@ -721,9 +693,6 @@ const sortedJobs = computed(() => {
       case 'company': {
         return a.companyName.localeCompare(b.companyName) * dir
       }
-      case 'status': {
-        return a.status.localeCompare(b.status) * dir
-      }
       case 'date':
       default: {
         const ad = new Date(a.createdAt).getTime()
@@ -735,14 +704,14 @@ const sortedJobs = computed(() => {
 })
 
 const totalJobs = computed(() => totalCount.value)
-const publishedJobs = computed(() => 
-  jobs.value.filter(j => j.status === 'published').length
+const alumniJobs = computed(() => 
+  jobs.value.filter(j => j.isFromAlumni === true).length
 )
-const draftJobs = computed(() => 
-  jobs.value.filter(j => j.status === 'draft').length
+const studentJobs = computed(() => 
+  jobs.value.filter(j => j.isFromAlumni === false).length
 )
-const closedJobs = computed(() => 
-  jobs.value.filter(j => j.status === 'closed').length
+const paidJobs = computed(() => 
+  jobs.value.filter(j => j.isPaid === true).length
 )
 
 const visiblePages = computed(() => {
@@ -763,14 +732,13 @@ const isFormValid = computed(() => {
     primaryOrganization.value &&
     createForm.title.trim() &&
     createForm.companyName.trim() &&
-    createForm.locationText.trim() &&
-    createForm.durationText &&
-    createForm.description.trim()
+    createForm.locationText?.trim() &&
+    createForm.category
   )
 })
 
 // Methods
-const changeSort = (key: 'title' | 'company' | 'status' | 'date') => {
+const changeSort = (key: 'title' | 'company' | 'date') => {
   if (sortBy.value === key) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
   } else {
@@ -904,13 +872,15 @@ const openEditModal = async (job: JobListDto | JobDetailDto) => {
     createForm.title = detail.title
     createForm.companyName = detail.companyName
     createForm.locationText = detail.locationText || ''
-    createForm.durationText = detail.durationText
+    createForm.durationText = detail.durationText || ''
     createForm.isPaid = detail.isPaid
     createForm.description = detail.description || ''
     createForm.applyUrl = detail.applyUrl || ''
     createForm.imageUrl = detail.imageUrl || ''
-    createForm.status = detail.status
-    createForm.visibility = detail.visibility
+    createForm.category = detail.category || ''
+    createForm.payRange = detail.payRange || ''
+    createForm.applicationDeadline = detail.applicationDeadline || ''
+    createForm.isFromAlumni = detail.isFromAlumni || false
     
     // Si hay imagen URL, mostrar preview
     if (detail.imageUrl) {
@@ -942,8 +912,10 @@ const closeCreateModal = () => {
   createForm.description = ''
   createForm.applyUrl = ''
   createForm.imageUrl = ''
-  createForm.status = 'draft'
-  createForm.visibility = 'public'
+  createForm.category = ''
+  createForm.payRange = ''
+  createForm.applicationDeadline = ''
+  createForm.isFromAlumni = false
   // Reset image upload
   imageFile.value = null
   imagePreviewUrl.value = null
@@ -1040,14 +1012,16 @@ const handleCreateJob = async () => {
       const updateData: JobUpdateDto = {
         title: createForm.title.trim(),
         companyName: createForm.companyName.trim(),
-        locationText: createForm.locationText.trim(),
-        durationText: createForm.durationText,
+        locationText: createForm.locationText?.trim() || '',
+        durationText: createForm.durationText || undefined,
         isPaid: createForm.isPaid,
-        description: createForm.description.trim(),
+        description: createForm.description?.trim() || undefined,
         applyUrl: createForm.applyUrl?.trim() || undefined,
         imageUrl: imageUrl,
-        status: createForm.status,
-        visibility: createForm.visibility,
+        category: createForm.category || undefined,
+        payRange: createForm.payRange || undefined,
+        applicationDeadline: createForm.applicationDeadline || undefined,
+        isFromAlumni: createForm.isFromAlumni,
       }
 
       await JobsApi.update(editingJob.value.id, updateData)
@@ -1058,14 +1032,16 @@ const handleCreateJob = async () => {
         organizationId: primaryOrganization.value.organizationId,
         title: createForm.title.trim(),
         companyName: createForm.companyName.trim(),
-        locationText: createForm.locationText.trim(),
-        durationText: createForm.durationText,
+        locationText: createForm.locationText?.trim() || '',
+        durationText: createForm.durationText || undefined,
         isPaid: createForm.isPaid,
-        description: createForm.description.trim(),
+        description: createForm.description?.trim() || undefined,
         applyUrl: createForm.applyUrl?.trim() || undefined,
         imageUrl: imageUrl,
-        status: createForm.status,
-        visibility: createForm.visibility,
+        category: createForm.category || undefined,
+        payRange: createForm.payRange || undefined,
+        applicationDeadline: createForm.applicationDeadline || undefined,
+        isFromAlumni: createForm.isFromAlumni,
       }
 
       await JobsApi.create(jobData)
@@ -1079,44 +1055,6 @@ const handleCreateJob = async () => {
     showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || `Failed to ${isEditing.value ? 'update' : 'create'} job` })
   } finally {
     creating.value = false
-  }
-}
-
-const handlePublish = async (job: JobListDto | JobDetailDto) => {
-  if (!confirm(`Are you sure you want to publish "${job.title}"?`)) {
-    return
-  }
-
-  processing.value = true
-  try {
-    await JobsApi.publish(job.id)
-    showToast({ type: 'success', title: 'Success', message: 'Job published successfully' })
-    closeModals()
-    fetchJobs()
-  } catch (error) {
-    console.error('Failed to publish job:', error)
-    showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || 'Failed to publish job' })
-  } finally {
-    processing.value = false
-  }
-}
-
-const handleClose = async (job: JobListDto | JobDetailDto) => {
-  if (!confirm(`Are you sure you want to close "${job.title}"?`)) {
-    return
-  }
-
-  processing.value = true
-  try {
-    await JobsApi.close(job.id)
-    showToast({ type: 'success', title: 'Success', message: 'Job closed successfully' })
-    closeModals()
-    fetchJobs()
-  } catch (error) {
-    console.error('Failed to close job:', error)
-    showToast({ type: 'error', title: 'Error', message: (error as Error)?.message || 'Failed to close job' })
-  } finally {
-    processing.value = false
   }
 }
 
@@ -1138,8 +1076,19 @@ const handleDelete = async (job: JobListDto) => {
   }
 }
 
+const fetchCategories = async () => {
+  try {
+    const result = await JobsApi.getCategories()
+    categories.value = result
+  } catch (error) {
+    console.error('Failed to load categories:', error)
+    categories.value = ['Finance', 'Law', 'IT', 'Other']
+  }
+}
+
 onMounted(() => {
   fetchJobs()
+  fetchCategories()
 })
 </script>
 

@@ -9,5 +9,15 @@ export default defineConfig({
         }
     },
     // 👇 Copia el .htaccess automáticamente al build
-    publicDir: 'public'
+    publicDir: 'public',
+    // 👇 Proxy para evitar CORS en desarrollo
+    server: {
+        proxy: {
+            '/api-dev': {
+                target: 'https://api.arch-api.co.uk',
+                changeOrigin: true,
+                secure: true,
+            }
+        }
+    }
 });

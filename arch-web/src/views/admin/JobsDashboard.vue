@@ -931,7 +931,7 @@ const openEditModal = async (job: JobListDto | JobDetailDto) => {
     createForm.title = detail.title
     createForm.companyName = detail.companyName
     createForm.locationText = detail.locationText || ''
-    createForm.durationText = detail.durationText
+    createForm.durationText = detail.durationText || ''
     createForm.isPaid = detail.isPaid
     createForm.description = detail.description || ''
     createForm.applyUrl = detail.applyUrl || ''
