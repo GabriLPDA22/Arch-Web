@@ -268,7 +268,12 @@
 
           <div class="detail-section" v-if="selectedJob.applicationDeadline">
             <h4>Application Deadline</h4>
-            <p>{{ selectedJob.applicationDeadline }}</p>
+            <p v-if="selectedJob.applicationDeadlineWeek" class="deadline-week">
+              {{ selectedJob.applicationDeadlineWeek }}
+            </p>
+            <p class="deadline-date">
+              {{ formatDateTime(selectedJob.applicationDeadline) }}
+            </p>
           </div>
 
           <div class="detail-section">
@@ -471,13 +476,13 @@
 
               <div class="form-group">
                 <label>Application Deadline</label>
-                <input
-                  v-model="createForm.applicationDeadline"
-                  type="text"
-                  class="form-input"
-                  placeholder="e.g., Friday Week 5"
-                  maxlength="100"
-                />
+                <div class="datetime-picker-container">
+                  <DateTimePicker
+                    v-model="createForm.applicationDeadline"
+                    placeholder="Select application deadline"
+                  />
+                </div>
+                <p class="form-hint">The deadline date for job applications</p>
               </div>
             </div>
 
@@ -686,6 +691,7 @@ import TableSkeleton from '@/components/ui/TableSkeleton.vue'
 import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
 import ModalComponent from '@/components/ui/ModalComponent.vue'
+import DateTimePicker from '@/components/calendar/CustomCalendar.vue'
 import { useToast } from '@/composables/useToast'
 
 const { showToast } = useToast()
@@ -886,6 +892,17 @@ const formatDate = (dateStr: string): string => {
   })
 }
 
+const formatDateTime = (dateStr: string): string => {
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 // Get organization name from the loaded organizations list
 const getOrganizationName = (organizationId: string): string => {
   const org = organizations.value.find(o => o.id === organizationId)
@@ -974,7 +991,15 @@ const openEditModal = async (job: JobListDto | JobDetailDto) => {
     createForm.imageUrl = detail.imageUrl || ''
     createForm.category = detail.category || ''
     createForm.payRange = detail.payRange || ''
-    createForm.applicationDeadline = detail.applicationDeadline || ''
+    // Convert DateTime ISO string to format expected by DateTimePicker (YYYY-MM-DDTHH:mm)
+    if (detail.applicationDeadline) {
+      const date = new Date(detail.applicationDeadline)
+      const offset = date.getTimezoneOffset() * 60000
+      const localDate = new Date(date.getTime() - offset)
+      createForm.applicationDeadline = localDate.toISOString().slice(0, 16)
+    } else {
+      createForm.applicationDeadline = ''
+    }
     createForm.isFromAlumni = detail.isFromAlumni || false
     
     // Si hay imagen URL, mostrar preview
@@ -1112,7 +1137,7 @@ const handleCreateJob = async () => {
         imageUrl: imageUrl,
         category: createForm.category,
         payRange: createForm.payRange?.trim() || undefined,
-        applicationDeadline: createForm.applicationDeadline?.trim() || undefined,
+        applicationDeadline: createForm.applicationDeadline?.trim() ? new Date(createForm.applicationDeadline).toISOString() : undefined,
         isFromAlumni: createForm.isFromAlumni,
       }
 
@@ -1132,7 +1157,7 @@ const handleCreateJob = async () => {
         imageUrl: imageUrl,
         category: createForm.category,
         payRange: createForm.payRange?.trim() || undefined,
-        applicationDeadline: createForm.applicationDeadline?.trim() || undefined,
+        applicationDeadline: createForm.applicationDeadline?.trim() ? new Date(createForm.applicationDeadline).toISOString() : undefined,
         isFromAlumni: createForm.isFromAlumni,
       }
 
@@ -1708,7 +1733,8 @@ onMounted(() => {
 }
 
 .create-modal {
-  max-width: 700px;
+  max-width: 1000px;
+  width: 95%;
 }
 
 .modal-header {
@@ -1751,6 +1777,7 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
   max-height: calc(90vh - 140px);
+  box-sizing: border-box;
 }
 
 .modal-footer {
@@ -1979,13 +2006,23 @@ onMounted(() => {
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2.5rem;
+  gap: 1.5rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .form-group label {
@@ -2010,6 +2047,8 @@ onMounted(() => {
   transition: all 0.2s;
   background: #fff;
   font-family: inherit;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .form-input:focus,
@@ -2271,6 +2310,60 @@ onMounted(() => {
 .warning-text {
   color: #9ca3af;
   font-size: 0.875rem;
+}
+
+.deadline-week {
+  font-weight: 600;
+  color: #dbb067;
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+}
+
+.deadline-date {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.datetime-picker-container {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Asegurar que el calendario se vea bien en el formulario */
+.datetime-picker-container :deep(.calendar-wrapper) {
+  width: 100%;
+}
+
+.datetime-picker-container :deep(.calendar-input) {
+  width: 100%;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  min-height: auto;
+  height: auto;
+}
+
+.datetime-picker-container :deep(.calendar-dropdown) {
+  z-index: 10000;
+  min-width: 100%;
+  width: max-content;
+}
+
+/* Asegurar que el calendario no se salga del modal */
+.datetime-picker-container :deep(.calendar-wrapper) {
+  position: relative;
+}
+
+/* Ajustar el dropdown para que se ajuste mejor en pantallas pequeñas */
+@media (max-width: 768px) {
+  .datetime-picker-container :deep(.calendar-dropdown) {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    min-width: 320px;
+    max-width: calc(100vw - 2rem);
+  }
 }
 
 .btn-danger {
