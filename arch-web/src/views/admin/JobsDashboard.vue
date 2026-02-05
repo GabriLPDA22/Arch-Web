@@ -134,6 +134,7 @@
             <th>Category</th>
             <th>Pay Range</th>
             <th>Target</th>
+            <th>Deadline</th>
             <th
               class="sortable-header"
               @click="changeSort('date')"
@@ -177,6 +178,7 @@
                 </template>
               </span>
             </td>
+            <td>{{ job.applicationDeadline ? formatDateOnly(job.applicationDeadline) : '-' }}</td>
             <td>{{ formatDate(job.createdAt) }}</td>
             <td class="actions-cell">
               <button class="action-btn view" @click="openDetailModal(job)" title="View details">
@@ -272,7 +274,7 @@
               {{ selectedJob.applicationDeadlineWeek }}
             </p>
             <p class="deadline-date">
-              {{ formatDateTime(selectedJob.applicationDeadline) }}
+              {{ formatDateOnly(selectedJob.applicationDeadline) }}
             </p>
           </div>
 
@@ -900,6 +902,14 @@ const formatDateTime = (dateStr: string): string => {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+  })
+}
+
+const formatDateOnly = (dateStr: string): string => {
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   })
 }
 
