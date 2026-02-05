@@ -293,8 +293,8 @@
     </div>
 
     <!-- Detail Modal -->
-    <div v-if="showDetailModal" class="modal-overlay" @click="closeModals">
-      <div class="modal-content" @click.stop>
+    <div v-if="showDetailModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleDetailBackdropMouseUp">
+      <div class="modal-content" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>Report Details</h2>
           <button @click="closeModals" class="modal-close">×</button>
@@ -489,8 +489,8 @@
     </div>
 
     <!-- Resolve Modal -->
-    <div v-if="showResolveModal" class="modal-overlay" @click="closeModals">
-      <div class="modal-content" @click.stop>
+    <div v-if="showResolveModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleResolveBackdropMouseUp">
+      <div class="modal-content" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>Resolve / Dismiss Report</h2>
           <button @click="closeModals" class="modal-close">×</button>
@@ -592,8 +592,8 @@
     </div>
 
     <!-- Photo Modal -->
-    <div v-if="showPhotoModal" class="modal-overlay" @click="showPhotoModal = false">
-      <div class="photo-modal-content" @click.stop>
+    <div v-if="showPhotoModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handlePhotoBackdropMouseUp">
+      <div class="photo-modal-content" @mousedown.stop @mouseup.stop>
         <button @click="showPhotoModal = false" class="modal-close">×</button>
         <img :src="selectedPhotoUrl" alt="Evidence" class="photo-modal-img" />
       </div>
@@ -635,6 +635,28 @@ const showPhotoModal = ref(false)
 const selectedPhotoUrl = ref<string>('')
 const sortBy = ref<'reporter' | 'reportedUser' | 'reason' | 'date' | 'status'>('date')
 const sortDirection = ref<'asc' | 'desc'>('desc')
+
+// Para evitar cerrar modales al arrastrar texto
+const mouseDownOnBackdrop = ref(false)
+
+const handleBackdropMouseDown = () => {
+  mouseDownOnBackdrop.value = true
+}
+
+const handleDetailBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeModals()
+  mouseDownOnBackdrop.value = false
+}
+
+const handleResolveBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeModals()
+  mouseDownOnBackdrop.value = false
+}
+
+const handlePhotoBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) showPhotoModal.value = false
+  mouseDownOnBackdrop.value = false
+}
 
 const resolveData = reactive({
   actionTaken: 'none',

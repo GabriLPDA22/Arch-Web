@@ -206,8 +206,8 @@
     </div>
 
     <!-- Detail Modal (with Members Management) -->
-    <div v-if="showDetailModal" class="modal-overlay" @click="closeModals">
-      <div class="modal-content large-modal" @click.stop>
+    <div v-if="showDetailModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleDetailBackdropMouseUp">
+      <div class="modal-content large-modal" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>Organization Details</h2>
           <button @click="closeModals" class="modal-close">×</button>
@@ -329,8 +329,8 @@
     </div>
 
     <!-- Create/Edit Organization Modal -->
-    <div v-if="showCreateModal || showEditModal" class="modal-overlay" @click="closeCreateModal">
-      <div class="modal-content" @click.stop>
+    <div v-if="showCreateModal || showEditModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleCreateBackdropMouseUp">
+      <div class="modal-content" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>{{ isEditing ? 'Edit Organization' : 'Create New Organization' }}</h2>
           <button @click="closeCreateModal" class="modal-close">×</button>
@@ -392,8 +392,8 @@
     </div>
 
     <!-- Add Member Modal (Create New User) -->
-    <div v-if="showAddMemberModal" class="modal-overlay" @click="closeAddMemberModal">
-      <div class="modal-content" @click.stop>
+    <div v-if="showAddMemberModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleAddMemberBackdropMouseUp">
+      <div class="modal-content" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>Create New Member for {{ selectedOrganization?.name }}</h2>
           <button @click="closeAddMemberModal" class="modal-close">×</button>
@@ -473,8 +473,8 @@
     </div>
 
     <!-- Edit Member Role Modal -->
-    <div v-if="showEditMemberModal" class="modal-overlay" @click="closeEditMemberModal">
-      <div class="modal-content" @click.stop>
+    <div v-if="showEditMemberModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleEditMemberBackdropMouseUp">
+      <div class="modal-content" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>Edit Member Role</h2>
           <button @click="closeEditMemberModal" class="modal-close">×</button>
@@ -517,6 +517,44 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Organization Modal -->
+    <ModalComponent :show="showDeleteOrgModal" title="Delete Organization" @close="closeDeleteOrgModal">
+      <div class="delete-warning">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
+        </svg>
+        <p>
+          Are you sure you want to delete <strong>{{ orgToDelete?.name }}</strong>?
+        </p>
+        <p class="warning-text">This action cannot be undone.</p>
+      </div>
+      <template #footer>
+        <button class="btn-secondary" @click="closeDeleteOrgModal">Cancel</button>
+        <button class="btn-danger" @click="handleDeleteConfirm" :disabled="processing">
+          {{ processing ? 'Deleting...' : 'Delete Organization' }}
+        </button>
+      </template>
+    </ModalComponent>
+
+    <!-- Remove Member Modal -->
+    <ModalComponent :show="showRemoveMemberModal" title="Remove Member" @close="closeRemoveMemberModal">
+      <div class="delete-warning">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
+        </svg>
+        <p>
+          Are you sure you want to remove <strong>{{ memberToRemove?.userName }}</strong> from the organization?
+        </p>
+        <p class="warning-text">This action cannot be undone.</p>
+      </div>
+      <template #footer>
+        <button class="btn-secondary" @click="closeRemoveMemberModal">Cancel</button>
+        <button class="btn-danger" @click="handleRemoveMemberConfirm" :disabled="processing">
+          {{ processing ? 'Removing...' : 'Remove Member' }}
+        </button>
+      </template>
+    </ModalComponent>
   </div>
 </template>
 
@@ -525,6 +563,7 @@ import { ref, onMounted, computed, reactive } from 'vue'
 import TableSkeleton from '@/components/ui/TableSkeleton.vue'
 import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
+import ModalComponent from '@/components/ui/ModalComponent.vue'
 import {
   OrganizationsApi,
   type OrganizationListDto,
@@ -552,12 +591,53 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showAddMemberModal = ref(false)
 const showEditMemberModal = ref(false)
+const showDeleteOrgModal = ref(false)
+const showRemoveMemberModal = ref(false)
+const orgToDelete = ref<OrganizationListDto | null>(null)
+const memberToRemove = ref<OrganizationMemberListDto | null>(null)
 const editingMember = ref<OrganizationMemberListDto | null>(null)
 const addingMember = ref(false)
 const updatingMember = ref(false)
 const sortBy = ref<'name' | 'date'>('date')
 const sortDirection = ref<'asc' | 'desc'>('desc')
 const logoLoaded = ref(false)
+
+// Para evitar cerrar modales al arrastrar texto
+const mouseDownOnBackdrop = ref(false)
+
+const handleBackdropMouseDown = () => {
+  mouseDownOnBackdrop.value = true
+}
+
+const handleDetailBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeModals()
+  mouseDownOnBackdrop.value = false
+}
+
+const handleCreateBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeCreateModal()
+  mouseDownOnBackdrop.value = false
+}
+
+const handleAddMemberBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeAddMemberModal()
+  mouseDownOnBackdrop.value = false
+}
+
+const handleEditMemberBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeEditMemberModal()
+  mouseDownOnBackdrop.value = false
+}
+
+const closeDeleteOrgModal = () => {
+  showDeleteOrgModal.value = false
+  orgToDelete.value = null
+}
+
+const closeRemoveMemberModal = () => {
+  showRemoveMemberModal.value = false
+  memberToRemove.value = null
+}
 
 const orgForm = reactive<OrganizationCreateDto>({
   name: '',
@@ -800,15 +880,19 @@ const handleSaveOrganization = async () => {
   }
 }
 
-const handleDelete = async (org: OrganizationListDto) => {
-  if (!confirm(`Are you sure you want to delete "${org.name}"? This action cannot be undone.`)) {
-    return
-  }
+const handleDelete = (org: OrganizationListDto) => {
+  orgToDelete.value = org
+  showDeleteOrgModal.value = true
+}
 
+const handleDeleteConfirm = async () => {
+  if (!orgToDelete.value) return
+  
   processing.value = true
   try {
-    await OrganizationsApi.remove(org.id)
+    await OrganizationsApi.remove(orgToDelete.value.id)
     showToast({ type: 'success', title: 'Success', message: 'Organization deleted successfully' })
+    closeDeleteOrgModal()
     fetchOrganizations()
   } catch (error: any) {
     console.error('Failed to delete organization:', error)
@@ -905,20 +989,24 @@ const handleUpdateMember = async () => {
   }
 }
 
-const handleRemoveMember = async (member: OrganizationMemberListDto) => {
+const handleRemoveMember = (member: OrganizationMemberListDto) => {
   if (!selectedOrganization.value) {
     return
   }
+  memberToRemove.value = member
+  showRemoveMemberModal.value = true
+}
 
-  if (!confirm(`Are you sure you want to remove "${member.userName}" from the organization?`)) {
-    return
-  }
-
+const handleRemoveMemberConfirm = async () => {
+  if (!memberToRemove.value || !selectedOrganization.value) return
+  
+  const orgId = selectedOrganization.value.id
   processing.value = true
   try {
-    await OrganizationsApi.removeMember(selectedOrganization.value.id, member.id)
+    await OrganizationsApi.removeMember(orgId, memberToRemove.value.id)
     showToast({ type: 'success', title: 'Success', message: 'Member removed successfully' })
-    await fetchMembers(selectedOrganization.value.id)
+    closeRemoveMemberModal()
+    await fetchMembers(orgId)
   } catch (error: any) {
     console.error('Failed to remove member:', error)
     showToast({ type: 'error', title: 'Error', message: error.message || 'Failed to remove member' })
@@ -1647,5 +1735,53 @@ onMounted(() => {
   .stats-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Delete Modal Styles */
+.delete-warning {
+  text-align: center;
+  padding: 1rem;
+}
+
+.delete-warning svg {
+  color: #f59e0b;
+  margin-bottom: 1rem;
+}
+
+.delete-warning p {
+  color: #4b5563;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.delete-warning strong {
+  color: #1a202c;
+}
+
+.warning-text {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+.btn-danger {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #bdbdbd;
 }
 </style>

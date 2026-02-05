@@ -227,8 +227,8 @@
     </div>
 
     <!-- Detail Modal -->
-    <div v-if="showDetailModal" class="modal-overlay" @click="closeModals">
-      <div class="modal-content" @click.stop>
+    <div v-if="showDetailModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleDetailBackdropMouseUp">
+      <div class="modal-content" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>Job Details</h2>
           <button @click="closeModals" class="modal-close">×</button>
@@ -359,8 +359,8 @@
     </div>
 
     <!-- Create Job Modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateModal">
-      <div class="modal-content create-modal" @click.stop>
+    <div v-if="showCreateModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleCreateBackdropMouseUp">
+      <div class="modal-content create-modal" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>{{ isEditing ? 'Edit Job' : 'Create New Job' }}</h2>
           <button @click="closeCreateModal" class="modal-close">×</button>
@@ -593,8 +593,8 @@
     </div>
 
     <!-- Candidates Modal -->
-    <div v-if="showCandidatesModal" class="modal-overlay" @click="closeCandidatesModal">
-      <div class="modal-content candidates-modal" @click.stop>
+    <div v-if="showCandidatesModal" class="modal-overlay" @mousedown="handleBackdropMouseDown" @mouseup="handleCandidatesBackdropMouseUp">
+      <div class="modal-content candidates-modal" @mousedown.stop @mouseup.stop>
         <div class="modal-header">
           <h2>Interested Candidates</h2>
           <button @click="closeCandidatesModal" class="modal-close">×</button>
@@ -657,6 +657,25 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <ModalComponent :show="showDeleteModal" title="Delete Job" @close="closeDeleteModal">
+      <div class="delete-warning">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />
+        </svg>
+        <p>
+          Are you sure you want to delete <strong>{{ jobToDelete?.title }}</strong>?
+        </p>
+        <p class="warning-text">This action cannot be undone.</p>
+      </div>
+      <template #footer>
+        <button class="btn-secondary" @click="closeDeleteModal">Cancel</button>
+        <button class="btn-danger" @click="handleDeleteConfirm" :disabled="processing">
+          {{ processing ? 'Deleting...' : 'Delete Job' }}
+        </button>
+      </template>
+    </ModalComponent>
   </div>
 </template>
 
@@ -666,6 +685,7 @@ import { JobsApi, OrganizationsApi, CandidateProfilesApi, parseCvPoints, type Jo
 import TableSkeleton from '@/components/ui/TableSkeleton.vue'
 import ImageWithSkeleton from '@/components/ui/ImageWithSkeleton.vue'
 import PaginationComponent from '@/components/ui/PaginationComponent.vue'
+import ModalComponent from '@/components/ui/ModalComponent.vue'
 import { useToast } from '@/composables/useToast'
 
 const { showToast } = useToast()
@@ -683,6 +703,8 @@ const totalPages = ref(0)
 const totalCount = ref(0)
 const showDetailModal = ref(false)
 const showCreateModal = ref(false)
+const showDeleteModal = ref(false)
+const jobToDelete = ref<JobListDto | null>(null)
 const selectedJob = ref<JobDetailDto | null>(null)
 const editingJob = ref<JobDetailDto | null>(null)
 const isEditing = ref(false)
@@ -697,6 +719,33 @@ const showCandidatesModal = ref(false)
 const loadingCandidates = ref(false)
 const interestedCandidates = ref<InterestedCandidateDto[]>([])
 const candidateProfiles = ref<Record<string, CandidateProfileDto>>({})
+
+// Para evitar cerrar modales al arrastrar texto
+const mouseDownOnBackdrop = ref(false)
+
+const handleBackdropMouseDown = () => {
+  mouseDownOnBackdrop.value = true
+}
+
+const handleDetailBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeModals()
+  mouseDownOnBackdrop.value = false
+}
+
+const handleCreateBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeCreateModal()
+  mouseDownOnBackdrop.value = false
+}
+
+const handleCandidatesBackdropMouseUp = () => {
+  if (mouseDownOnBackdrop.value) closeCandidatesModal()
+  mouseDownOnBackdrop.value = false
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  jobToDelete.value = null
+}
 
 // Lista de categorías (cargadas desde el API)
 const categories = ref<string[]>([])
@@ -1101,15 +1150,19 @@ const handleCreateJob = async () => {
   }
 }
 
-const handleDelete = async (job: JobListDto) => {
-  if (!confirm(`Are you sure you want to delete "${job.title}"? This action cannot be undone.`)) {
-    return
-  }
+const handleDelete = (job: JobListDto) => {
+  jobToDelete.value = job
+  showDeleteModal.value = true
+}
 
+const handleDeleteConfirm = async () => {
+  if (!jobToDelete.value) return
+  
   processing.value = true
   try {
-    await JobsApi.remove(job.id)
+    await JobsApi.remove(jobToDelete.value.id)
     showToast({ type: 'success', title: 'Success', message: 'Job deleted successfully' })
+    closeDeleteModal()
     fetchJobs()
   } catch (error) {
     console.error('Failed to delete job:', error)
@@ -1926,7 +1979,7 @@ onMounted(() => {
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 2.5rem;
 }
 
 .form-group {
@@ -2192,5 +2245,53 @@ onMounted(() => {
   font-size: 0.875rem;
   color: #9ca3af;
   font-style: italic;
+}
+
+/* Delete Modal Styles */
+.delete-warning {
+  text-align: center;
+  padding: 1rem;
+}
+
+.delete-warning svg {
+  color: #f59e0b;
+  margin-bottom: 1rem;
+}
+
+.delete-warning p {
+  color: #4b5563;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.delete-warning strong {
+  color: #1a202c;
+}
+
+.warning-text {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+.btn-danger {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #bdbdbd;
 }
 </style>
