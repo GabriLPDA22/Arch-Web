@@ -2337,7 +2337,7 @@ onMounted(() => {
 }
 
 .datetime-picker-container :deep(.calendar-input) {
-  width: 100%;
+  width: 423px;
   border-radius: 8px;
   padding: 0.75rem 1rem;
   min-height: auto;
@@ -2346,8 +2346,40 @@ onMounted(() => {
 
 .datetime-picker-container :deep(.calendar-dropdown) {
   z-index: 10000;
-  min-width: 100%;
+  min-width: 280px;
   width: max-content;
+  padding: 1rem;
+}
+
+.datetime-picker-container :deep(.calendar-header) {
+  margin-bottom: 0.75rem;
+}
+
+.datetime-picker-container :deep(.month-year) {
+  font-size: 0.95rem;
+}
+
+.datetime-picker-container :deep(.weekday) {
+  font-size: 0.65rem;
+  padding: 0.25rem;
+}
+
+.datetime-picker-container :deep(.days-grid) {
+  gap: 0.15rem;
+  margin-bottom: 0.75rem;
+}
+
+.datetime-picker-container :deep(.day-button) {
+  font-size: 0.8rem;
+  padding: 0.35rem;
+}
+
+.datetime-picker-container :deep(.time-picker) {
+  display: none;
+}
+
+.datetime-picker-container :deep(.days-grid) {
+  margin-bottom: 0;
 }
 
 /* Asegurar que el calendario no se salga del modal */
