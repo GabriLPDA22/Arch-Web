@@ -159,7 +159,9 @@
             </td>
             <td>{{ job.companyName }}</td>
             <td>
-              <span class="category-badge">{{ job.category }}</span>
+              <div class="categories-cell">
+                <span v-for="cat in (job.categories || [])" :key="cat" class="category-badge">{{ cat }}</span>
+              </div>
             </td>
             <td>{{ job.payRange || '-' }}</td>
             <td>
@@ -259,8 +261,10 @@
           </div>
 
           <div class="detail-section">
-            <h4>Category</h4>
-            <span class="category-badge">{{ selectedJob.category }}</span>
+            <h4>Categories</h4>
+            <div class="categories-cell">
+              <span v-for="cat in (selectedJob.categories || [])" :key="cat" class="category-badge">{{ cat }}</span>
+            </div>
           </div>
 
           <div class="detail-section" v-if="selectedJob.payRange">
@@ -455,12 +459,25 @@
 
               <div class="form-group">
                 <label>
-                  Category <span class="required">*</span>
+                  Categories <span class="required">*</span>
                 </label>
-                <select v-model="createForm.category" class="form-select" required>
-                  <option value="">Select category...</option>
-                  <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-                </select>
+                <div class="categories-multi-select">
+                  <label
+                    v-for="cat in categories"
+                    :key="cat"
+                    class="category-checkbox-label"
+                    :class="{ selected: createForm.categories.includes(cat) }"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="cat"
+                      v-model="createForm.categories"
+                      class="category-checkbox"
+                    />
+                    <span>{{ cat }}</span>
+                  </label>
+                </div>
+                <p class="form-hint">Select one or more categories for this job</p>
               </div>
             </div>
 
@@ -769,7 +786,7 @@ type JobFormData = {
   description: string
   applyUrl: string
   imageUrl: string
-  category: string
+  categories: string[]
   payRange: string
   applicationDeadline: string
   isFromAlumni: boolean
@@ -785,7 +802,7 @@ const createForm = reactive<JobFormData>({
   description: '',
   applyUrl: '',
   imageUrl: '',
-  category: '',
+  categories: [],
   payRange: '',
   applicationDeadline: '',
   isFromAlumni: false,
@@ -832,7 +849,7 @@ const isFormValid = computed(() => {
     createForm.companyName.trim() &&
     createForm.locationText.trim() &&
     createForm.durationText &&
-    createForm.category &&
+    createForm.categories.length > 0 &&
     createForm.description.trim()
   )
 })
@@ -999,7 +1016,7 @@ const openEditModal = async (job: JobListDto | JobDetailDto) => {
     createForm.description = detail.description || ''
     createForm.applyUrl = detail.applyUrl || ''
     createForm.imageUrl = detail.imageUrl || ''
-    createForm.category = detail.category || ''
+    createForm.categories = detail.categories || []
     createForm.payRange = detail.payRange || ''
     // Convert DateTime ISO string to format expected by DateTimePicker (YYYY-MM-DDTHH:mm)
     if (detail.applicationDeadline) {
@@ -1045,7 +1062,7 @@ const closeCreateModal = () => {
   createForm.description = ''
   createForm.applyUrl = ''
   createForm.imageUrl = ''
-  createForm.category = ''
+  createForm.categories = []
   createForm.payRange = ''
   createForm.applicationDeadline = ''
   createForm.isFromAlumni = false
@@ -1145,7 +1162,7 @@ const handleCreateJob = async () => {
         description: createForm.description.trim(),
         applyUrl: createForm.applyUrl?.trim() || undefined,
         imageUrl: imageUrl,
-        category: createForm.category,
+        categories: createForm.categories,
         payRange: createForm.payRange?.trim() || undefined,
         applicationDeadline: createForm.applicationDeadline?.trim() ? new Date(createForm.applicationDeadline).toISOString() : undefined,
         isFromAlumni: createForm.isFromAlumni,
@@ -1165,7 +1182,7 @@ const handleCreateJob = async () => {
         description: createForm.description.trim(),
         applyUrl: createForm.applyUrl?.trim() || undefined,
         imageUrl: imageUrl,
-        category: createForm.category,
+        categories: createForm.categories,
         payRange: createForm.payRange?.trim() || undefined,
         applicationDeadline: createForm.applicationDeadline?.trim() ? new Date(createForm.applicationDeadline).toISOString() : undefined,
         isFromAlumni: createForm.isFromAlumni,
@@ -1567,6 +1584,57 @@ onMounted(() => {
   font-weight: 600;
   background: #e0e7ff;
   color: #3730a3;
+}
+
+.categories-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* Multi-select categories in form */
+.categories-multi-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.category-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  background: #f9fafb;
+  color: #4b5563;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.category-checkbox-label:hover {
+  border-color: #dbb067;
+  background: #fffbf5;
+}
+
+.category-checkbox-label.selected {
+  background: #e0e7ff;
+  border-color: #6366f1;
+  color: #3730a3;
+  font-weight: 600;
+}
+
+.category-checkbox {
+  display: none;
 }
 
 .target-badge {

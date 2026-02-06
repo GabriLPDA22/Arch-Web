@@ -563,7 +563,7 @@ export type JobListDto = {
   description?: string
   applyUrl?: string
   imageUrl?: string
-  category: string              // e.g. "Finance", "Law", "IT"
+  categories: string[]          // e.g. ["Finance", "Law", "IT"] - multiple categories per job
   applicationDeadline?: string  // DateTime ISO string (e.g. "2024-02-16T00:00:00Z")
   applicationDeadlineWeek?: string  // Oxford Week format (e.g. "Friday Week 5") - calculated by backend
   payRange?: string             // e.g. "£1500-£2000"
@@ -586,7 +586,7 @@ export type JobDetailDto = {
   description?: string
   applyUrl?: string
   imageUrl?: string
-  category: string
+  categories: string[]          // e.g. ["Finance", "Law", "IT"] - multiple categories per job
   applicationDeadline?: string  // DateTime ISO string (e.g. "2024-02-16T00:00:00Z")
   applicationDeadlineWeek?: string  // Oxford Week format (e.g. "Friday Week 5") - calculated by backend
   payRange?: string
@@ -611,7 +611,7 @@ export type JobCreateDto = {
   applyUrl?: string
   imageUrl?: string
   isPaid?: boolean              // default: false
-  category?: string             // default: "Other"
+  categories?: string[]         // default: ["Other"] - multiple categories per job
   applicationDeadline?: string  // DateTime ISO string (e.g. "2024-02-16T00:00:00Z")
   payRange?: string
   isFromAlumni?: boolean        // default: false
@@ -627,7 +627,7 @@ export type JobUpdateDto = {
   description?: string
   applyUrl?: string
   imageUrl?: string
-  category?: string
+  categories?: string[]         // multiple categories per job
   applicationDeadline?: string  // DateTime ISO string (e.g. "2024-02-16T00:00:00Z")
   payRange?: string
   isFromAlumni?: boolean
