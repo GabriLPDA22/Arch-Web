@@ -27,8 +27,6 @@ import Sidebar from '@/components/layouts/SidebarComponet.vue'
   padding: 2rem;
   width: calc(100% - 280px);
   overflow-x: hidden;
-  position: relative;
-  z-index: 1;
 }
 
 @media (max-width: 1024px) {

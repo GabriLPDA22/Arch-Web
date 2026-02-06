@@ -1403,7 +1403,7 @@ onMounted(() => {
 }
 
 .modal-content.large-modal {
-  max-width: 900px;
+  max-width: 800px;
 }
 
 .modal-header {

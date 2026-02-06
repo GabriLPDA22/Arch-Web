@@ -1728,6 +1728,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .modal-content {
@@ -1743,8 +1745,8 @@ onMounted(() => {
 }
 
 .create-modal {
-  max-width: 1000px;
-  width: 95%;
+  max-width: 800px;
+  width: 100%;
 }
 
 .modal-header {
@@ -2106,6 +2108,14 @@ onMounted(() => {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .create-modal {
+    max-width: 700px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2130,6 +2140,18 @@ onMounted(() => {
   .data-table {
     min-width: 800px;
   }
+
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+
+  .create-modal {
+    max-width: 100%;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2142,9 +2164,8 @@ onMounted(() => {
     align-items: flex-start;
   }
 
-  .modal-content {
-    margin: 1rem;
-    max-width: calc(100% - 2rem);
+  .modal-overlay {
+    padding: 0.5rem;
   }
 }
 
@@ -2347,11 +2368,13 @@ onMounted(() => {
 }
 
 .datetime-picker-container :deep(.calendar-input) {
-  width: 423px;
+  width: 100%;
+  max-width: 423px;
   border-radius: 8px;
   padding: 0.75rem 1rem;
   min-height: auto;
   height: auto;
+  box-sizing: border-box;
 }
 
 .datetime-picker-container :deep(.calendar-dropdown) {
