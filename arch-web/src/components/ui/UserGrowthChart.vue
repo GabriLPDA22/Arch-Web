@@ -224,13 +224,15 @@ const chartData = computed((): ChartDataResult => {
   // Agrupar por tipo de usuario y fecha
   const usersByTypeAndDate = new Map<string, Map<string, number>>()
   
-  // Colores para cada tipo de usuario
+  // Colores para cada tipo de usuario (incluye 'alumni' como grupo separado)
   const typeColors: Record<string, { border: string; background: string }> = {
     'user': { border: '#4f46e5', background: 'rgba(79, 70, 229, 0.1)' },
+    'alumni': { border: '#9333ea', background: 'rgba(147, 51, 234, 0.1)' },
     'staff-user': { border: '#0ea5e9', background: 'rgba(14, 165, 233, 0.1)' },
     'admin': { border: '#dc2626', background: 'rgba(220, 38, 38, 0.1)' },
     'moderator': { border: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' },
     'scanner': { border: '#10b981', background: 'rgba(16, 185, 129, 0.1)' },
+    'org-members': { border: '#6b7280', background: 'rgba(107, 114, 128, 0.1)' },
   }
 
   usersWithDate.forEach((user) => {
@@ -239,17 +241,25 @@ const chartData = computed((): ChartDataResult => {
     const date = parseDate(user.createdAt)
     if (!date) return
     
-    const userType = user.userType || 'unknown'
+    // Determinar la clave de agrupación: separar Alumni de Oxford (Students)
+    let groupKey = user.userType || 'unknown'
+    if (groupKey === 'user') {
+      if (user.userRole === 'alumni') {
+        groupKey = 'alumni'
+      }
+      // Si no es alumni, se mantiene como 'user' (Oxford/Students)
+    }
+    
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const dateKey = `${year}-${month}-${day}`
     
-    if (!usersByTypeAndDate.has(userType)) {
-      usersByTypeAndDate.set(userType, new Map<string, number>())
+    if (!usersByTypeAndDate.has(groupKey)) {
+      usersByTypeAndDate.set(groupKey, new Map<string, number>())
     }
     
-    const typeMap = usersByTypeAndDate.get(userType)!
+    const typeMap = usersByTypeAndDate.get(groupKey)!
     typeMap.set(dateKey, (typeMap.get(dateKey) || 0) + 1)
   })
 
@@ -281,8 +291,10 @@ const chartData = computed((): ChartDataResult => {
     
     const colors = typeColors[userType] || { border: '#6b7280', background: 'rgba(107, 114, 128, 0.1)' }
     const typeLabel = userType === 'user' ? 'Oxford' : 
+                     userType === 'alumni' ? 'Alumni' :
                      userType === 'staff-user' ? 'Staff' :
                      userType === 'scanner' ? 'Organizer' :
+                     userType === 'org-members' ? 'Org-members' :
                      userType.charAt(0).toUpperCase() + userType.slice(1)
     
     datasets.push({
